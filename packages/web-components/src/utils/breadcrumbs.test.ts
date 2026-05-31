@@ -8,6 +8,8 @@ import {
   buildNewTaskBreadcrumbs,
   buildNewChatBreadcrumbs,
   buildSessionBreadcrumbs,
+  buildPersonaLibraryBreadcrumbs,
+  buildPersonaDetailBreadcrumbs,
   type BreadcrumbSegment,
 } from "./breadcrumbs.js";
 import type { Environment, TaskData, Workspace } from "../hooks/types.js";
@@ -288,6 +290,27 @@ describe("breadcrumb builders", () => {
     const segments: BreadcrumbSegment[] = buildSessionBreadcrumbs("abcdef1234567890");
     expect(segments).toHaveLength(2);
     expect(segments[1].label).toBe("Session abcdef12");
+  });
+
+  it("persona library returns Home > Personas (current page, non-clickable)", () => {
+    const segments: BreadcrumbSegment[] = buildPersonaLibraryBreadcrumbs();
+    expect(segments).toHaveLength(2);
+    expect(segments[0]).toEqual({ label: "Home", url: "/" });
+    expect(segments[1]).toEqual({ label: "Personas", url: undefined });
+  });
+
+  it("persona detail returns Home > Personas (clickable) > {label}", () => {
+    const segments: BreadcrumbSegment[] = buildPersonaDetailBreadcrumbs("My Persona");
+    expect(segments).toHaveLength(3);
+    expect(segments[0]).toEqual({ label: "Home", url: "/" });
+    expect(segments[1]).toEqual({ label: "Personas", url: "/personas" });
+    expect(segments[2]).toEqual({ label: "My Persona", url: undefined });
+  });
+
+  it("persona detail uses 'New Persona' label on the create form", () => {
+    const segments: BreadcrumbSegment[] = buildPersonaDetailBreadcrumbs("New Persona");
+    expect(segments[2].label).toBe("New Persona");
+    expect(segments[2].url).toBeUndefined();
   });
 });
 

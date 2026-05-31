@@ -134,15 +134,15 @@ export const SETTINGS_CREDENTIALS_URL: string = "/settings/credentials";
 /** URL for the GitHub accounts settings tab. */
 export const SETTINGS_GITHUB_ACCOUNTS_URL: string = "/settings/github-accounts";
 
-/** URL for the persona management tab. */
-export const PERSONAS_URL: string = "/settings/personas";
+/** URL for the top-level Persona Library page. */
+export const PERSONAS_URL: string = "/personas";
 
 /** URL for the new persona form. */
-export const NEW_PERSONA_URL: string = "/settings/personas/new";
+export const NEW_PERSONA_URL: string = "/personas/new";
 
 /** Build URL for a persona detail page. */
 export function personaUrl(personaId: string): string {
-  return `/settings/personas/${encodeURIComponent(personaId)}`;
+  return `/personas/${encodeURIComponent(personaId)}`;
 }
 
 /** URL for the schedule management tab. */

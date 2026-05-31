@@ -5,7 +5,6 @@ import { expect } from "@storybook/test";
 import { withMockGrackle } from "@grackle-ai/web-components";
 import { SettingsPage } from "./SettingsPage.js";
 import { SettingsCredentialsTab } from "./settings/SettingsCredentialsTab.js";
-import { SettingsPersonasTab } from "./settings/SettingsPersonasTab.js";
 import { SettingsAboutTab } from "./settings/SettingsAboutTab.js";
 import { SettingsAppearanceTab } from "./settings/SettingsAppearanceTab.js";
 
@@ -16,7 +15,6 @@ function SettingsRouteWrapper({ initialEntry }: { initialEntry: string }): JSX.E
       <Routes>
         <Route path="/settings" element={<SettingsPage />}>
           <Route path="credentials" element={<SettingsCredentialsTab />} />
-          <Route path="personas" element={<SettingsPersonasTab />} />
           <Route path="appearance" element={<SettingsAppearanceTab />} />
           <Route path="about" element={<SettingsAboutTab />} />
         </Route>
@@ -41,15 +39,6 @@ export const CredentialsTab: Story = {
     await expect(canvas.getByText("Credential Providers")).toBeInTheDocument();
     // Tokens section heading
     await expect(canvas.getByText("Tokens")).toBeInTheDocument();
-  },
-};
-
-/** Personas tab renders the persona manager with persona cards. */
-export const PersonasTab: Story = {
-  render: () => <SettingsRouteWrapper initialEntry="/settings/personas" />,
-  play: async ({ canvas }) => {
-    // At least one persona card should be visible (mock data has multiple personas)
-    await expect(canvas.getByTestId("persona-card-persona-arch")).toBeInTheDocument();
   },
 };
 

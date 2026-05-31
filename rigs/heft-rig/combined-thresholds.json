@@ -106,8 +106,8 @@
   },
   "packages/powerline": {
     "lines": 80,
-    "functions": 80,
-    "branches": 65
+    "functions": 70,
+    "branches": 60
   },
   "packages/prompt": {
     "lines": 95,

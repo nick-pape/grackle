@@ -225,6 +225,7 @@ Prettier is the canonical formatter. Config lives at `.prettierrc.json`; ignore 
 - Cross-package deps use `"workspace:*"` (pnpm rewrites to real versions at publish time)
 - `@bufbuild/protobuf` must be a direct dependency in any package using `create()`
 - Pin specific versions for runtime SDKs (not `@latest`)
+- **A direct dependency covered by a pnpm `globalOverride` range must be pinned to the exact overridden version** in its `package.json` — a caret range will not work. The overrides in `common/config/rush/pnpm-config.json` rewrite the lockfile importer specifier to the exact pinned version (e.g. `picomatch@>=4.0.0` → `4.0.4`), so a `package.json` range like `^4.0.0` never matches the shrinkwrap and `rush install`/CI fails with `Dependencies of project "<pkg>" do not match the current shrinkwrap` (even though `rush update` reports success and leaves a clean tree). Pin the exact version (e.g. `"picomatch": "4.0.4"`). The heft-rig base (`rigs/heft-rig/profiles/default/tsconfig-base.json`) uses `moduleResolution: Node16`, which **does** honor `exports` maps, so ESM-`exports`-only packages (e.g. `chokidar@4`, `picomatch@4`) resolve and compile fine.
 
 ### Database
 

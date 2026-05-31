@@ -19,6 +19,7 @@ import {
   useSidebarContent,
   useToast,
   sessionUrl,
+  personaUrl,
   useAppNavigate,
   type AppTab,
 } from "@grackle-ai/web-components";
@@ -63,8 +64,8 @@ import { EnvironmentDetailPage } from "./pages/EnvironmentDetailPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.js";
 import { SettingsGitHubAccountsTab } from "./pages/settings/SettingsGitHubAccountsTab.js";
-import { SettingsPersonasTab } from "./pages/settings/SettingsPersonasTab.js";
-import { PersonaDetailPage } from "./pages/settings/PersonaDetailPage.js";
+import { PersonaLibraryPage } from "./pages/PersonaLibraryPage.js";
+import { PersonaDetailPage } from "./pages/PersonaDetailPage.js";
 import { SettingsSchedulesTab } from "./pages/settings/SettingsSchedulesTab.js";
 import { ScheduleDetailPage } from "./pages/settings/ScheduleDetailPage.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
@@ -315,6 +316,16 @@ function WorkspaceRedirect(): JSX.Element | undefined {
   return <Navigate to={target} replace />;
 }
 
+/**
+ * Back-compat redirect for legacy `/settings/personas/:personaId` URLs.
+ * Re-encodes the `personaId` param via `personaUrl()` so reserved characters
+ * survive the redirect (useParams URL-decodes; personaUrl re-encodes).
+ */
+function PersonaSettingsRedirect(): JSX.Element {
+  const { personaId } = useParams<{ personaId: string }>();
+  return <Navigate to={personaUrl(personaId ?? "")} replace />;
+}
+
 /** Route configuration for the application. */
 function AppRoutes(): JSX.Element {
   const { pluginNames } = useManifest();
@@ -361,15 +372,21 @@ function AppRoutes(): JSX.Element {
           </Route>
         )}
 
-        {/* Tasks sidebar (orchestration plugin) */}
+        {/* Tasks sidebar + top-level Persona Library (orchestration plugin) */}
         {hasOrchestration && (
-          <Route element={<WithTaskSidebar />}>
-            <Route path="tasks" element={<TasksEmptyPage />} />
-            <Route path="tasks/new" element={<NewTaskPage />} />
-            <Route path="tasks/:taskId" element={<TaskPage />} />
-            <Route path="tasks/:taskId/edit" element={<TaskPage />} />
-            <Route path="tasks/:taskId/stream" element={<TaskPage />} />
-          </Route>
+          <>
+            <Route element={<WithTaskSidebar />}>
+              <Route path="tasks" element={<TasksEmptyPage />} />
+              <Route path="tasks/new" element={<NewTaskPage />} />
+              <Route path="tasks/:taskId" element={<TaskPage />} />
+              <Route path="tasks/:taskId/edit" element={<TaskPage />} />
+              <Route path="tasks/:taskId/stream" element={<TaskPage />} />
+            </Route>
+            {/* Persona Library — top-level surface (no sidebar), like /chat and /coordination */}
+            <Route path="personas" element={<PersonaLibraryPage />} />
+            <Route path="personas/new" element={<PersonaDetailPage />} />
+            <Route path="personas/:personaId" element={<PersonaDetailPage />} />
+          </>
         )}
 
         {/* Environments sidebar */}
@@ -415,9 +432,6 @@ function AppRoutes(): JSX.Element {
             <Route path="credentials" element={<SettingsCredentialsTab />} />
             <Route path="github-accounts" element={<SettingsGitHubAccountsTab />} />
             <Route path="tokens" element={<Navigate to="../credentials" replace />} />
-            <Route path="personas" element={<SettingsPersonasTab />} />
-            <Route path="personas/new" element={<PersonaDetailPage />} />
-            <Route path="personas/:personaId" element={<PersonaDetailPage />} />
             <Route path="schedules" element={<SettingsSchedulesTab />} />
             <Route path="schedules/new" element={<ScheduleDetailPage />} />
             <Route path="schedules/:scheduleId" element={<ScheduleDetailPage />} />
@@ -427,6 +441,12 @@ function AppRoutes(): JSX.Element {
             <Route path="about" element={<SettingsAboutTab />} />
           </Route>
         </Route>
+
+        {/* Back-compat redirects for the legacy /settings/personas* URLs.
+            Always on (no plugin gate) so old bookmarks/deep links keep working. */}
+        <Route path="settings/personas" element={<Navigate to="/personas" replace />} />
+        <Route path="settings/personas/new" element={<Navigate to="/personas/new" replace />} />
+        <Route path="settings/personas/:personaId" element={<PersonaSettingsRedirect />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

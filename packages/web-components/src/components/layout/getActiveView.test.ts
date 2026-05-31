@@ -23,4 +23,12 @@ describe("getActiveView", () => {
     expect(getActiveView("/tasks")).toBe("tasks");
     expect(getActiveView("/tasks/task-1")).toBe("tasks");
   });
+
+  it("maps the Personas routes to the personas view", () => {
+    // The library list, the new-persona form, and a persona detail page all
+    // highlight the top-level Personas tab (#1413).
+    expect(getActiveView("/personas")).toBe("personas");
+    expect(getActiveView("/personas/new")).toBe("personas");
+    expect(getActiveView("/personas/abc-123")).toBe("personas");
+  });
 });

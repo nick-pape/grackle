@@ -328,6 +328,8 @@ export {
   buildWorkspaceBreadcrumbs,
   buildTaskBreadcrumbs,
   buildNewTaskBreadcrumbs,
+  buildPersonaLibraryBreadcrumbs,
+  buildPersonaDetailBreadcrumbs,
 } from "./utils/breadcrumbs.js";
 
 export { groupConsecutiveTextEvents, pairToolEvents } from "./utils/sessionEvents.js";

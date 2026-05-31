@@ -3,6 +3,7 @@ import {
   ENVIRONMENTS_URL,
   environmentUrl,
   HOME_URL,
+  PERSONAS_URL,
   SETTINGS_URL,
   taskUrl,
   workspaceUrl,
@@ -62,6 +63,19 @@ export function buildSettingsBreadcrumbs(tabLabel?: string): BreadcrumbSegment[]
 
 /** Environments breadcrumb segment. */
 const ENVIRONMENTS_SEGMENT: BreadcrumbSegment = { label: "Environments", url: ENVIRONMENTS_URL };
+
+/** Personas breadcrumb segment (links back to the top-level Persona Library). */
+const PERSONAS_SEGMENT: BreadcrumbSegment = { label: "Personas", url: PERSONAS_URL };
+
+/** Build breadcrumbs for the top-level Persona Library page. */
+export function buildPersonaLibraryBreadcrumbs(): BreadcrumbSegment[] {
+  return [HOME_SEGMENT, { label: "Personas", url: undefined }];
+}
+
+/** Build breadcrumbs for a persona detail (create or edit) page. */
+export function buildPersonaDetailBreadcrumbs(label: string): BreadcrumbSegment[] {
+  return [HOME_SEGMENT, PERSONAS_SEGMENT, { label, url: undefined }];
+}
 
 /** Build breadcrumbs for the environments landing page. */
 export function buildEnvironmentsBreadcrumbs(): BreadcrumbSegment[] {
