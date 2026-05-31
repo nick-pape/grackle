@@ -20,6 +20,7 @@ import {
   useToast,
   sessionUrl,
   personaUrl,
+  scheduleUrl,
   useAppNavigate,
   type AppTab,
 } from "@grackle-ai/web-components";
@@ -66,8 +67,8 @@ import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.
 import { SettingsGitHubAccountsTab } from "./pages/settings/SettingsGitHubAccountsTab.js";
 import { PersonaLibraryPage } from "./pages/PersonaLibraryPage.js";
 import { PersonaDetailPage } from "./pages/PersonaDetailPage.js";
-import { SettingsSchedulesTab } from "./pages/settings/SettingsSchedulesTab.js";
-import { ScheduleDetailPage } from "./pages/settings/ScheduleDetailPage.js";
+import { SchedulesPage } from "./pages/SchedulesPage.js";
+import { ScheduleDetailPage } from "./pages/ScheduleDetailPage.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
@@ -344,10 +345,21 @@ function PersonaSettingsRedirect(): JSX.Element {
   return <Navigate to={personaUrl(personaId ?? "")} replace />;
 }
 
+/**
+ * Back-compat redirect for legacy `/settings/schedules/:scheduleId` URLs.
+ * Re-encodes the `scheduleId` param via `scheduleUrl()` so reserved characters
+ * survive the redirect (useParams URL-decodes; scheduleUrl re-encodes).
+ */
+function ScheduleSettingsRedirect(): JSX.Element {
+  const { scheduleId } = useParams<{ scheduleId: string }>();
+  return <Navigate to={scheduleUrl(scheduleId ?? "")} replace />;
+}
+
 /** Route configuration for the application. */
 function AppRoutes(): JSX.Element {
   const { pluginNames } = useManifest();
   const hasOrchestration = pluginNames.includes("orchestration");
+  const hasScheduling = pluginNames.includes("scheduling");
   const hasKnowledge = pluginNames.includes("knowledge");
 
   return (
@@ -407,6 +419,16 @@ function AppRoutes(): JSX.Element {
           </>
         )}
 
+        {/* Schedules — top-level surface (no sidebar), relocated out of Settings (#1416).
+            A holding home at the fleet altitude until per-agent ownership (#1418). */}
+        {hasScheduling && (
+          <>
+            <Route path="schedules" element={<SchedulesPage />} />
+            <Route path="schedules/new" element={<ScheduleDetailPage />} />
+            <Route path="schedules/:scheduleId" element={<ScheduleDetailPage />} />
+          </>
+        )}
+
         {/* Environments sidebar */}
         <Route element={<WithEnvironmentSidebar />}>
           <Route path="workspaces" element={<Navigate to="/environments" replace />} />
@@ -450,9 +472,6 @@ function AppRoutes(): JSX.Element {
             <Route path="credentials" element={<SettingsCredentialsTab />} />
             <Route path="github-accounts" element={<SettingsGitHubAccountsTab />} />
             <Route path="tokens" element={<Navigate to="../credentials" replace />} />
-            <Route path="schedules" element={<SettingsSchedulesTab />} />
-            <Route path="schedules/new" element={<ScheduleDetailPage />} />
-            <Route path="schedules/:scheduleId" element={<ScheduleDetailPage />} />
             <Route path="appearance" element={<SettingsAppearanceTab />} />
             <Route path="shortcuts" element={<SettingsShortcutsTab />} />
             <Route path="plugins" element={<SettingsPluginsTab />} />
@@ -465,6 +484,12 @@ function AppRoutes(): JSX.Element {
         <Route path="settings/personas" element={<Navigate to="/personas" replace />} />
         <Route path="settings/personas/new" element={<Navigate to="/personas/new" replace />} />
         <Route path="settings/personas/:personaId" element={<PersonaSettingsRedirect />} />
+
+        {/* Back-compat redirects for the legacy /settings/schedules* URLs (#1416).
+            Always on (no plugin gate) so old bookmarks/deep links keep working. */}
+        <Route path="settings/schedules" element={<Navigate to="/schedules" replace />} />
+        <Route path="settings/schedules/new" element={<Navigate to="/schedules/new" replace />} />
+        <Route path="settings/schedules/:scheduleId" element={<ScheduleSettingsRedirect />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

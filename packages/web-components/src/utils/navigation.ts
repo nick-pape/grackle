@@ -145,15 +145,15 @@ export function personaUrl(personaId: string): string {
   return `/personas/${encodeURIComponent(personaId)}`;
 }
 
-/** URL for the schedule management tab. */
-export const SCHEDULES_URL: string = "/settings/schedules";
+/** URL for the top-level Schedules surface. */
+export const SCHEDULES_URL: string = "/schedules";
 
 /** URL for the new schedule form. */
-export const NEW_SCHEDULE_URL: string = "/settings/schedules/new";
+export const NEW_SCHEDULE_URL: string = "/schedules/new";
 
 /** Build URL for a schedule detail page. */
 export function scheduleUrl(scheduleId: string): string {
-  return `/settings/schedules/${encodeURIComponent(scheduleId)}`;
+  return `/schedules/${encodeURIComponent(scheduleId)}`;
 }
 
 /** URL for the settings appearance tab. */
