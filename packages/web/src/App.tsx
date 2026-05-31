@@ -13,6 +13,7 @@ import {
   DEFAULT_CONTEXT_ID,
   agentUrl,
   getActiveView,
+  isImageAvatar,
   BottomStatusBar,
   DocPane,
   ToastContainer,
@@ -111,31 +112,6 @@ const AGENT_CONTEXT_PREFIX: string = "agent:";
 
 /** Pixel size of an agent's avatar glyph/image in the context rail. */
 const AGENT_ICON_SIZE_PX: number = 18;
-
-/**
- * Allowed `data:` URI subtypes for inline avatars. Excludes `svg+xml` (can
- * carry script payloads). Mirrors the allow-list in `AgentManager`.
- */
-const SAFE_DATA_IMAGE_PREFIXES: readonly string[] = [
-  "data:image/png;",
-  "data:image/jpeg;",
-  "data:image/gif;",
-  "data:image/webp;",
-];
-
-/**
- * True when the avatar string points to a renderable image source. Allows
- * `http(s)://`, root-relative paths, and a fixed allow-list of safe `data:`
- * image MIME types; anything else falls through to the inline-glyph branch
- * instead of becoming an `<img src>`. Same policy as `AvatarPreview` in
- * `AgentManager`. See CodeQL alerts #26 and #27.
- */
-function isImageAvatar(avatar: string): boolean {
-  if (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("/")) {
-    return true;
-  }
-  return SAFE_DATA_IMAGE_PREFIXES.some((p) => avatar.startsWith(p));
-}
 
 /** Render an agent's rail icon: image, emoji glyph, or a name-derived monogram. */
 function renderAgentIcon(name: string, avatar: string): JSX.Element {

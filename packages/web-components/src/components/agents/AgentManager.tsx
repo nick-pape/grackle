@@ -54,7 +54,7 @@ const SAFE_DATA_IMAGE_PREFIXES: readonly string[] = [
  * `vbscript:`, etc.) falls through to the inline-glyph branch instead of
  * becoming an `<img src>`. See CodeQL alerts #26 and #27.
  */
-function isImageAvatar(avatar: string): boolean {
+export function isImageAvatar(avatar: string): boolean {
   if (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("/")) {
     return true;
   }

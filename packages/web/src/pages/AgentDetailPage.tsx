@@ -1,6 +1,6 @@
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
-import { AgentManager, agentUrl, useAppNavigate } from "@grackle-ai/web-components";
+import { AgentManager, agentUrl, useAppNavigate, useToast } from "@grackle-ai/web-components";
 import type { JSX } from "react";
 
 /**
@@ -14,6 +14,7 @@ import type { JSX } from "react";
 export function AgentDetailPage(): JSX.Element {
   const { agentId } = useParams<{ agentId: string }>();
   const navigate = useAppNavigate();
+  const { showToast } = useToast();
   const {
     agents: { agents, agentsLoading, createAgent, deleteAgent },
     personas: { personas },
@@ -24,8 +25,8 @@ export function AgentDetailPage(): JSX.Element {
       (created) => {
         navigate(agentUrl(created.id));
       },
-      (err: unknown) => {
-        console.error("[AgentDetailPage] createAgent failed", err);
+      (_err: unknown) => {
+        showToast("Failed to create agent", "error");
       },
     );
   };
@@ -35,8 +36,8 @@ export function AgentDetailPage(): JSX.Element {
       () => {
         navigate("/");
       },
-      (err: unknown) => {
-        console.error("[AgentDetailPage] deleteAgent failed", err);
+      (_err: unknown) => {
+        showToast("Failed to delete agent", "error");
       },
     );
   };

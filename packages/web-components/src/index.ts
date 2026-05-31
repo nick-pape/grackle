@@ -140,7 +140,7 @@ export { McpToolSelector } from "./components/personas/McpToolSelector.js";
 export type { PersonaManagerProps } from "./components/personas/PersonaManager.js";
 
 // Agents (#1417)
-export { AgentManager } from "./components/agents/AgentManager.js";
+export { AgentManager, isImageAvatar } from "./components/agents/AgentManager.js";
 export type { AgentManagerProps } from "./components/agents/AgentManager.js";
 
 // Schedules
