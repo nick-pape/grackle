@@ -80,8 +80,15 @@ test.describe("Live docs v0 viewer", { tag: ["@session"] }, () => {
         expect(content.data).toContain("Plan v1");
       }).toPass({ timeout: 20_000, intervals: [250, 500, 1000] });
 
-      // Open the session view; the Write tool card exposes a clickable filename.
+      // Open the session view. The session must be in the sessions list (with a
+      // real environmentId, not the placeholder from a status-event upsert) before
+      // EventStream wires onOpenDocument. Wait for Stub runtime text then reload
+      // once to ensure the full session record (with environmentId) is loaded.
       await page.goto(`/sessions/${sessionId}`);
+      await expect(page.getByText("Working on the plan.")).toBeVisible({ timeout: 20_000 });
+      // Reload forces loadSessions() on reconnect, populating environmentId.
+      await page.reload();
+      await expect(page.getByText("Working on the plan.")).toBeVisible({ timeout: 20_000 });
       const fileLink = page.getByTestId("tool-card-file-link").first();
       await expect(fileLink).toBeVisible({ timeout: 20_000 });
 
