@@ -16,6 +16,7 @@ import type {
   TaskData,
   TokenInfo,
   PersonaData,
+  AgentData,
 } from "../hooks/types.js";
 export {
   MOCK_KNOWLEDGE_NODES,
@@ -1622,6 +1623,24 @@ export const MOCK_PERSONAS: PersonaData[] = [
     script:
       'const files = env.files.filter(f => /\\.(ts|tsx|js)$/.test(f.filename));\nfor (const f of files) {\n  const eslintResult = await host.exec("npx", ["eslint", "--fix", f.filename]);\n  if (eslintResult.exitCode !== 0) {\n    console.log(`Lint issues in ${f.filename}: ${eslintResult.stderr}`);\n  }\n  const prettierResult = await host.exec("npx", ["prettier", "--write", f.filename]);\n  if (prettierResult.exitCode !== 0) {\n    console.log(`Prettier issues in ${f.filename}: ${prettierResult.stderr}`);\n  }\n}\nconsole.log(`Ran ESLint and Prettier on ${files.length} files`);',
     allowedMcpTools: [],
+  },
+];
+
+// ─── Agents (#1417) ─────────────────────────────────
+
+/** Sample agents for the context-axis nav (#1417). */
+export const MOCK_AGENTS: AgentData[] = [
+  {
+    id: "refactor-bot",
+    name: "Refactor Bot",
+    avatar: "",
+    primaryPersonaId: "persona-fe",
+  },
+  {
+    id: "security-auditor",
+    name: "Security Auditor",
+    avatar: "",
+    primaryPersonaId: "persona-arch",
   },
 ];
 

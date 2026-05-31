@@ -1,0 +1,41 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).",
+      "type": "minor"
+    },
+    {
+      "packageName": "@grackle-ai/common",
+      "comment": "Add Agent proto messages and GrackleOrchestration agent RPCs (#1417).",
+      "type": "minor"
+    },
+    {
+      "packageName": "@grackle-ai/core",
+      "comment": "Add agent.created/updated/deleted event types (#1417).",
+      "type": "minor"
+    },
+    {
+      "packageName": "@grackle-ai/database",
+      "comment": "Add agents table and agent-store CRUD (#1417).",
+      "type": "minor"
+    },
+    {
+      "packageName": "@grackle-ai/powerline",
+      "comment": "Lockstep version bump for the Agent entity feature (#1417).",
+      "type": "minor"
+    },
+    {
+      "packageName": "@grackle-ai/server",
+      "comment": "Register agent RPC handlers in the orchestration service collector (#1417).",
+      "type": "minor"
+    },
+    {
+      "packageName": "@grackle-ai/web-server",
+      "comment": "Lockstep version bump for the Agent entity feature (#1417).",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "nickpape@outlook.com"
+}

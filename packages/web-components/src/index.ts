@@ -134,6 +134,10 @@ export { PersonaManager } from "./components/personas/PersonaManager.js";
 export { McpToolSelector } from "./components/personas/McpToolSelector.js";
 export type { PersonaManagerProps } from "./components/personas/PersonaManager.js";
 
+// Agents (#1417)
+export { AgentManager } from "./components/agents/AgentManager.js";
+export type { AgentManagerProps } from "./components/agents/AgentManager.js";
+
 // Schedules
 export { ScheduleManager } from "./components/schedules/ScheduleManager.js";
 export type { ScheduleManagerProps } from "./components/schedules/ScheduleManager.js";
@@ -204,6 +208,7 @@ export type {
   Codespace,
   DockerContainer,
   PersonaData,
+  AgentData,
   ScheduleData,
   ScheduleUpdate,
   UseSchedulesResult,
@@ -225,6 +230,8 @@ export type {
   UseCodespacesResult,
   UseDockerContainersResult,
   UsePersonasResult,
+  UseAgentsResult,
+  UpdateAgentFields,
   UsePluginsResult,
   PluginData,
   StreamData,
@@ -282,6 +289,7 @@ export {
   PERSONAS_URL,
   NEW_PERSONA_URL,
   personaUrl,
+  agentUrl,
   SCHEDULES_URL,
   NEW_SCHEDULE_URL,
   scheduleUrl,

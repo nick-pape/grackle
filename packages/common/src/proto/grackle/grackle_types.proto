@@ -832,6 +832,43 @@ message UpdatePersonaRequest {
   AllowedMcpTools allowed_mcp_tools = 13; // Presence-aware wrapper (absent = keep, empty = clear, populated = replace)
 }
 
+// ─── Agents ────────────────────────────────────────────────
+
+// A standing Agent: the context-axis unit of the Code/Claw split (#1412).
+// Phase 0 (#1417) is a deliberately minimal, dead entity — no lifecycle,
+// heartbeat, or autonomous spawning (those arrive in #1418/#1419). It holds
+// no spawn config of its own, only a reference to a primary persona. The
+// persona→agent relationship is 1:N (many agents may share one persona).
+message Agent {
+  string id = 1;
+  string name = 2;
+  string avatar = 3; // Emoji, URL, or base64 data URI ("" = monogram fallback)
+  string primary_persona_id = 4; // Reference into the Persona Library (#1413)
+  string created_at = 5;
+  string updated_at = 6;
+}
+
+message AgentList {
+  repeated Agent agents = 1;
+}
+
+message AgentId {
+  string id = 1;
+}
+
+message CreateAgentRequest {
+  string name = 1;
+  string avatar = 2;
+  string primary_persona_id = 3;
+}
+
+message UpdateAgentRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string avatar = 3;
+  optional string primary_persona_id = 4;
+}
+
 // ─── Schedules ─────────────────────────────────────────────
 
 message Schedule {

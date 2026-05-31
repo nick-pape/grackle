@@ -1,0 +1,42 @@
+import { useParams, useNavigate } from "react-router";
+import { useGrackle } from "../context/GrackleContext.js";
+import { AgentManager, agentUrl } from "@grackle-ai/web-components";
+import type { JSX } from "react";
+
+/**
+ * Agent create / detail page (#1417). Renders the {@link AgentManager}
+ * component wired to live agent + persona data and CRUD actions from
+ * {@link useGrackle}. With no `:agentId` (the `/agents/new` route) it shows the
+ * create form; with a valid id it shows the read-only detail view.
+ *
+ * @module
+ */
+export function AgentDetailPage(): JSX.Element {
+  const { agentId } = useParams<{ agentId: string }>();
+  const navigate = useNavigate();
+  const {
+    agents: { agents, createAgent, deleteAgent },
+    personas: { personas },
+  } = useGrackle();
+
+  return (
+    <AgentManager
+      agents={agents}
+      personas={personas}
+      agentId={agentId}
+      onCreate={(name, avatar, primaryPersonaId) => {
+        createAgent(name, avatar, primaryPersonaId).then(
+          (created) => navigate(agentUrl(created.id)),
+          () => {},
+        );
+      }}
+      onDelete={(id) => {
+        deleteAgent(id).then(
+          () => navigate("/"),
+          () => {},
+        );
+      }}
+      onNavigateBack={() => navigate("/")}
+    />
+  );
+}

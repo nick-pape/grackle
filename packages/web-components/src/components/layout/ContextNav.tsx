@@ -1,5 +1,5 @@
 import { useCallback, useRef, type JSX, type KeyboardEvent, type ReactNode } from "react";
-import { Code2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Code2, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import { ICON_LG } from "../../utils/iconSize.js";
 import { Tooltip } from "../display/Tooltip.js";
 import styles from "./ContextNav.module.scss";
@@ -52,6 +52,8 @@ export interface ContextNavProps {
   collapsed?: boolean;
   /** Called when the user toggles the collapsed state. Omit to hide the toggle. */
   onToggleCollapsed?: () => void;
+  /** Called when the user clicks "Create Agent". Omit to hide the affordance. */
+  onCreateAgent?: () => void;
 }
 
 /**
@@ -70,7 +72,9 @@ export function ContextNav({
   onSelectContext,
   collapsed = false,
   onToggleCollapsed,
+  onCreateAgent,
 }: ContextNavProps): JSX.Element {
+  const createAgentLabel = "Create Agent";
   const tabListRef = useRef<HTMLDivElement>(null);
 
   const handleKeyDown = useCallback(
@@ -152,6 +156,36 @@ export function ContextNav({
           );
         })}
       </div>
+
+      {onCreateAgent &&
+        (collapsed ? (
+          <Tooltip text={createAgentLabel} placement="right" inline={false}>
+            <button
+              type="button"
+              className={styles.createAgent}
+              onClick={onCreateAgent}
+              aria-label={createAgentLabel}
+              data-testid="context-nav-create-agent"
+            >
+              <span className={styles.tabIcon} aria-hidden="true">
+                <Plus size={ICON_LG} />
+              </span>
+            </button>
+          </Tooltip>
+        ) : (
+          <button
+            type="button"
+            className={styles.createAgent}
+            onClick={onCreateAgent}
+            aria-label={createAgentLabel}
+            data-testid="context-nav-create-agent"
+          >
+            <span className={styles.tabIcon} aria-hidden="true">
+              <Plus size={ICON_LG} />
+            </span>
+            <span className={styles.tabLabel}>{createAgentLabel}</span>
+          </button>
+        ))}
 
       {onToggleCollapsed && (
         <button

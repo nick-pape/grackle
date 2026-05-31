@@ -145,6 +145,11 @@ export function personaUrl(personaId: string): string {
   return `/personas/${encodeURIComponent(personaId)}`;
 }
 
+/** Build URL for an agent's view (#1417). */
+export function agentUrl(agentId: string): string {
+  return `/agents/${encodeURIComponent(agentId)}`;
+}
+
 /** URL for the schedule management tab. */
 export const SCHEDULES_URL: string = "/settings/schedules";
 

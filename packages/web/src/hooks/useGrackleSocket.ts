@@ -22,6 +22,7 @@ import { useCredentials } from "./useCredentials.js";
 import { useCodespaces } from "./useCodespaces.js";
 import { useDockerContainers } from "./useDockerContainers.js";
 import { usePersonas } from "./usePersonas.js";
+import { useAgents } from "./useAgents.js";
 import { useSchedules } from "./useSchedules.js";
 import { useKnowledge } from "./useKnowledge.js";
 import { useNotifications } from "./useNotifications.js";
@@ -98,6 +99,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const codespacesHook = useCodespaces();
   const dockerContainersHook = useDockerContainers();
   const personasHook = usePersonas();
+  const agentsHook = useAgents();
   const schedulesHook = useSchedules();
   const knowledgeHook = useKnowledge();
   const notificationsHook = useNotifications();
@@ -120,6 +122,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     ...(activeHookKeys.has("codespaces") ? [codespacesHook.domainHook] : []),
     ...(activeHookKeys.has("dockerContainers") ? [dockerContainersHook.domainHook] : []),
     ...(activeHookKeys.has("personas") ? [personasHook.domainHook] : []),
+    ...(activeHookKeys.has("agents") ? [agentsHook.domainHook] : []),
     ...(activeHookKeys.has("schedules") ? [schedulesHook.domainHook] : []),
     ...(activeHookKeys.has("knowledge") ? [knowledgeHook.domainHook] : []),
     ...(activeHookKeys.has("notifications") ? [notificationsHook.domainHook] : []),
@@ -374,6 +377,14 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       updatePersona: personasHook.updatePersona,
       deletePersona: personasHook.deletePersona,
       domainHook: personasHook.domainHook,
+    },
+    agents: {
+      agents: agentsHook.agents,
+      agentsLoading: agentsHook.agentsLoading,
+      createAgent: agentsHook.createAgent,
+      updateAgent: agentsHook.updateAgent,
+      deleteAgent: agentsHook.deleteAgent,
+      domainHook: agentsHook.domainHook,
     },
     schedules: {
       schedules: schedulesHook.schedules,

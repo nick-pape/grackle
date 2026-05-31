@@ -6,6 +6,7 @@ import {
   workspaceStore,
   taskStore,
   personaStore,
+  agentStore,
   componentStore,
   escalationStore,
   workspaceEnvironmentLinkStore,
@@ -150,6 +151,18 @@ export function safeParseJson<T>(value: string | undefined, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+/** Convert an agent database row to an Agent proto message (#1417). */
+export function agentRowToProto(row: agentStore.AgentRow): grackle.Agent {
+  return create(grackle.AgentSchema, {
+    id: row.id,
+    name: row.name,
+    avatar: row.avatar,
+    primaryPersonaId: row.primaryPersonaId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  });
 }
 
 /** Convert a persona database row to a Persona proto message. */

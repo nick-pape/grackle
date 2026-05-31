@@ -211,6 +211,25 @@ export interface PersonaData {
   allowedMcpTools: string[];
 }
 
+/**
+ * A standing agent as the web UI consumes it (#1417). Phase 0: a minimal
+ * context-axis entity with no lifecycle — identity plus a primary persona.
+ */
+export interface AgentData {
+  id: string;
+  name: string;
+  /** Emoji, image URL, or base64 data URI. Empty string renders a monogram. */
+  avatar: string;
+  primaryPersonaId: string;
+}
+
+/** Fields accepted when updating an agent. Omitted fields are left unchanged. */
+export interface UpdateAgentFields {
+  name?: string;
+  avatar?: string;
+  primaryPersonaId?: string;
+}
+
 /** Provisioning progress state for a single environment. */
 export interface ProvisionStatus {
   stage: string;
@@ -549,6 +568,26 @@ export interface UsePersonasResult {
   ) => Promise<PersonaData>;
   /** Delete a persona by ID. */
   deletePersona: (personaId: string) => Promise<void>;
+  /** Handle a domain event from the event bus. Returns `true` if handled. */
+  handleEvent: (event: GrackleEvent) => boolean;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
+}
+
+/** Values returned by the agents domain hook (#1417). */
+export interface UseAgentsResult {
+  /** All known agents. */
+  agents: AgentData[];
+  /** Whether the agent list is currently being loaded. */
+  agentsLoading: boolean;
+  /** Request the current agent list from the server. */
+  loadAgents: () => Promise<void>;
+  /** Create a new agent. */
+  createAgent: (name: string, avatar?: string, primaryPersonaId?: string) => Promise<AgentData>;
+  /** Update an existing agent; omitted fields are preserved. */
+  updateAgent: (id: string, updates: UpdateAgentFields) => Promise<AgentData>;
+  /** Delete an agent by ID. */
+  deleteAgent: (id: string) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Lifecycle hook for connect/disconnect/event routing. */

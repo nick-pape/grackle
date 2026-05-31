@@ -11,6 +11,8 @@ import {
   ContextNav,
   CONTEXTS,
   DEFAULT_CONTEXT_ID,
+  agentUrl,
+  type ContextItem,
   BottomStatusBar,
   ToastContainer,
   SplashScreen,
@@ -26,6 +28,7 @@ import {
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   Suspense,
@@ -89,6 +92,9 @@ const KnowledgePage: LazyExoticComponent<() => JSX.Element> = lazy(() =>
 const SessionsListPage: LazyExoticComponent<() => JSX.Element> = lazy(() =>
   import("./pages/SessionsListPage.js").then((m) => ({ default: m.SessionsListPage })),
 );
+const AgentDetailPage: LazyExoticComponent<() => JSX.Element> = lazy(() =>
+  import("./pages/AgentDetailPage.js").then((m) => ({ default: m.AgentDetailPage })),
+);
 
 /** Build-time flag set when producing a static demo build (see vite.config.ts). */
 declare const __DEMO_MODE__: boolean;
@@ -98,6 +104,46 @@ declare const __BASE_URL__: string;
 
 /** Matches the `$mobile` breakpoint in `packages/web-components/src/styles/mixins.scss`. */
 const MOBILE_MAX_WIDTH_PX: number = 768;
+
+/** Prefix marking a {@link ContextItem} id as an agent context (#1417). */
+const AGENT_CONTEXT_PREFIX: string = "agent:";
+
+/** Pixel size of an agent's avatar glyph/image in the context rail. */
+const AGENT_ICON_SIZE_PX: number = 18;
+
+/** True when an avatar string points to an image rather than an inline glyph. */
+function isImageAvatar(avatar: string): boolean {
+  return (
+    avatar.startsWith("http://") ||
+    avatar.startsWith("https://") ||
+    avatar.startsWith("/") ||
+    avatar.startsWith("data:")
+  );
+}
+
+/** Render an agent's rail icon: image, emoji glyph, or a name-derived monogram. */
+function renderAgentIcon(name: string, avatar: string): JSX.Element {
+  if (avatar && isImageAvatar(avatar)) {
+    return (
+      <img
+        src={avatar}
+        alt=""
+        style={{
+          width: AGENT_ICON_SIZE_PX,
+          height: AGENT_ICON_SIZE_PX,
+          borderRadius: 4,
+          objectFit: "cover",
+        }}
+      />
+    );
+  }
+  const glyph = avatar || (name.trim()[0] ?? "?").toUpperCase();
+  return (
+    <span style={{ fontSize: AGENT_ICON_SIZE_PX, lineHeight: 1 }} aria-hidden="true">
+      {glyph}
+    </span>
+  );
+}
 
 /** Whether the app is running in mock mode (`?mock` query parameter or demo build). */
 const IS_MOCK_MODE: boolean =
@@ -111,9 +157,11 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
     environments: { environments },
     sessions: { sessions },
     tasks: { tasks },
+    agents: { agents },
   } = useGrackle();
   const { toasts, dismissToast } = useToast();
   const location = useLocation();
+  const navigate = useAppNavigate();
   const sidebarContent = useSidebarContent();
   const hasSidebar = sidebarContent !== undefined;
 
@@ -144,10 +192,51 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
     };
   }, []);
 
-  // Selecting a context is inert in Phase 0 (Code is the only/default context);
-  // it just dismisses the mobile drawer. Agent contexts + real switching arrive
-  // in #1417.
-  const handleSelectContext = useCallback(() => setContextNavOpen(false), []);
+  // Context axis = the static `Code` context plus one row per standing agent
+  // (#1417). Agent rows are sourced dynamically from the agent store.
+  const contexts: ContextItem[] = useMemo(
+    () => [
+      ...CONTEXTS,
+      ...agents.map((a) => ({
+        id: `${AGENT_CONTEXT_PREFIX}${a.id}`,
+        label: a.name,
+        icon: renderAgentIcon(a.name, a.avatar),
+        testId: `context-agent-${a.id}`,
+      })),
+    ],
+    [agents],
+  );
+
+  // Derive the active context from the current route: `/agents/:id` activates
+  // that agent row, everything else falls back to the default `Code` context.
+  const agentRouteMatch = location.pathname.match(/^\/agents\/([^/]+)$/);
+  const activeAgentId =
+    agentRouteMatch && agentRouteMatch[1] !== "new"
+      ? decodeURIComponent(agentRouteMatch[1])
+      : undefined;
+  const activeContextId = activeAgentId
+    ? `${AGENT_CONTEXT_PREFIX}${activeAgentId}`
+    : DEFAULT_CONTEXT_ID;
+
+  // Selecting a context navigates: agent rows open the agent view; the `Code`
+  // context returns to the default landing route. Always dismiss the mobile drawer.
+  const handleSelectContext = useCallback(
+    (id: string) => {
+      setContextNavOpen(false);
+      if (id.startsWith(AGENT_CONTEXT_PREFIX)) {
+        navigate(agentUrl(id.slice(AGENT_CONTEXT_PREFIX.length)));
+      } else if (id === DEFAULT_CONTEXT_ID) {
+        navigate("/");
+      }
+    },
+    [navigate],
+  );
+
+  // The "+ Create Agent" affordance opens the create form.
+  const handleCreateAgent = useCallback(() => {
+    setContextNavOpen(false);
+    navigate("/agents/new");
+  }, [navigate]);
 
   // Auto-close both mobile drawers on navigation
   useEffect(() => {
@@ -187,9 +276,10 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
       <div className={styles.shell}>
         <div className={styles.contextNavWrapper} data-context-nav-open={contextNavOpen}>
           <ContextNav
-            contexts={CONTEXTS}
-            activeContextId={DEFAULT_CONTEXT_ID}
+            contexts={contexts}
+            activeContextId={activeContextId}
             onSelectContext={handleSelectContext}
+            onCreateAgent={handleCreateAgent}
             collapsed={isMobile ? false : contextNavCollapsed}
             onToggleCollapsed={isMobile ? undefined : toggleContextNavCollapsed}
           />
@@ -404,6 +494,23 @@ function AppRoutes(): JSX.Element {
             <Route path="personas" element={<PersonaLibraryPage />} />
             <Route path="personas/new" element={<PersonaDetailPage />} />
             <Route path="personas/:personaId" element={<PersonaDetailPage />} />
+            {/* Agents — context-axis entities (#1417). Create form + read-only view. */}
+            <Route
+              path="agents/new"
+              element={
+                <Suspense fallback={<SplashScreen />}>
+                  <AgentDetailPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="agents/:agentId"
+              element={
+                <Suspense fallback={<SplashScreen />}>
+                  <AgentDetailPage />
+                </Suspense>
+              }
+            />
           </>
         )}
 
