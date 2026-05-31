@@ -295,3 +295,18 @@ export const WorkbenchAndFleetOnly: Story = {
     await expect(canvas.queryByRole("tab", { name: /Settings/ })).not.toBeInTheDocument();
   },
 };
+
+/**
+ * The composition the app actually ships (#1415): the view bar renders only
+ * `workbench` + `global` tabs, so Coordination (the lone `fleet` tab) is absent
+ * — it now lives at the fleet altitude in the context rail.
+ */
+export const WorkbenchAndGlobalOnly: Story = {
+  args: { groups: ["workbench", "global"] },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Environments/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Settings/ })).toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /Coordination/ })).not.toBeInTheDocument();
+  },
+};

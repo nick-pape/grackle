@@ -11,6 +11,7 @@ import {
   ContextNav,
   CONTEXTS,
   DEFAULT_CONTEXT_ID,
+  getActiveView,
   BottomStatusBar,
   ToastContainer,
   SplashScreen,
@@ -22,10 +23,12 @@ import {
   personaUrl,
   useAppNavigate,
   type AppTab,
+  type ContextItem,
 } from "@grackle-ai/web-components";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   Suspense,
@@ -114,6 +117,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   } = useGrackle();
   const { toasts, dismissToast } = useToast();
   const location = useLocation();
+  const navigate = useAppNavigate();
   const sidebarContent = useSidebarContent();
   const hasSidebar = sidebarContent !== undefined;
 
@@ -148,6 +152,28 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   // it just dismisses the mobile drawer. Agent contexts + real switching arrive
   // in #1417.
   const handleSelectContext = useCallback(() => setContextNavOpen(false), []);
+
+  // Fleet/overview altitude (#1415): the `fleet`-group tabs (Coordination today)
+  // are pulled out of the view bar and rendered at the top of the context rail.
+  // Data-driven from `tabs`, so any future `fleet` tab appears here automatically.
+  const fleetTabs = useMemo(() => tabs.filter((t) => t.group === "fleet"), [tabs]);
+  const fleetItems = useMemo<ContextItem[]>(
+    () => fleetTabs.map((t) => ({ id: t.view, label: t.label, icon: t.icon, testId: t.testId })),
+    [fleetTabs],
+  );
+  const activeView = getActiveView(location.pathname);
+  const activeFleetId = fleetTabs.some((t) => t.view === activeView) ? activeView : undefined;
+  const handleSelectFleet = useCallback(
+    (id: string) => {
+      const tab = fleetTabs.find((t) => t.view === id);
+      if (tab) {
+        navigate(tab.route);
+      }
+      // Mirror handleSelectContext: dismiss the mobile context drawer on select.
+      setContextNavOpen(false);
+    },
+    [fleetTabs, navigate],
+  );
 
   // Auto-close both mobile drawers on navigation
   useEffect(() => {
@@ -190,6 +216,9 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
             contexts={CONTEXTS}
             activeContextId={DEFAULT_CONTEXT_ID}
             onSelectContext={handleSelectContext}
+            fleetItems={fleetItems}
+            activeFleetId={activeFleetId}
+            onSelectFleet={handleSelectFleet}
             collapsed={isMobile ? false : contextNavCollapsed}
             onToggleCollapsed={isMobile ? undefined : toggleContextNavCollapsed}
           />
@@ -202,7 +231,9 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
           />
         )}
         <div className={styles.contextPane}>
-          <AppNav tabs={tabs} />
+          {/* Fleet tabs (Coordination) live at the fleet altitude in the context
+              rail (#1415); the view bar shows only workbench + global tabs. */}
+          <AppNav tabs={tabs} groups={["workbench", "global"]} />
           <div className={styles.body}>
             {hasSidebar && (
               <div className={styles.sidebarWrapper} data-sidebar-open={sidebarOpen}>

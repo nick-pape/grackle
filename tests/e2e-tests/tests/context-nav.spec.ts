@@ -30,6 +30,42 @@ test.describe("Context nav (context axis)", { tag: ["@webui", "@smoke"] }, () =>
     await expect(page.getByTestId("sidebar-tab-settings")).toBeVisible();
   });
 
+  test("Coordination lives at the fleet altitude (context rail), not the view bar", async ({
+    appPage,
+  }) => {
+    const page = appPage;
+    await page.goto("/");
+    await waitForConnected(page);
+
+    // Fleet altitude (#1415): Coordination is in the context rail...
+    await expect(
+      page.getByTestId("context-nav").getByTestId("sidebar-tab-coordination"),
+    ).toBeVisible();
+    // ...and NOT in the horizontal view bar.
+    await expect(
+      page.getByTestId("sidebar-nav").getByTestId("sidebar-tab-coordination"),
+    ).toHaveCount(0);
+
+    // Selecting it from the rail navigates to the Coordination page.
+    await page.getByTestId("context-nav").getByTestId("sidebar-tab-coordination").click();
+    await expect(page).toHaveURL(/\/coordination/);
+    await expect(page.getByTestId("coordination-page")).toBeVisible();
+  });
+
+  test("Coordination stays reachable when the rail is collapsed", async ({ appPage }) => {
+    const page = appPage;
+    await page.goto("/");
+    await waitForConnected(page);
+
+    await page.getByTestId("context-nav-toggle").click();
+    await expect(page.getByTestId("context-nav")).toHaveAttribute("data-collapsed", "true");
+
+    // Icon-only, but still present and navigable.
+    await page.getByTestId("context-nav").getByTestId("sidebar-tab-coordination").click();
+    await expect(page).toHaveURL(/\/coordination/);
+    await expect(page.getByTestId("coordination-page")).toBeVisible();
+  });
+
   test("workbench views remain reachable through the view tabs", async ({ appPage }) => {
     const page = appPage;
     await page.goto("/");
@@ -97,6 +133,22 @@ test.describe("Context nav drawer (mobile)", { tag: ["@webui"] }, () => {
     await expect(rail).toBeVisible();
 
     await page.keyboard.press("Escape");
+    await expect(rail).not.toBeVisible({ timeout: 5_000 });
+  });
+
+  test("selecting Coordination from the drawer navigates and closes it", async ({ appPage }) => {
+    const page = appPage;
+    await page.goto("/");
+    await waitForConnected(page);
+
+    const rail = page.getByTestId("context-nav");
+    await page.getByRole("button", { name: "Toggle contexts" }).click();
+    await expect(rail).toBeVisible();
+
+    await rail.getByTestId("sidebar-tab-coordination").click();
+    await expect(page).toHaveURL(/\/coordination/);
+    await expect(page.getByTestId("coordination-page")).toBeVisible();
+    // Navigation dismisses the drawer.
     await expect(rail).not.toBeVisible({ timeout: 5_000 });
   });
 });
