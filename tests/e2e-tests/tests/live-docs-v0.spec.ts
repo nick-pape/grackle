@@ -85,10 +85,10 @@ test.describe("Live docs v0 viewer", { tag: ["@session"] }, () => {
       // EventStream wires onOpenDocument. Wait for Stub runtime text then reload
       // once to ensure the full session record (with environmentId) is loaded.
       await page.goto(`/sessions/${sessionId}`);
-      await expect(page.getByText("Working on the plan.")).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText("Working on the plan.").first()).toBeVisible({ timeout: 20_000 });
       // Reload forces loadSessions() on reconnect, populating environmentId.
       await page.reload();
-      await expect(page.getByText("Working on the plan.")).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText("Working on the plan.").first()).toBeVisible({ timeout: 20_000 });
       const fileLink = page.getByTestId("tool-card-file-link").first();
       await expect(fileLink).toBeVisible({ timeout: 20_000 });
 
