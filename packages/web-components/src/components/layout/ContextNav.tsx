@@ -20,6 +20,13 @@ export interface ContextItem {
 export const DEFAULT_CONTEXT_ID: string = "code";
 
 /**
+ * Accessible name shared by the `<nav>` landmark and its `tablist`. The landmark
+ * names the region; the tablist needs its own name so assistive tech announces a
+ * named tab list (and so `getByRole("tablist")` can find it by label).
+ */
+const CONTEXT_NAV_LABEL: string = "Context navigation";
+
+/**
  * Canonical list of contexts, co-located with the component like {@link TABS}
  * so icons/ids/test-ids stay a single source of truth. Phase 0 ships only
  * `Code` (#1414); Agent rows are appended dynamically in #1417.
@@ -102,7 +109,7 @@ export function ContextNav({
   return (
     <nav
       className={styles.rail}
-      aria-label="Context navigation"
+      aria-label={CONTEXT_NAV_LABEL}
       data-testid="context-nav"
       data-collapsed={collapsed}
     >
@@ -110,6 +117,7 @@ export function ContextNav({
         className={styles.tabList}
         ref={tabListRef}
         role="tablist"
+        aria-label={CONTEXT_NAV_LABEL}
         aria-orientation="vertical"
         onKeyDown={handleKeyDown}
       >
