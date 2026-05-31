@@ -11,7 +11,9 @@ import {
   ContextNav,
   CONTEXTS,
   DEFAULT_CONTEXT_ID,
+  agentUrl,
   getActiveView,
+  isImageAvatar,
   BottomStatusBar,
   DocPane,
   ToastContainer,
@@ -71,6 +73,7 @@ import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.
 import { SettingsGitHubAccountsTab } from "./pages/settings/SettingsGitHubAccountsTab.js";
 import { PersonaLibraryPage } from "./pages/PersonaLibraryPage.js";
 import { PersonaDetailPage } from "./pages/PersonaDetailPage.js";
+import { AgentDetailPage } from "./pages/AgentDetailPage.js";
 import { SchedulesPage } from "./pages/SchedulesPage.js";
 import { ScheduleDetailPage } from "./pages/ScheduleDetailPage.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
@@ -104,6 +107,38 @@ declare const __BASE_URL__: string;
 /** Matches the `$mobile` breakpoint in `packages/web-components/src/styles/mixins.scss`. */
 const MOBILE_MAX_WIDTH_PX: number = 768;
 
+/** Prefix marking a {@link ContextItem} id as an agent context (#1417). */
+const AGENT_CONTEXT_PREFIX: string = "agent:";
+
+/** Pixel size of an agent's avatar glyph/image in the context rail. */
+const AGENT_ICON_SIZE_PX: number = 18;
+
+/** Render an agent's rail icon: image, emoji glyph, or a name-derived monogram. */
+function renderAgentIcon(name: string, avatar: string): JSX.Element {
+  if (avatar && isImageAvatar(avatar)) {
+    return (
+      <img
+        src={avatar}
+        alt=""
+        referrerPolicy="no-referrer"
+        loading="lazy"
+        style={{
+          width: AGENT_ICON_SIZE_PX,
+          height: AGENT_ICON_SIZE_PX,
+          borderRadius: 4,
+          objectFit: "cover",
+        }}
+      />
+    );
+  }
+  const glyph = avatar || (name.trim().charAt(0) || "?").toUpperCase();
+  return (
+    <span style={{ fontSize: AGENT_ICON_SIZE_PX, lineHeight: 1 }} aria-hidden="true">
+      {glyph}
+    </span>
+  );
+}
+
 /** Whether the app is running in mock mode (`?mock` query parameter or demo build). */
 const IS_MOCK_MODE: boolean =
   __DEMO_MODE__ ||
@@ -116,6 +151,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
     environments: { environments },
     sessions: { sessions },
     tasks: { tasks },
+    agents: { agents },
     documents,
     resources,
   } = useGrackle();
@@ -152,6 +188,58 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
     };
   }, []);
 
+  // Context axis = the static `Code` context plus one row per standing agent
+  // (#1417). Agent rows are sourced dynamically from the agent store.
+  const contexts: ContextItem[] = useMemo(
+    () => [
+      ...CONTEXTS,
+      ...agents.map((a) => ({
+        id: `${AGENT_CONTEXT_PREFIX}${a.id}`,
+        label: a.name,
+        icon: renderAgentIcon(a.name, a.avatar),
+        testId: `context-agent-${a.id}`,
+      })),
+    ],
+    [agents],
+  );
+
+  // Derive the active context from the route: `/agents/:id` activates that agent
+  // row; everything else falls back to the default `Code` context.
+  // `decodeURIComponent` throws on malformed percent-encoding (e.g. `/agents/%E0`),
+  // which would otherwise crash the shell while deriving `activeContextId`.
+  const agentRouteMatch = location.pathname.match(/^\/agents\/([^/]+)$/);
+  let activeAgentId: string | undefined;
+  if (agentRouteMatch && agentRouteMatch[1] !== "new") {
+    try {
+      activeAgentId = decodeURIComponent(agentRouteMatch[1]);
+    } catch {
+      activeAgentId = undefined;
+    }
+  }
+  const activeContextId = activeAgentId
+    ? `${AGENT_CONTEXT_PREFIX}${activeAgentId}`
+    : DEFAULT_CONTEXT_ID;
+
+  // Selecting a context navigates: agent rows open the agent view; `Code` returns
+  // to the default landing route. Always dismiss the mobile drawer.
+  const handleSelectContext = useCallback(
+    (id: string) => {
+      setContextNavOpen(false);
+      if (id.startsWith(AGENT_CONTEXT_PREFIX)) {
+        navigate(agentUrl(id.slice(AGENT_CONTEXT_PREFIX.length)));
+      } else if (id === DEFAULT_CONTEXT_ID) {
+        navigate("/");
+      }
+    },
+    [navigate],
+  );
+
+  // The "+ Create Agent" affordance opens the create form.
+  const handleCreateAgent = useCallback(() => {
+    setContextNavOpen(false);
+    navigate("/agents/new");
+  }, [navigate]);
+
   // Fleet/overview altitude (#1415): the `fleet`-group tabs (Coordination today)
   // are pulled out of the view bar and rendered at the top of the context rail.
   // Data-driven from `tabs`, so any future `fleet` tab appears here automatically.
@@ -163,12 +251,6 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   const activeView = getActiveView(location.pathname);
   const activeFleetId = fleetTabs.some((t) => t.view === activeView) ? activeView : undefined;
 
-  const handleSelectContext = useCallback(() => {
-    if (activeFleetId) {
-      navigate("/");
-    }
-    setContextNavOpen(false);
-  }, [activeFleetId, navigate]);
   const handleSelectFleet = useCallback(
     (id: string) => {
       const tab = fleetTabs.find((t) => t.view === id);
@@ -219,9 +301,10 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
       <div className={styles.shell}>
         <div className={styles.contextNavWrapper} data-context-nav-open={contextNavOpen}>
           <ContextNav
-            contexts={CONTEXTS}
-            activeContextId={DEFAULT_CONTEXT_ID}
+            contexts={contexts}
+            activeContextId={activeContextId}
             onSelectContext={handleSelectContext}
+            onCreateAgent={handleCreateAgent}
             fleetItems={fleetItems}
             activeFleetId={activeFleetId}
             onSelectFleet={handleSelectFleet}
@@ -464,6 +547,9 @@ function AppRoutes(): JSX.Element {
             <Route path="personas" element={<PersonaLibraryPage />} />
             <Route path="personas/new" element={<PersonaDetailPage />} />
             <Route path="personas/:personaId" element={<PersonaDetailPage />} />
+            {/* Agents — context-axis entities (#1417). Create form + read-only view. */}
+            <Route path="agents/new" element={<AgentDetailPage />} />
+            <Route path="agents/:agentId" element={<AgentDetailPage />} />
           </>
         )}
 

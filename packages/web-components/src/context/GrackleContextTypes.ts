@@ -18,6 +18,7 @@ import type {
   UseCodespacesResult,
   UseDockerContainersResult,
   UsePersonasResult,
+  UseAgentsResult,
   UsePluginsResult,
   UseSchedulesResult,
   UseStreamsResult,
@@ -52,6 +53,8 @@ export interface UseGrackleSocketResult {
   dockerContainers: UseDockerContainersResult;
   /** Persona state and actions. */
   personas: Omit<UsePersonasResult, "handleEvent" | "loadPersonas">;
+  /** Agent state and actions (#1417). */
+  agents: Omit<UseAgentsResult, "handleEvent" | "loadAgents">;
   /** Schedule state and actions. */
   schedules: Omit<UseSchedulesResult, "handleEvent" | "loadSchedules">;
   /** IPC stream state and actions. */

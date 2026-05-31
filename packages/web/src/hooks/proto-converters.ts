@@ -26,6 +26,7 @@ import type {
   Codespace,
   DockerContainer,
   PersonaData,
+  AgentData,
   ScheduleData,
   UsageStats,
   StreamData,
@@ -202,6 +203,16 @@ export function protoToPersona(p: grackle.Persona): PersonaData {
     type: p.type || "agent",
     script: p.script,
     allowedMcpTools: [...p.allowedMcpTools],
+  };
+}
+
+/** Convert a proto Agent to the UI AgentData type (#1417). */
+export function protoToAgent(p: grackle.Agent): AgentData {
+  return {
+    id: p.id,
+    name: p.name,
+    avatar: p.avatar,
+    primaryPersonaId: p.primaryPersonaId,
   };
 }
 

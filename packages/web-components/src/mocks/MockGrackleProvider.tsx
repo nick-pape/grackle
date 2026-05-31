@@ -20,6 +20,7 @@ import type {
   Workspace,
   TokenInfo,
   PersonaData,
+  AgentData,
   ScheduleData,
   CredentialProviderConfig,
   DomainHook,
@@ -42,6 +43,7 @@ import {
   MOCK_TASKS,
   MOCK_TOKENS,
   MOCK_PERSONAS,
+  MOCK_AGENTS,
   MOCK_TASK_SESSIONS,
   MOCK_STREAM_SCENARIOS,
   MOCK_KNOWLEDGE_NODES,
@@ -97,6 +99,7 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
     goose: "off",
   });
   const [personas, setPersonas] = useState<PersonaData[]>(MOCK_PERSONAS);
+  const [agents, setAgents] = useState<AgentData[]>(MOCK_AGENTS);
   const [schedules, setSchedules] = useState<ScheduleData[]>([]);
   const [taskSessions] = useState<Record<string, Session[]>>(MOCK_TASK_SESSIONS);
   const [appDefaultPersonaId, setAppDefaultPersonaIdState] = useState<string>("");
@@ -1097,6 +1100,39 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         deletePersona: async (personaId: string) => {
           console.log("[MockGrackle] deletePersona", personaId);
           setPersonas((prev) => prev.filter((p) => p.id !== personaId));
+        },
+        domainHook: NOOP_DOMAIN_HOOK,
+      },
+
+      agents: {
+        agents,
+        agentsLoading: false,
+        loadAgents: async () => {},
+        createAgent: async (name: string, avatar?: string, primaryPersonaId?: string) => {
+          console.log("[MockGrackle] createAgent", { name });
+          const created: AgentData = {
+            id: `mock-agent-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+            name,
+            avatar: avatar ?? "",
+            primaryPersonaId: primaryPersonaId ?? "",
+          };
+          setAgents((prev) => [...prev, created]);
+          return created;
+        },
+        updateAgent: async (id: string, updates) => {
+          const existing = agents.find((a) => a.id === id);
+          if (!existing) {
+            throw new Error(`Agent not found: ${id}`);
+          }
+          const defined = Object.fromEntries(
+            Object.entries(updates).filter(([, v]) => v !== undefined),
+          );
+          const updated: AgentData = { ...existing, ...defined };
+          setAgents((prev) => prev.map((a) => (a.id === id ? updated : a)));
+          return updated;
+        },
+        deleteAgent: async (id: string) => {
+          setAgents((prev) => prev.filter((a) => a.id !== id));
         },
         domainHook: NOOP_DOMAIN_HOOK,
       },

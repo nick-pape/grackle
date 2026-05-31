@@ -50,6 +50,16 @@ const AddGitHubAccountRequestSchema: GenMessage<AddGitHubAccountRequest>;
 export const ADMIN_MCP_TOOLS: readonly string[];
 
 // @public
+type Agent = Message<"grackle.Agent"> & {
+    id: string;
+    name: string;
+    avatar: string;
+    primaryPersonaId: string;
+    createdAt: string;
+    updatedAt: string;
+};
+
+// @public
 type AgentEvent = Message<"grackle.powerline.AgentEvent"> & {
     sessionId: string;
     type: string;
@@ -79,6 +89,25 @@ const AgentEventSchema: GenMessage<AgentEvent>;
 
 // @public
 export type AgentEventType = "text" | "tool_use" | "tool_result" | "error" | "status" | "system" | "runtime_session_id" | "usage" | "turn_started" | "turn_complete" | "input_needed";
+
+// @public
+type AgentId = Message<"grackle.AgentId"> & {
+    id: string;
+};
+
+// @public
+const AgentIdSchema: GenMessage<AgentId>;
+
+// @public
+type AgentList = Message<"grackle.AgentList"> & {
+    agents: Agent[];
+};
+
+// @public
+const AgentListSchema: GenMessage<AgentList>;
+
+// @public
+const AgentSchema: GenMessage<Agent>;
 
 // @public
 export const ALL_MCP_TOOL_NAMES: ReadonlySet<string>;
@@ -405,6 +434,16 @@ export type CopyButtonBuiltinProps = z.infer<typeof copyButtonPropsSchema>;
 export const copyButtonPropsSchema: z.ZodObject<{
     text: z.ZodString;
 }, z.core.$strip>;
+
+// @public
+type CreateAgentRequest = Message<"grackle.CreateAgentRequest"> & {
+    name: string;
+    avatar: string;
+    primaryPersonaId: string;
+};
+
+// @public
+const CreateAgentRequestSchema: GenMessage<CreateAgentRequest>;
 
 // @public
 type CreateCodespaceRequest = Message<"grackle.CreateCodespaceRequest"> & {
@@ -1187,6 +1226,16 @@ declare namespace grackle {
         CreatePersonaRequestSchema,
         UpdatePersonaRequest,
         UpdatePersonaRequestSchema,
+        Agent,
+        AgentSchema,
+        AgentList,
+        AgentListSchema,
+        AgentId,
+        AgentIdSchema,
+        CreateAgentRequest,
+        CreateAgentRequestSchema,
+        UpdateAgentRequest,
+        UpdateAgentRequestSchema,
         Schedule,
         ScheduleSchema,
         ScheduleId,
@@ -1765,6 +1814,31 @@ const GrackleOrchestration: GenService<{
     deletePersona: {
         methodKind: "unary";
         input: typeof PersonaIdSchema;
+        output: typeof EmptySchema;
+    };
+    listAgents: {
+        methodKind: "unary";
+        input: typeof EmptySchema;
+        output: typeof AgentListSchema;
+    };
+    createAgent: {
+        methodKind: "unary";
+        input: typeof CreateAgentRequestSchema;
+        output: typeof AgentSchema;
+    };
+    getAgent: {
+        methodKind: "unary";
+        input: typeof AgentIdSchema;
+        output: typeof AgentSchema;
+    };
+    updateAgent: {
+        methodKind: "unary";
+        input: typeof UpdateAgentRequestSchema;
+        output: typeof AgentSchema;
+    };
+    deleteAgent: {
+        methodKind: "unary";
+        input: typeof AgentIdSchema;
         output: typeof EmptySchema;
     };
     registerComponent: {
@@ -3452,6 +3526,17 @@ type UnwatchResourceRequest = Message<"grackle.UnwatchResourceRequest"> & {
 
 // @public
 const UnwatchResourceRequestSchema: GenMessage<UnwatchResourceRequest>;
+
+// @public
+type UpdateAgentRequest = Message<"grackle.UpdateAgentRequest"> & {
+    id: string;
+    name?: string;
+    avatar?: string;
+    primaryPersonaId?: string;
+};
+
+// @public
+const UpdateAgentRequestSchema: GenMessage<UpdateAgentRequest>;
 
 // @public
 type UpdateComponentRequest = Message<"grackle.UpdateComponentRequest"> & {

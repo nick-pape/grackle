@@ -319,6 +319,40 @@ describe("initDatabase", () => {
       .get() as Record<string, unknown> | undefined;
     expect(row).toMatchObject({ seq: "01A", session_id: "s1", type: "text", content: "hi" });
   });
+
+  it("migration v20 — creates agents table on upgrade from v19 (#1417)", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+
+    // Step 1: create the current schema so all tables exist.
+    initDatabase(mem);
+
+    // Step 2: simulate a pre-v20 database — drop the table and rewind.
+    mem.exec("DROP TABLE agents");
+    mem.pragma("user_version = 19");
+    expect(listTables(mem)).not.toContain("agents");
+
+    // Step 3: run migration.
+    initDatabase(mem);
+
+    // Assert: table exists and version advanced.
+    expect(listTables(mem)).toContain("agents");
+    expect(getUserVersion(mem)).toBe(CURRENT_VERSION);
+
+    // Assert: a row round-trips through the upgraded table.
+    mem
+      .prepare("INSERT INTO agents (id, name, avatar, primary_persona_id) VALUES (?, ?, ?, ?)")
+      .run("a1", "Refactor Bot", "B", "claude-code");
+    const row = mem
+      .prepare("SELECT id, name, avatar, primary_persona_id FROM agents WHERE id = 'a1'")
+      .get() as Record<string, unknown> | undefined;
+    expect(row).toMatchObject({
+      id: "a1",
+      name: "Refactor Bot",
+      avatar: "B",
+      primary_persona_id: "claude-code",
+    });
+  });
 });
 
 describe("checkDatabaseIntegrity", () => {

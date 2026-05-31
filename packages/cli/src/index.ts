@@ -5,6 +5,7 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { createRequire } from "node:module";
 import chalk from "chalk";
 import { registerEnvCommands } from "./commands/env.js";
+import { registerSessionVerbCommands } from "./commands/session-verbs.js";
 import { registerAgentCommands } from "./commands/agent.js";
 import { registerTokenCommands } from "./commands/token.js";
 import { registerLogCommands } from "./commands/logs.js";
@@ -57,6 +58,7 @@ program.addHelpText("after", (context) => {
 });
 
 registerEnvCommands(program);
+registerSessionVerbCommands(program);
 registerAgentCommands(program);
 registerTokenCommands(program);
 registerLogCommands(program);

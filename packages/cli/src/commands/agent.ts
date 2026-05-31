@@ -1,184 +1,126 @@
-import type { Command } from "commander";
+/**
+ * `grackle agent` command group — manage standing agents (#1417).
+ *
+ * Distinct from the top-level agent-session verbs (`spawn`, `status`, `kill`,
+ * …) in `session-verbs.ts`: this group is CRUD over the standing-Agent entity.
+ * Phase 0 — the Agent has no lifecycle yet, so these are plain create / list /
+ * show / edit / delete commands.
+ *
+ * @module
+ */
+
+import { Command } from "commander";
 import chalk from "chalk";
 import { createGrackleClients } from "../client.js";
-import { grackle, SESSION_STATUS } from "@grackle-ai/common";
-import Table from "cli-table3";
-import { formatTokens, formatCost } from "../format.js";
 
-/** Register agent-related commands: `spawn`, `resume`, `status`, `kill`, and `attach`. */
-export function registerAgentCommands(program: Command): void {
-  program
-    .command("spawn <env-id> <prompt>")
-    .description("Start a new agent session")
-    .option("--max-turns <n>", "Maximum turns", parseInt)
-    .option("--persona <id>", "Persona to use (falls back to app default)")
-    .option(
-      "--workspace <id>",
-      "Workspace to associate with this session (enables workspace-scoped MCP tools)",
-    )
-    .action(
-      async (
-        environmentId: string,
-        prompt: string,
-        opts: { maxTurns?: number; persona?: string; workspace?: string },
-      ) => {
-        const { core: client } = createGrackleClients();
-        const session = await client.spawnAgent({
-          environmentId,
-          prompt,
-          config: {
-            maxTurns: opts.maxTurns || 0,
-            personaId: opts.persona || "",
-            workspaceId: opts.workspace || "",
-          },
-        });
-        console.log(`Spawned session: ${session.id}`);
-        console.log(`Streaming events (Ctrl+C to detach)...\n`);
+/** Max characters of an avatar to inline in `agent list`. */
+const INLINE_AVATAR_MAX_CHARS: number = 6;
 
-        // Auto-attach to stream
-        for await (const event of client.streamSession({ id: session.id })) {
-          printEvent(event);
-        }
-      },
-    );
-
-  program
-    .command("resume <session-id>")
-    .description("Resume a paused session")
-    .action(async (sessionId: string) => {
-      const { core: client } = createGrackleClients();
-      const session = await client.resumeAgent({ sessionId });
-      console.log(`Resumed session: ${session.id}`);
-    });
-
-  program
-    .command("status")
-    .description("List agent sessions")
-    .option("--env <env-id>", "Filter by environment")
-    .option("--all", "Show all sessions including stopped")
-    .action(async (opts: { env?: string; all?: boolean }) => {
-      const { core: client } = createGrackleClients();
-      const res = await client.listSessions({
-        environmentId: opts.env || "",
-        status: "",
-      });
-      const activeStatuses = new Set<string>([
-        SESSION_STATUS.PENDING,
-        SESSION_STATUS.RUNNING,
-        SESSION_STATUS.IDLE,
-      ]);
-      const sessions = opts.all
-        ? res.sessions
-        : res.sessions.filter((s) => activeStatuses.has(s.status));
-      if (sessions.length === 0) {
-        console.log("No sessions.");
-        return;
-      }
-      const table = new Table({
-        head: ["ID", "Env", "Runtime", "Status", "Tokens", "Cost", "Prompt", "Started"],
-      });
-      for (const s of sessions) {
-        const prompt = s.prompt.length > 40 ? s.prompt.slice(0, 40) + "..." : s.prompt;
-        const tokens =
-          s.inputTokens || s.outputTokens
-            ? `${formatTokens(s.inputTokens)}→${formatTokens(s.outputTokens)}`
-            : "-";
-        const statusDisplay =
-          s.status === "stopped" && s.endReason ? `${s.status} (${s.endReason})` : s.status;
-        table.push([
-          s.id.slice(0, 8),
-          s.environmentId,
-          s.runtime,
-          statusDisplay,
-          tokens,
-          formatCost(s.costMillicents),
-          prompt,
-          s.startedAt,
-        ]);
-      }
-      console.log(table.toString());
-    });
-
-  program
-    .command("kill <session-id>")
-    .description("Stop a running session")
-    .option("-g, --graceful", "Send SIGTERM for graceful shutdown instead of hard kill")
-    .action(async (sessionId: string, opts: { graceful?: boolean }) => {
-      const { core: client } = createGrackleClients();
-      await client.killAgent({ id: sessionId, graceful: opts.graceful ?? false });
-      console.log(opts.graceful ? `Sent SIGTERM to: ${sessionId}` : `Killed: ${sessionId}`);
-    });
-
-  program
-    .command("send-input <session-id> <text>")
-    .description("Send input to a waiting session")
-    .action(async (sessionId: string, text: string) => {
-      const { core: client } = createGrackleClients();
-      await client.sendInput({ sessionId, text });
-      console.log(chalk.green(`Sent input to session ${sessionId}`));
-    });
-
-  program
-    .command("attach <session-id>")
-    .description("Attach to a live session")
-    .action(async (sessionId: string) => {
-      const { core: client } = createGrackleClients();
-      console.log(`Attached to ${sessionId} (Ctrl+C to detach)\n`);
-
-      const readline = await import("node:readline");
-      const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-      });
-
-      let prompting = false;
-
-      /** Prompt for input once and send the response. */
-      function promptForInput(): void {
-        if (prompting) {
-          return;
-        }
-        prompting = true;
-        rl.question("> ", (answer) => {
-          prompting = false;
-          client.sendInput({ sessionId, text: answer }).catch((err: unknown) => {
-            const message = err instanceof Error ? err.message : String(err);
-            console.error(`Failed to send input for session ${sessionId}: ${message}`);
-          });
-        });
-      }
-
-      for await (const event of client.streamSession({ id: sessionId })) {
-        printEvent(event);
-        if (event.type === grackle.EventType.STATUS && event.content === "waiting_input") {
-          promptForInput();
-        }
-      }
-
-      rl.close();
-    });
+/**
+ * Return the avatar string when it's a short inline glyph (emoji / monogram),
+ * or `""` when it's a URL / `data:` URI that would spam the terminal. The
+ * full value is always available via `agent show`.
+ */
+function renderInlineAvatar(avatar: string): string {
+  if (!avatar) {
+    return "";
+  }
+  if (
+    avatar.startsWith("http://") ||
+    avatar.startsWith("https://") ||
+    avatar.startsWith("/") ||
+    avatar.startsWith("data:")
+  ) {
+    return "";
+  }
+  // Multi-codepoint emoji can be > 1 character; cap at a small ceiling.
+  if ([...avatar].length > INLINE_AVATAR_MAX_CHARS) {
+    return "";
+  }
+  return avatar;
 }
 
-function printEvent(event: { type: grackle.EventType; content: string; timestamp: string }): void {
-  const time = new Date(event.timestamp).toLocaleTimeString();
-  switch (event.type) {
-    case grackle.EventType.SYSTEM:
-      console.log(chalk.gray(`[${time}] ${event.content}`));
-      break;
-    case grackle.EventType.TEXT:
-      console.log(event.content);
-      break;
-    case grackle.EventType.TOOL_USE:
-      console.log(chalk.blue(`> ${event.content}`));
-      break;
-    case grackle.EventType.TOOL_RESULT:
-      console.log(chalk.gray(event.content));
-      break;
-    case grackle.EventType.ERROR:
-      console.log(chalk.red(`[ERROR] ${event.content}`));
-      break;
-    case grackle.EventType.STATUS:
-      console.log(chalk.yellow(`--- ${event.content} ---`));
-      break;
-  }
+/**
+ * Register the `agent` command group on the root program.
+ *
+ * @param program - The root Commander program.
+ */
+export function registerAgentCommands(program: Command): void {
+  const agent = program.command("agent").description("Create and manage standing agents");
+
+  agent
+    .command("list")
+    .description("List all agents")
+    .action(async () => {
+      const { orchestration } = createGrackleClients();
+      const res = await orchestration.listAgents({});
+      if (res.agents.length === 0) {
+        console.log(chalk.yellow("No agents found."));
+        return;
+      }
+      for (const a of res.agents) {
+        // Inline only short glyphs (emoji / monogram). URLs and base64
+        // data URIs would wrap and spam the terminal — `show` is where
+        // the full value belongs.
+        const inlineAvatar = renderInlineAvatar(a.avatar);
+        const prefix = inlineAvatar ? `${inlineAvatar} ` : "";
+        console.log(`${prefix}${chalk.bold(a.name)} ${chalk.dim(`(${a.id})`)}`);
+        console.log(`  persona: ${a.primaryPersonaId || "(none)"}`);
+      }
+    });
+
+  agent
+    .command("show <id>")
+    .description("Show details for an agent")
+    .action(async (id: string) => {
+      const { orchestration } = createGrackleClients();
+      const a = await orchestration.getAgent({ id });
+      console.log(`ID:       ${a.id}`);
+      console.log(`Name:     ${a.name}`);
+      console.log(`Avatar:   ${a.avatar || "-"}`);
+      console.log(`Persona:  ${a.primaryPersonaId || "-"}`);
+      console.log(`Created:  ${a.createdAt}`);
+      console.log(`Updated:  ${a.updatedAt}`);
+    });
+
+  agent
+    .command("create <name>")
+    .description("Create an agent")
+    .option("--avatar <value>", "Avatar: emoji, URL, or base64 data URI", "")
+    .option("--persona <id>", "Primary persona id", "")
+    .action(async (name: string, opts: { avatar: string; persona: string }) => {
+      const { orchestration } = createGrackleClients();
+      const res = await orchestration.createAgent({
+        name,
+        avatar: opts.avatar,
+        primaryPersonaId: opts.persona,
+      });
+      console.log(chalk.green(`Created agent ${chalk.bold(res.name)} (${res.id})`));
+    });
+
+  agent
+    .command("edit <id>")
+    .description("Update an agent")
+    .option("--name <name>", "New name")
+    .option("--avatar <value>", "New avatar: emoji, URL, or base64 data URI")
+    .option("--persona <id>", "New primary persona id")
+    .action(async (id: string, opts: { name?: string; avatar?: string; persona?: string }) => {
+      const { orchestration } = createGrackleClients();
+      const res = await orchestration.updateAgent({
+        id,
+        name: opts.name,
+        avatar: opts.avatar,
+        primaryPersonaId: opts.persona,
+      });
+      console.log(chalk.green(`Updated agent ${chalk.bold(res.name)} (${res.id})`));
+    });
+
+  agent
+    .command("delete <id>")
+    .description("Delete an agent")
+    .action(async (id: string) => {
+      const { orchestration } = createGrackleClients();
+      await orchestration.deleteAgent({ id });
+      console.log(chalk.green(`Deleted agent ${id}`));
+    });
 }

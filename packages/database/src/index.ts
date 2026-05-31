@@ -59,6 +59,7 @@ export * as sessionStore from "./session-store.js";
 export * as taskStore from "./task-store.js";
 export * as workspaceStore from "./workspace-store.js";
 export * as personaStore from "./persona-store.js";
+export * as agentStore from "./agent-store.js";
 export * as componentStore from "./component-store.js";
 export * as settingsStore from "./settings-store.js";
 export * as envRegistry from "./env-registry.js";

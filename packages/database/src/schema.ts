@@ -248,6 +248,27 @@ export type PersonaRow = typeof personas.$inferSelect;
 /** Shape accepted by INSERT into the personas table. */
 export type NewPersona = typeof personas.$inferInsert;
 
+// ─── Agents (context-axis standing entities, #1417) ──────────
+
+export const agents = sqliteTable("agents", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  avatar: text("avatar").notNull().default(""),
+  primaryPersonaId: text("primary_persona_id").notNull().default(""),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+/** Row shape returned by a SELECT on the agents table. */
+export type AgentRow = typeof agents.$inferSelect;
+
+/** Shape accepted by INSERT into the agents table. */
+export type NewAgent = typeof agents.$inferInsert;
+
 // ─── Components (agent-authored UI registry, #1239/#1269) ────
 
 export const components = sqliteTable("components", {
