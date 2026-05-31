@@ -53,6 +53,12 @@ vi.mock("./event-handlers.js", () => ({
   getSessionActions: vi.fn(),
 }));
 vi.mock("./runtime-handlers.js", () => ({ listRuntimes: vi.fn() }));
+vi.mock("./resource-handlers.js", () => ({
+  readResource: vi.fn(),
+  listResource: vi.fn(),
+  watchResource: vi.fn(),
+  unwatchResource: vi.fn(),
+}));
 
 import {
   createCoreCollector,
@@ -89,6 +95,8 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "getSessionActions" in m)).toBe(true);
     // Runtime catalog (AHP RootState.agents) is registered in core (#1288)
     expect(addedModules.some((m) => "listRuntimes" in m)).toBe(true);
+    // Resource bridge handlers are registered in core (#1395)
+    expect(addedModules.some((m) => "readResource" in m)).toBe(true);
     // Schedules are contributed by @grackle-ai/plugin-scheduling
     expect(addedModules.some((m) => "listSchedules" in m)).toBe(false);
   });
@@ -103,9 +111,9 @@ describe("createCoreCollector", () => {
     expect(addedModules.some((m) => "createEscalation" in m)).toBe(false);
   });
 
-  it("adds exactly 12 handler groups", () => {
+  it("adds exactly 13 handler groups", () => {
     createCoreCollector();
-    expect(addHandlersMock).toHaveBeenCalledTimes(12);
+    expect(addHandlersMock).toHaveBeenCalledTimes(13);
   });
 });
 
@@ -137,7 +145,7 @@ describe("createOrchestrationCollector", () => {
 });
 
 describe("createDefaultCollector (regression)", () => {
-  it("adds all 16 handler groups including orchestration, components, plugins, github accounts, channels, domain events, and runtime catalog (knowledge and schedules moved to plugins)", () => {
+  it("adds all 17 handler groups including orchestration, components, plugins, github accounts, channels, domain events, runtime catalog, and resources (knowledge and schedules moved to plugins)", () => {
     createDefaultCollector();
     const addedModules = addHandlersMock.mock.calls.map(
       ([, module]: [unknown, Record<string, unknown>]) => module,
@@ -154,6 +162,7 @@ describe("createDefaultCollector (regression)", () => {
     expect(addedModules.some((m) => "queryDomainEvents" in m)).toBe(true);
     expect(addedModules.some((m) => "getSessionActions" in m)).toBe(true);
     expect(addedModules.some((m) => "listRuntimes" in m)).toBe(true);
-    expect(addHandlersMock).toHaveBeenCalledTimes(16);
+    expect(addedModules.some((m) => "readResource" in m)).toBe(true);
+    expect(addHandlersMock).toHaveBeenCalledTimes(17);
   });
 });

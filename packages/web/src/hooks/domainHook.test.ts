@@ -25,6 +25,7 @@ import { useNotifications } from "./useNotifications.js";
 import { usePlugins } from "./usePlugins.js";
 import { useStreams } from "./useStreams.js";
 import { useGitHubAccounts } from "./useGitHubAccounts.js";
+import { useResources } from "./useResources.js";
 
 // ---------------------------------------------------------------------------
 // Mock grackleClient (all hooks import it)
@@ -142,6 +143,7 @@ type _Not = AssertHasDomainHook<ReturnType<typeof useNotifications>>;
 type _Plg = AssertHasDomainHook<ReturnType<typeof usePlugins>>;
 type _Str = AssertHasDomainHook<ReturnType<typeof useStreams>>;
 type _GhA = AssertHasDomainHook<ReturnType<typeof useGitHubAccounts>>;
+type _Res = AssertHasDomainHook<ReturnType<typeof useResources>>;
 
 // Suppress unused-variable warnings — these exist solely for the type check
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -160,7 +162,8 @@ type _All =
   | _Not
   | _Plg
   | _Str
-  | _GhA;
+  | _GhA
+  | _Res;
 
 // ---------------------------------------------------------------------------
 // Runtime tests
@@ -194,10 +197,11 @@ const ALL_HOOKS = [
   { name: "usePlugins", hook: usePlugins },
   { name: "useStreams", hook: useStreams },
   { name: "useGitHubAccounts", hook: useGitHubAccounts },
+  { name: "useResources", hook: useResources },
 ] as const;
 
 /** Expected number of domain hooks. Bump this when adding a new hook. */
-const EXPECTED_HOOK_COUNT = 15;
+const EXPECTED_HOOK_COUNT = 16;
 
 describe("DomainHook registry", () => {
   it(`has exactly ${EXPECTED_HOOK_COUNT} registered hooks`, () => {

@@ -233,6 +233,8 @@ export type {
   UseStreamsResult,
   UseGitHubAccountsResult,
   GitHubAccountData,
+  UseResourcesResult,
+  ResourceContentState,
   DomainHook,
   ConnectionStatus,
 } from "./hooks/types.js";

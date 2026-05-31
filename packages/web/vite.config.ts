@@ -37,6 +37,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
+          // Split the React runtime into its own vendor chunk. The main `index`
+          // chunk had crept to ~795 KB (just under the 800 KB gate), so any
+          // app-code addition tipped CI over the warnings-as-errors limit;
+          // pulling React out gives the app chunk durable headroom.
+          react: ["react", "react-dom", "react-dom/client"],
           markdown: ["react-markdown", "remark-gfm", "rehype-prism-plus"],
           dagview: ["@xyflow/react", "@dagrejs/dagre"],
           grpc: [

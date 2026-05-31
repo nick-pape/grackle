@@ -5,8 +5,15 @@
 ```ts
 
 import { AhpClientSocket } from '@grackle-ai/ahp-transport';
+import { AhpErrorCodes } from '@grackle-ai/ahp';
 import type { AhpNotification } from '@grackle-ai/ahp';
 import { ChildProcess } from 'node:child_process';
+import { ContentEncoding } from '@grackle-ai/ahp';
+import { JsonRpcErrorCodes } from '@grackle-ai/ahp';
+import { ResourceChange } from '@grackle-ai/ahp';
+import { ResourceChangeType } from '@grackle-ai/ahp';
+import { ResourceListResult } from '@grackle-ai/ahp';
+import { ResourceReadResult } from '@grackle-ai/ahp';
 import { SpawnOptions } from 'node:child_process';
 import type { StateAction } from '@grackle-ai/ahp';
 
@@ -43,16 +50,21 @@ export interface AgentEventFields {
     type: string;
 }
 
+export { AhpErrorCodes }
+
 // @public
 export class AhpHostTransport implements IHostTransport {
     constructor(socket: AhpClientSocket);
     authenticate(params: AuthenticateParams): Promise<void>;
+    createResourceWatch(options: ResourceWatchOptions, onChange: ResourceWatchListener): Promise<ResourceWatchSubscription>;
     createSession(params: CreateSessionParams): CreateSessionResult;
     dispatchInput(sessionUri: string, text: string): Promise<void>;
     dispose(sessionUri: string, _reason?: string): Promise<void>;
     handleNotification(notif: AhpNotification): void;
     listSessions(): Promise<HostSessionInfo[]>;
     reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
+    resourceList(uri: string): Promise<ResourceListResult>;
+    resourceRead(uri: string, encoding?: ContentEncoding): Promise<ResourceReadResult>;
 }
 
 // @public
@@ -106,6 +118,8 @@ export function closeTunnel(environmentId: string): Promise<void>;
 
 // @public
 export function connectThroughTunnel(environmentId: string, localPort: number, powerlineToken: string, logger?: AdapterLogger): Promise<PowerLineConnection>;
+
+export { ContentEncoding }
 
 // @public
 export function createAhpHostTransport(baseUrl: string, powerlineToken: string, environmentId: string, logger?: AdapterLogger): Promise<{
@@ -201,15 +215,20 @@ export interface HostSessionInfo {
 // @public
 export interface IHostTransport {
     authenticate(params: AuthenticateParams): Promise<void>;
+    createResourceWatch(options: ResourceWatchOptions, onChange: ResourceWatchListener): Promise<ResourceWatchSubscription>;
     createSession(params: CreateSessionParams): CreateSessionResult;
     dispatchInput(sessionUri: string, text: string): Promise<void>;
     dispose(sessionUri: string, reason?: string): Promise<void>;
     listSessions(): Promise<HostSessionInfo[]>;
     reanimate(params: ReanimateParams): AsyncIterable<ServerActionEnvelope>;
+    resourceList(uri: string): Promise<ResourceListResult>;
+    resourceRead(uri: string, encoding?: ContentEncoding): Promise<ResourceReadResult>;
 }
 
 // @public
 export function isDevMode(): boolean;
+
+export { JsonRpcErrorCodes }
 
 // @public
 export interface PortProber {
@@ -306,6 +325,29 @@ export interface RemoteTunnel {
     isAlive(): boolean;
     localPort: number;
     open(): Promise<void>;
+}
+
+export { ResourceChange }
+
+export { ResourceChangeType }
+
+export { ResourceListResult }
+
+export { ResourceReadResult }
+
+// @public
+export type ResourceWatchListener = (changes: ResourceChange[]) => void;
+
+// @public
+export interface ResourceWatchOptions {
+    recursive?: boolean;
+    uri: string;
+}
+
+// @public
+export interface ResourceWatchSubscription {
+    channel: string;
+    close(): Promise<void>;
 }
 
 // @public

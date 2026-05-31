@@ -105,4 +105,13 @@ service GrackleCore {
 
   // Session action log (read a session's durable, server-sequenced replay buffer)
   rpc GetSessionActions(GetSessionActionsRequest) returns (SessionActionList);
+
+  // Resources (AHP resource bridge, #1395) — read/list files from an
+  // environment's PowerLine-owned worktree, and subscribe to file-change
+  // notifications. Change batches surface as "resource.changed" domain events
+  // on StreamEvents (consumed by the web `useResources` domain hook).
+  rpc ReadResource(ReadResourceRequest) returns (ResourceContent);
+  rpc ListResource(ListResourceRequest) returns (ResourceListing);
+  rpc WatchResource(WatchResourceRequest) returns (WatchHandle);
+  rpc UnwatchResource(UnwatchResourceRequest) returns (Empty);
 }

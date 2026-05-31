@@ -79,5 +79,19 @@ export type {
   AuthenticateParams,
   AuthenticateTokenItem,
   HostSessionInfo,
+  ResourceWatchOptions,
+  ResourceWatchListener,
+  ResourceWatchSubscription,
 } from "./host-transport.js";
 export { AhpHostTransport, bindNotificationHandler } from "./ahp-host-transport.js";
+
+// Re-export AHP resource shapes so bridge consumers (e.g. the Server's resource
+// handlers, #1395) don't need a direct @grackle-ai/ahp dependency — adapter-sdk
+// is the host-transport boundary.
+export type { ResourceReadResult, ResourceListResult, ResourceChange } from "@grackle-ai/ahp";
+export {
+  ContentEncoding,
+  ResourceChangeType,
+  AhpErrorCodes,
+  JsonRpcErrorCodes,
+} from "@grackle-ai/ahp";

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add Server AHP-client resource bridge: ReadResource/ListResource/WatchResource/UnwatchResource RPCs over PowerLine's resource capability, IHostTransport resourceRead/resourceList/createResourceWatch wrappers, and a resource.changed domain event for live file-change notifications (#1395).",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
