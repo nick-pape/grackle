@@ -107,6 +107,7 @@ import {
 } from "./resource-fs.js";
 
 import { logger } from "./logger.js";
+import { coalesceChangeType, COALESCE_DROP } from "./resource-watch-coalesce.js";
 import { getRuntime } from "./runtime-registry.js";
 import {
   deleteSessionPump,
@@ -698,16 +699,14 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
           }
         }
         const uri = emitUriFor(changedPath);
-        // Coalesce: an add followed by a delete of the same path within one
-        // window is a net no-op the client never saw created — drop it rather
-        // than emitting a Deleted for a path it has no record of.
-        if (
-          type === ResourceChangeType.Deleted &&
-          entry.pending.get(uri)?.type === ResourceChangeType.Added
-        ) {
+        // Coalesce against any pending change for this URI: add→delete drops as a
+        // net no-op; add→change keeps Added (the client learns the file exists,
+        // not that it changed); otherwise latest wins. See coalesceChangeType.
+        const next = coalesceChangeType(entry.pending.get(uri)?.type, type);
+        if (next === COALESCE_DROP) {
           entry.pending.delete(uri);
         } else {
-          entry.pending.set(uri, { uri, type });
+          entry.pending.set(uri, { uri, type: next });
         }
         if (entry.pending.size > 0 && entry.flushTimer === undefined) {
           entry.flushTimer = setTimeout(() => {

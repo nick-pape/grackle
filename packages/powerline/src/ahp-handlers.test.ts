@@ -1156,6 +1156,7 @@ describe("createResourceWatch", () => {
 
       const deadline = Date.now() + 5000;
       const seen = new Map<string, string>();
+      const expected = ["plan.md", "deep.md", "old.md"];
       while (Date.now() < deadline) {
         for (const e of client.received.filter((r) => r.channel === channel)) {
           const items = (e.action as { changes: { items: Array<{ uri: string; type: string }> } })
@@ -1164,7 +1165,9 @@ describe("createResourceWatch", () => {
             seen.set(it.uri, it.type);
           }
         }
-        if ([...seen.keys()].some((u) => u.endsWith("plan.md")) && seen.size >= 2) {
+        // Wait for all expected paths (events may arrive across several coalesced
+        // batches), not just a count — a size-based break races under load.
+        if (expected.every((name) => [...seen.keys()].some((u) => u.endsWith(name)))) {
           break;
         }
         await new Promise((r) => setTimeout(r, 50));
