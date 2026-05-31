@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add operator stream control plane (#1309): OperatorCreateStream/AttachTask/DetachTask/ListTaskAttachments/CloseStream RPCs + operator:* anchor principal, stream.created/attached/detached/closed lifecycle events (live Coordination roster), and `grackle streams create/attach/detach/attachments/close` CLI commands.",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

@@ -74,4 +74,75 @@ export function registerStreamCommands(program: Command): void {
       }
       console.log(table.toString());
     });
+
+  // ─── Operator control plane (#1309) ──────────────────────────────────────────
+
+  streams
+    .command("create <name>")
+    .description("Create an operator-owned room (survives at zero agents)")
+    .option("--self-echo", "Chatroom mode: publishers receive their own messages echoed back")
+    .action(async (name: string, opts: { selfEcho?: boolean }) => {
+      const { core: client } = createGrackleClients();
+      const res = await client.operatorCreateStream({ name, selfEcho: opts.selfEcho ?? false });
+      console.log(`Created stream "${name}" (${res.streamId})`);
+    });
+
+  streams
+    .command("attach <taskId> <streamId>")
+    .description("Attach a task's latest live session to a stream")
+    .option("--perm <perm>", 'Permission to grant: "r", "w", or "rw"', "rw")
+    .option("--mode <mode>", 'Delivery mode: "sync", "async", or "detach"', "async")
+    .action(async (taskId: string, streamId: string, opts: { perm: string; mode: string }) => {
+      const { core: client } = createGrackleClients();
+      const res = await client.operatorAttachTask({
+        taskId,
+        streamId,
+        permission: opts.perm,
+        deliveryMode: opts.mode,
+      });
+      console.log(
+        `Attached task ${taskId} (session ${res.sessionId.slice(0, 8)}, fd=${String(res.fd)}) to ${streamId.slice(0, 8)}`,
+      );
+    });
+
+  streams
+    .command("detach <taskId> <streamId>")
+    .description("Detach a task's latest live session from a stream")
+    .action(async (taskId: string, streamId: string) => {
+      const { core: client } = createGrackleClients();
+      const res = await client.operatorDetachTask({ taskId, streamId });
+      console.log(res.detached ? `Detached task ${taskId}` : "No matching attachment to detach.");
+    });
+
+  streams
+    .command("attachments <taskId>")
+    .description("List the rooms a task's latest live session is attached to")
+    .action(async (taskId: string) => {
+      const { core: client } = createGrackleClients();
+      const res = await client.listTaskAttachments({ taskId });
+      if (res.attachments.length === 0) {
+        console.log("No attachments.");
+        return;
+      }
+      const table = new Table({ head: ["Stream ID", "Name", "Session", "Permission", "Mode"] });
+      for (const a of res.attachments) {
+        table.push([
+          a.streamId.slice(0, 8),
+          a.streamName,
+          a.sessionId.slice(0, 8),
+          a.permission,
+          a.deliveryMode,
+        ]);
+      }
+      console.log(table.toString());
+    });
+
+  streams
+    .command("close <streamId>")
+    .description("Close an operator room (evict all subscribers, remove the stream)")
+    .action(async (streamId: string) => {
+      const { core: client } = createGrackleClients();
+      const res = await client.operatorCloseStream({ streamId });
+      console.log(res.closed ? `Closed stream ${streamId.slice(0, 8)}` : "Stream not found.");
+    });
 }

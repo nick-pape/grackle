@@ -32,7 +32,7 @@ export { authenticateForRuntime } from "./token-push.js";
 export type { AuthenticateOptions } from "./token-push.js";
 export { buildProviderTokenBundle, deriveCredentialNeeds } from "./credential-bundle.js";
 export type { ProtectedResourceDescriptor, CredentialKind } from "./credential-bundle.js";
-export { computeTaskStatus } from "./compute-task-status.js";
+export { computeTaskStatus, getLatestLiveSessionId } from "./compute-task-status.js";
 export type { TaskStatusResult } from "./compute-task-status.js";
 export { findFirstConnectedEnvironment } from "./find-connected-environment.js";
 export { hasCapacity, getEffectiveLimit } from "./concurrency.js";
@@ -99,7 +99,14 @@ export type {
 // stranded RUNNING subagent children whose parent session has gone terminal.
 export { interruptChildSession } from "./subagent-session.js";
 export { createEventStream } from "./event-hub.js";
-export { RESERVED_PREFIXES, isReservedStreamName, LIFECYCLE_PREFIX } from "./stream-names.js";
+export {
+  RESERVED_PREFIXES,
+  isReservedStreamName,
+  LIFECYCLE_PREFIX,
+  OPERATOR_PRINCIPAL,
+  OPERATOR_PRINCIPAL_PREFIX,
+  isOperatorPrincipal,
+} from "./stream-names.js";
 export { subscribeStreamMessages } from "./stream-message-bus.js";
 export type { StreamMessageEvent, StreamMessageObserver } from "./stream-message-bus.js";
 export { recoverSuspendedSessions } from "./session-recovery.js";

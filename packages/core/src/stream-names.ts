@@ -25,3 +25,30 @@ export const RESERVED_PREFIXES: readonly string[] = ["lifecycle:", "pipe:", "std
 export function isReservedStreamName(name: string): boolean {
   return RESERVED_PREFIXES.some((prefix) => name.startsWith(prefix));
 }
+
+/**
+ * Prefix for operator (human-driven) principal ids (#1309).
+ *
+ * This is a *principal id* convention (the `session_id` of a subscription),
+ * distinct from {@link RESERVED_PREFIXES}, which gate stream *names*. The
+ * operator principal anchors an operator-created room — it holds an `rw`/`detach`
+ * subscription so the room survives at zero agents and shows in the roster.
+ */
+export const OPERATOR_PRINCIPAL_PREFIX: string = "operator:";
+
+/**
+ * The default operator principal id. A single well-known server-side principal
+ * is sufficient for T1; per-operator identities can layer on later by varying
+ * the suffix after {@link OPERATOR_PRINCIPAL_PREFIX}.
+ */
+export const OPERATOR_PRINCIPAL: string = "operator:default";
+
+/**
+ * True if `sessionId` is an operator (human-driven) principal rather than a real
+ * agent session. Mirrors the `__server__` pseudo-principal pattern.
+ *
+ * @param sessionId - The subscription session id to test.
+ */
+export function isOperatorPrincipal(sessionId: string): boolean {
+  return sessionId.startsWith(OPERATOR_PRINCIPAL_PREFIX);
+}

@@ -73,6 +73,10 @@ export type GrackleEventType =
   // Keep in sync with the same union in @grackle-ai/core event-bus.ts.
   | "component.changed"
   | "resource.changed"
+  | "stream.created"
+  | "stream.attached"
+  | "stream.detached"
+  | "stream.closed"
   | "document.show";
 
 /** A domain event from the event bus. */
