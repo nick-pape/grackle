@@ -453,12 +453,19 @@ export function EventRenderer({
               toolUseCtx.tool,
               toolUseCtx.args,
             )}
+            onOpenDocument={onOpenDocument}
           />
         );
       }
       // Unpaired tool_result — use generic card with fallback label
       return (
-        <ToolCard tool="Tool output" args={undefined} result={resultContent} isError={isError} />
+        <ToolCard
+          tool="Tool output"
+          args={undefined}
+          result={resultContent}
+          isError={isError}
+          onOpenDocument={onOpenDocument}
+        />
       );
     }
     case "error":
