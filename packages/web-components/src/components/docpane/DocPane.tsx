@@ -114,11 +114,8 @@ export function DocPane({
         draggingRef.current = false;
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
-        try {
-          localStorage.setItem(WIDTH_STORAGE_KEY, String(width));
-        } catch {
-          // ignore persistence failures
-        }
+        // Width is persisted by the `useEffect([width])` below on every change;
+        // no need to write here (and the closure's `width` is the pre-drag value).
       };
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);

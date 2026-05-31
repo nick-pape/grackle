@@ -233,7 +233,9 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
               getContent={resources.getResourceContent}
               onSelectTab={documents.setActiveTab}
               onCloseTab={documents.closeTab}
-              onOpenUri={(environmentId, uri) => documents.openDocument({ environmentId, uri })}
+              onOpenUri={(environmentId, uri) =>
+                documents.openDocument({ environmentId, uri }, { focus: true })
+              }
             />
           </div>
         </div>

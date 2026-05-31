@@ -166,7 +166,9 @@ export function SessionPage(): JSX.Element {
         personas={personas}
         onForward={(targetSessionId, text) => sendInput(targetSessionId, text)}
         onOpenDocument={
-          session ? (uri) => openDocument({ environmentId: session.environmentId, uri }) : undefined
+          session
+            ? (uri) => openDocument({ environmentId: session.environmentId, uri }, { focus: true })
+            : undefined
         }
       />
       {isActive && (

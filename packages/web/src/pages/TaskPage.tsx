@@ -464,7 +464,7 @@ export function TaskPage(): JSX.Element {
               onShowToast={showToast}
               onOpenDocument={
                 docEnvironmentId
-                  ? (uri) => openDocument({ environmentId: docEnvironmentId, uri })
+                  ? (uri) => openDocument({ environmentId: docEnvironmentId, uri }, { focus: true })
                   : undefined
               }
             />
