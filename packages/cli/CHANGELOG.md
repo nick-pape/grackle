@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 31 May 2026 15:07:03 GMT and should not be manually modified.
+This log was last generated on Sun, 31 May 2026 16:46:28 GMT and should not be manually modified.
+
+## 0.140.0
+Sun, 31 May 2026 16:46:28 GMT
+
+### Minor changes
+
+- Live docs v0: tabbed read-only file viewer. Adds a show_file MCP tool and a document.show domain event that open a split-pane, live-refreshing view of a file (markdown via react-markdown, code/text via CodeMirror 6 read-only), plus clickable file paths in the chat (#1396).
 
 ## 0.139.2
 Sun, 31 May 2026 15:07:03 GMT
