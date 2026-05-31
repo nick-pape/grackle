@@ -134,4 +134,46 @@ describe("agent-handlers", () => {
     expect(mockDb.agents.has(created.id)).toBe(false);
     expect(emitMock).toHaveBeenCalledWith("agent.deleted", expect.objectContaining({}));
   });
+
+  it("createAgent trims whitespace from the name and stores the trimmed value", async () => {
+    const created = await agentHandlers.createAgent(
+      create(grackle.CreateAgentRequestSchema, { name: "  Trimmed  " }),
+    );
+    expect(created.name).toBe("Trimmed");
+  });
+
+  it("createAgent rejects a whitespace-only name", async () => {
+    await expect(
+      agentHandlers.createAgent(create(grackle.CreateAgentRequestSchema, { name: "   " })),
+    ).rejects.toThrow(/name is required/i);
+  });
+
+  it("updateAgent rejects an explicitly-empty name (presence-tracked)", async () => {
+    const created = await agentHandlers.createAgent(
+      create(grackle.CreateAgentRequestSchema, { name: "Keep" }),
+    );
+    await expect(
+      agentHandlers.updateAgent(
+        create(grackle.UpdateAgentRequestSchema, { id: created.id, name: "" }),
+      ),
+    ).rejects.toThrow(/cannot be empty/i);
+    await expect(
+      agentHandlers.updateAgent(
+        create(grackle.UpdateAgentRequestSchema, { id: created.id, name: "   " }),
+      ),
+    ).rejects.toThrow(/cannot be empty/i);
+  });
+
+  it("updateAgent trims the name and rejects a name colliding with another agent", async () => {
+    await agentHandlers.createAgent(create(grackle.CreateAgentRequestSchema, { name: "Taken" }));
+    const other = await agentHandlers.createAgent(
+      create(grackle.CreateAgentRequestSchema, { name: "Other" }),
+    );
+    // Trimming applies before the duplicate check.
+    await expect(
+      agentHandlers.updateAgent(
+        create(grackle.UpdateAgentRequestSchema, { id: other.id, name: "  Taken  " }),
+      ),
+    ).rejects.toThrow(/already exists/i);
+  });
 });

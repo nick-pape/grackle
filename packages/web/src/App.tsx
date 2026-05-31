@@ -111,14 +111,18 @@ const AGENT_CONTEXT_PREFIX: string = "agent:";
 /** Pixel size of an agent's avatar glyph/image in the context rail. */
 const AGENT_ICON_SIZE_PX: number = 18;
 
-/** True when an avatar string points to an image rather than an inline glyph. */
+/**
+ * True when the avatar string points to a renderable image source. Only
+ * `http(s)://`, root-relative paths, and `data:image/...` URIs qualify; other
+ * `data:` MIME types (e.g. `text/html`) are rejected so they fall through to
+ * the glyph branch instead of becoming an `<img src>` — same policy as the
+ * full-size `AvatarPreview` in `AgentManager`.
+ */
 function isImageAvatar(avatar: string): boolean {
-  return (
-    avatar.startsWith("http://") ||
-    avatar.startsWith("https://") ||
-    avatar.startsWith("/") ||
-    avatar.startsWith("data:")
-  );
+  if (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("/")) {
+    return true;
+  }
+  return avatar.startsWith("data:image/");
 }
 
 /** Render an agent's rail icon: image, emoji glyph, or a name-derived monogram. */
@@ -128,6 +132,8 @@ function renderAgentIcon(name: string, avatar: string): JSX.Element {
       <img
         src={avatar}
         alt=""
+        referrerPolicy="no-referrer"
+        loading="lazy"
         style={{
           width: AGENT_ICON_SIZE_PX,
           height: AGENT_ICON_SIZE_PX,
@@ -209,11 +215,17 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
 
   // Derive the active context from the route: `/agents/:id` activates that agent
   // row; everything else falls back to the default `Code` context.
+  // `decodeURIComponent` throws on malformed percent-encoding (e.g. `/agents/%E0`),
+  // which would otherwise crash the shell while deriving `activeContextId`.
   const agentRouteMatch = location.pathname.match(/^\/agents\/([^/]+)$/);
-  const activeAgentId =
-    agentRouteMatch && agentRouteMatch[1] !== "new"
-      ? decodeURIComponent(agentRouteMatch[1])
-      : undefined;
+  let activeAgentId: string | undefined;
+  if (agentRouteMatch && agentRouteMatch[1] !== "new") {
+    try {
+      activeAgentId = decodeURIComponent(agentRouteMatch[1]);
+    } catch {
+      activeAgentId = undefined;
+    }
+  }
   const activeContextId = activeAgentId
     ? `${AGENT_CONTEXT_PREFIX}${activeAgentId}`
     : DEFAULT_CONTEXT_ID;

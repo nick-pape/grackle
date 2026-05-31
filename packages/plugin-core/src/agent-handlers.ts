@@ -28,20 +28,21 @@ export async function listAgents(): Promise<grackle.AgentList> {
 
 /** Create a new agent. */
 export async function createAgent(req: grackle.CreateAgentRequest): Promise<grackle.Agent> {
-  if (!req.name) {
+  const name = req.name.trim();
+  if (!name) {
     throw new ConnectError("Agent name is required", Code.InvalidArgument);
   }
-  if (agentStore.getAgentByName(req.name)) {
-    throw new ConnectError(`Agent with name "${req.name}" already exists`, Code.AlreadyExists);
+  if (agentStore.getAgentByName(name)) {
+    throw new ConnectError(`Agent with name "${name}" already exists`, Code.AlreadyExists);
   }
 
   // Enforce a unique ID derived from the name (mirrors persona handling).
-  let id = slugify(req.name) || uuid().slice(0, 8);
+  let id = slugify(name) || uuid().slice(0, 8);
   if (agentStore.getAgent(id)) {
     id = `${id}-${uuid().slice(0, 4)}`;
   }
 
-  agentStore.createAgent(id, req.name, req.avatar, req.primaryPersonaId);
+  agentStore.createAgent(id, name, req.avatar, req.primaryPersonaId);
   emit("agent.created", { agentId: id });
   const row = agentStore.getAgent(id);
   return agentRowToProto(row!);
@@ -63,13 +64,22 @@ export async function updateAgent(req: grackle.UpdateAgentRequest): Promise<grac
     throw new ConnectError(`Agent not found: ${req.id}`, Code.NotFound);
   }
 
-  // Optional (presence-tracked) fields: undefined = keep existing.
-  if (req.name !== undefined && req.name !== existing.name && agentStore.getAgentByName(req.name)) {
-    throw new ConnectError(`Agent with name "${req.name}" already exists`, Code.AlreadyExists);
+  // Optional (presence-tracked) fields: undefined = keep existing. When `name`
+  // is explicitly sent, trim it and reject empty (the DB's NOT NULL constraint
+  // allows empty strings, which would persist an invalid record).
+  let trimmedName: string | undefined;
+  if (req.name !== undefined) {
+    trimmedName = req.name.trim();
+    if (!trimmedName) {
+      throw new ConnectError("Agent name cannot be empty", Code.InvalidArgument);
+    }
+    if (trimmedName !== existing.name && agentStore.getAgentByName(trimmedName)) {
+      throw new ConnectError(`Agent with name "${trimmedName}" already exists`, Code.AlreadyExists);
+    }
   }
 
   agentStore.updateAgent(req.id, {
-    name: req.name,
+    name: trimmedName,
     avatar: req.avatar,
     primaryPersonaId: req.primaryPersonaId,
   });

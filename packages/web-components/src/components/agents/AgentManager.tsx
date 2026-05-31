@@ -27,20 +27,32 @@ export interface AgentManagerProps {
   onNavigateBack: () => void;
 }
 
-/** True when the avatar string points to an image rather than an inline glyph. */
+/**
+ * True when the avatar string points to a renderable image source. Only
+ * `http(s)://`, root-relative paths, and `data:image/...` URIs qualify; other
+ * `data:` MIME types (e.g. `text/html`) are rejected so they fall through to
+ * the glyph branch instead of becoming an `<img src>`. See CodeQL alert #26.
+ */
 function isImageAvatar(avatar: string): boolean {
-  return (
-    avatar.startsWith("http://") ||
-    avatar.startsWith("https://") ||
-    avatar.startsWith("/") ||
-    avatar.startsWith("data:")
-  );
+  if (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("/")) {
+    return true;
+  }
+  return avatar.startsWith("data:image/");
 }
 
 /** Render an agent's avatar: image, emoji glyph, or a name-derived monogram. */
 function AvatarPreview({ name, avatar }: { name: string; avatar: string }): JSX.Element {
   if (avatar && isImageAvatar(avatar)) {
-    return <img className={styles.avatar} src={avatar} alt="" data-testid="agent-avatar-image" />;
+    return (
+      <img
+        className={styles.avatar}
+        src={avatar}
+        alt=""
+        referrerPolicy="no-referrer"
+        loading="lazy"
+        data-testid="agent-avatar-image"
+      />
+    );
   }
   const glyph = avatar || (name.trim().charAt(0) || "?").toUpperCase();
   return (
@@ -62,6 +74,26 @@ export function AgentManager({
   onNavigateBack,
 }: AgentManagerProps): JSX.Element {
   const agent = agentId ? agents.find((a) => a.id === agentId) : undefined;
+
+  // ── Not-found view ───────────────────────────────────────────────────────
+  // If the route names an `agentId` but it doesn't exist (deleted, bad URL),
+  // show an explicit not-found state instead of falling through to the create
+  // form — otherwise the URL `/agents/:gone` looks identical to `/agents/new`.
+  if (agentId && !agent) {
+    return (
+      <div className={styles.container} data-testid="agent-not-found">
+        <h1 className={styles.title}>Agent not found</h1>
+        <p className={styles.placeholder}>
+          No agent exists with id <code>{agentId}</code>.
+        </p>
+        <div className={styles.actions}>
+          <Button variant="ghost" onClick={onNavigateBack} data-testid="agent-back">
+            Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // ── Read-only view ───────────────────────────────────────────────────────
   if (agentId && agent) {

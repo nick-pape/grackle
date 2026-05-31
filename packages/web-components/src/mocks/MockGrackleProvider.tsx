@@ -1120,16 +1120,12 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
           return created;
         },
         updateAgent: async (id: string, updates) => {
-          let updated: AgentData = { id, name: "", avatar: "", primaryPersonaId: "" };
-          setAgents((prev) =>
-            prev.map((a) => {
-              if (a.id === id) {
-                updated = { ...a, ...updates };
-                return updated;
-              }
-              return a;
-            }),
-          );
+          const existing = agents.find((a) => a.id === id);
+          if (!existing) {
+            throw new Error(`Agent not found: ${id}`);
+          }
+          const updated: AgentData = { ...existing, ...updates };
+          setAgents((prev) => prev.map((a) => (a.id === id ? updated : a)));
           return updated;
         },
         deleteAgent: async (id: string) => {

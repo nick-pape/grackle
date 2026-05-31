@@ -24,8 +24,8 @@ export function AgentDetailPage(): JSX.Element {
       (created) => {
         navigate(agentUrl(created.id));
       },
-      () => {
-        /* ignore — error toasts handled elsewhere */
+      (err: unknown) => {
+        console.error("[AgentDetailPage] createAgent failed", err);
       },
     );
   };
@@ -35,8 +35,8 @@ export function AgentDetailPage(): JSX.Element {
       () => {
         navigate("/");
       },
-      () => {
-        /* ignore */
+      (err: unknown) => {
+        console.error("[AgentDetailPage] deleteAgent failed", err);
       },
     );
   };
