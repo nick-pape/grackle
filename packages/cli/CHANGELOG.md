@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 31 May 2026 17:38:29 GMT and should not be manually modified.
+This log was last generated on Sun, 31 May 2026 19:50:14 GMT and should not be manually modified.
+
+## 0.142.0
+Sun, 31 May 2026 19:50:14 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
 
 ## 0.141.0
 Sun, 31 May 2026 17:38:29 GMT
