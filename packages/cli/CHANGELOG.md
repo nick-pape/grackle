@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 31 May 2026 14:40:44 GMT and should not be manually modified.
+This log was last generated on Sun, 31 May 2026 15:07:03 GMT and should not be manually modified.
+
+## 0.139.2
+Sun, 31 May 2026 15:07:03 GMT
+
+### Patches
+
+- Relocate the Schedules surface out of Settings to a top-level /schedules route (fleet-altitude nav tab), with back-compat redirects from /settings/schedules* (#1416).
 
 ## 0.139.1
 Sun, 31 May 2026 14:40:44 GMT
