@@ -52,6 +52,17 @@ export interface ContextNavProps {
   collapsed?: boolean;
   /** Called when the user toggles the collapsed state. Omit to hide the toggle. */
   onToggleCollapsed?: () => void;
+  /**
+   * Fleet/overview items rendered in a section **above** the contexts — the
+   * cross-context altitude (e.g. Coordination, #1415). Unlike contexts, these
+   * navigate to a route, so the parent maps each id back to its destination.
+   * Omit or pass an empty array to render no Fleet section.
+   */
+  fleetItems?: ContextItem[];
+  /** Identifier of the active fleet item, if any (route-derived by the parent). */
+  activeFleetId?: string;
+  /** Called with a fleet item id when selected (the parent navigates to its route). */
+  onSelectFleet?: (id: string) => void;
 }
 
 /**
@@ -60,6 +71,11 @@ export interface ContextNavProps {
  * enter (just `Code` today; Agent rows arrive in #1417) and is purely
  * presentational: it takes the active id plus selection/toggle callbacks and
  * never touches the router or `useGrackle`.
+ *
+ * An optional **Fleet** section sits above the contexts for cross-context
+ * overview surfaces (Coordination, #1415). Those items navigate to a route, so
+ * they render as plain buttons (not `tab`s) and stay out of the context
+ * `tablist`'s roving-tabindex group.
  *
  * Implements a vertical `tablist` with automatic activation — arrow keys move
  * focus and select in one step, mirroring {@link AppNav}'s horizontal behavior.
@@ -70,6 +86,9 @@ export function ContextNav({
   onSelectContext,
   collapsed = false,
   onToggleCollapsed,
+  fleetItems,
+  activeFleetId,
+  onSelectFleet,
 }: ContextNavProps): JSX.Element {
   const tabListRef = useRef<HTMLDivElement>(null);
 
@@ -113,6 +132,41 @@ export function ContextNav({
       data-testid="context-nav"
       data-collapsed={collapsed}
     >
+      {fleetItems && fleetItems.length > 0 && (
+        <div className={styles.fleetSection}>
+          {!collapsed && <span className={styles.sectionLabel}>Fleet</span>}
+          <div className={styles.fleetList} role="list" aria-label="Fleet overview">
+            {fleetItems.map((item) => {
+              const isActive = item.id === activeFleetId;
+              const button = (
+                <button
+                  type="button"
+                  aria-current={isActive ? "page" : undefined}
+                  className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
+                  onClick={() => onSelectFleet?.(item.id)}
+                  data-testid={item.testId}
+                  aria-label={item.label}
+                >
+                  <span className={styles.tabIcon} aria-hidden="true">
+                    {item.icon}
+                  </span>
+                  {!collapsed && <span className={styles.tabLabel}>{item.label}</span>}
+                </button>
+              );
+              // When collapsed, labels live in a tooltip so the rail stays icon-only.
+              return collapsed ? (
+                <Tooltip key={item.id} text={item.label} placement="right" inline={false}>
+                  {button}
+                </Tooltip>
+              ) : (
+                <div key={item.id} className={styles.tabWrapper}>
+                  {button}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div
         className={styles.tabList}
         ref={tabListRef}
