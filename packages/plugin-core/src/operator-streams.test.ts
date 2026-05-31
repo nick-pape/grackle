@@ -281,6 +281,57 @@ describe("operatorCloseStream", () => {
   });
 });
 
+describe("operator control plane only manages operator-owned rooms (#1309 review)", () => {
+  beforeEach(() => {
+    streamRegistry._resetForTesting();
+    vi.clearAllMocks();
+  });
+
+  /** An agent-created room has no operator:* anchor. */
+  function agentRoom(name: string): string {
+    const stream = streamRegistry.createStream(name);
+    streamRegistry.subscribe(stream.id, "agent-session", "rw", "async", false);
+    return stream.id;
+  }
+
+  it("attach rejects an agent-owned room with FailedPrecondition", async () => {
+    const streamId = agentRoom("agent-room");
+    setLiveTask("task-1", "sess-1");
+    await expect(
+      operatorAttachTask(
+        create(grackle.OperatorAttachTaskRequestSchema, { taskId: "task-1", streamId }),
+      ),
+    ).rejects.toMatchObject({ code: Code.FailedPrecondition });
+  });
+
+  it("close rejects an agent-owned room with FailedPrecondition", async () => {
+    const streamId = agentRoom("agent-room");
+    await expect(
+      operatorCloseStream(create(grackle.OperatorCloseStreamRequestSchema, { streamId })),
+    ).rejects.toMatchObject({ code: Code.FailedPrecondition });
+    // The agent room is untouched.
+    expect(streamRegistry.getStream(streamId)).toBeDefined();
+  });
+
+  it("detach rejects an agent-owned room with FailedPrecondition", async () => {
+    const streamId = agentRoom("agent-room");
+    setLiveTask("task-1", "sess-1");
+    await expect(
+      operatorDetachTask(
+        create(grackle.OperatorDetachTaskRequestSchema, { taskId: "task-1", streamId }),
+      ),
+    ).rejects.toMatchObject({ code: Code.FailedPrecondition });
+  });
+
+  it("detach is idempotent (detached=false) when the room is already gone", async () => {
+    setLiveTask("task-1", "sess-1");
+    const res = await operatorDetachTask(
+      create(grackle.OperatorDetachTaskRequestSchema, { taskId: "task-1", streamId: "gone" }),
+    );
+    expect(res.detached).toBe(false);
+  });
+});
+
 describe("lifecycle events reach the domain-event bus (wire)", () => {
   beforeEach(() => {
     streamRegistry._resetForTesting();

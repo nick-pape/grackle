@@ -31,7 +31,12 @@ import { recoverSuspendedSessions } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { reanimateAgent } from "@grackle-ai/core";
 import { streamRegistry } from "@grackle-ai/core";
-import { RESERVED_PREFIXES, isReservedStreamName, OPERATOR_PRINCIPAL } from "@grackle-ai/core";
+import {
+  RESERVED_PREFIXES,
+  isReservedStreamName,
+  OPERATOR_PRINCIPAL,
+  isOperatorPrincipal,
+} from "@grackle-ai/core";
 import { getLatestLiveSessionId } from "@grackle-ai/core";
 import { pipeDelivery } from "@grackle-ai/core";
 import { logWriter } from "@grackle-ai/core";
@@ -784,6 +789,22 @@ function resolveLiveSessionForTask(taskId: string): string {
 }
 
 /**
+ * True if `stream` is an operator-owned room — i.e. it carries an `operator:*`
+ * anchor subscription. The operator control plane only manages rooms it created;
+ * it must not attach/detach/close agent-owned streams (`#1309` review).
+ *
+ * @param stream - The stream to inspect.
+ */
+function isOperatorRoom(stream: streamRegistry.Stream): boolean {
+  for (const sub of stream.subscriptions.values()) {
+    if (isOperatorPrincipal(sub.sessionId)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Create an operator-owned room. Unlike {@link createStream} (agent-driven, needs
  * a creator session), this is human-driven via the server: it plants the
  * `operator:*` anchor (`rw`/`detach`) so the room survives at zero agents and
@@ -837,7 +858,15 @@ export async function operatorAttachTask(
   if (!stream) {
     throw new ConnectError(`Stream not found: ${req.streamId}`, Code.NotFound);
   }
+  if (!isOperatorRoom(stream)) {
+    throw new ConnectError(
+      `Stream ${req.streamId} is not an operator-owned room`,
+      Code.FailedPrecondition,
+    );
+  }
 
+  // The operator principal holds `rw`, so any requested grant ("r"/"w"/"rw") is
+  // trivially a subset; we only validate the permission/delivery values here.
   const permission = req.permission || "rw";
   const deliveryMode = req.deliveryMode || "async";
   validateSubscriptionParams(permission, deliveryMode);
@@ -867,9 +896,10 @@ export async function operatorAttachTask(
 
 /**
  * Detach a task's latest live session from a stream (operator-driven). The
- * operator anchor keeps the room alive after the agent leaves. Idempotent:
- * returns `detached=false` when the task has no live session or no matching
- * subscription on the stream.
+ * operator anchor keeps the room alive after the agent leaves. Only operates on
+ * operator-owned rooms. Idempotent: returns `detached=false` when the room is
+ * already gone, the task has no live session, or it has no matching subscription
+ * on the stream.
  */
 export async function operatorDetachTask(
   req: grackle.OperatorDetachTaskRequest,
@@ -879,6 +909,18 @@ export async function operatorDetachTask(
   }
   if (!req.streamId) {
     throw new ConnectError("stream_id is required", Code.InvalidArgument);
+  }
+
+  const stream = streamRegistry.getStream(req.streamId);
+  if (!stream) {
+    // Room already gone — nothing to detach.
+    return create(grackle.OperatorDetachTaskResponseSchema, { detached: false });
+  }
+  if (!isOperatorRoom(stream)) {
+    throw new ConnectError(
+      `Stream ${req.streamId} is not an operator-owned room`,
+      Code.FailedPrecondition,
+    );
   }
 
   const sessionId = resolveLiveSessionForTask(req.taskId);
@@ -936,7 +978,8 @@ export async function listTaskAttachments(
 
 /**
  * Close an operator room — evict all subscribers (including the operator anchor)
- * and remove the stream. Reserved plumbing streams cannot be closed this way.
+ * and remove the stream. Only operator-owned rooms can be closed: reserved
+ * plumbing streams and agent-owned rooms (no `operator:*` anchor) are rejected.
  */
 export async function operatorCloseStream(
   req: grackle.OperatorCloseStreamRequest,
@@ -953,6 +996,12 @@ export async function operatorCloseStream(
     throw new ConnectError(
       `Stream "${stream.name}" is an internal plumbing stream and cannot be closed`,
       Code.InvalidArgument,
+    );
+  }
+  if (!isOperatorRoom(stream)) {
+    throw new ConnectError(
+      `Stream ${req.streamId} is not an operator-owned room`,
+      Code.FailedPrecondition,
     );
   }
 
