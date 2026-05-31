@@ -182,14 +182,16 @@ export function ContextNav({
         aria-orientation="vertical"
         onKeyDown={handleKeyDown}
       >
-        {contexts.map((context) => {
+        {contexts.map((context, index) => {
           const isActive = context.id === activeContextId;
+          const hasActiveContext = contexts.some((c) => c.id === activeContextId);
+          const isFocusable = isActive || (!hasActiveContext && index === 0);
           const button = (
             <button
               role="tab"
               type="button"
               aria-selected={isActive}
-              tabIndex={isActive ? 0 : -1}
+              tabIndex={isFocusable ? 0 : -1}
               className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
               onClick={() => onSelectContext(context.id)}
               data-testid={context.testId}
