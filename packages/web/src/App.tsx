@@ -96,6 +96,9 @@ declare const __DEMO_MODE__: boolean;
 /** Build-time base URL path for the router (see vite.config.ts). */
 declare const __BASE_URL__: string;
 
+/** Matches the `$mobile` breakpoint in `packages/web-components/src/styles/mixins.scss`. */
+const MOBILE_MAX_WIDTH_PX: number = 768;
+
 /** Whether the app is running in mock mode (`?mock` query parameter or demo build). */
 const IS_MOCK_MODE: boolean =
   __DEMO_MODE__ ||
@@ -125,6 +128,21 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   const [contextNavCollapsed, setContextNavCollapsed] = useState(false);
   const toggleContextNav = useCallback(() => setContextNavOpen((prev) => !prev), []);
   const toggleContextNavCollapsed = useCallback(() => setContextNavCollapsed((prev) => !prev), []);
+
+  // Track mobile viewport so the collapsed-rail state is never applied inside the drawer.
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH_PX}px)`).matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH_PX}px)`);
+    const handler = (e: MediaQueryListEvent): void => {
+      setIsMobile(e.matches);
+    };
+    mq.addEventListener("change", handler);
+    return () => {
+      mq.removeEventListener("change", handler);
+    };
+  }, []);
 
   // Selecting a context is inert in Phase 0 (Code is the only/default context);
   // it just dismisses the mobile drawer. Agent contexts + real switching arrive
@@ -172,8 +190,8 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
             contexts={CONTEXTS}
             activeContextId={DEFAULT_CONTEXT_ID}
             onSelectContext={handleSelectContext}
-            collapsed={contextNavOpen ? false : contextNavCollapsed}
-            onToggleCollapsed={contextNavOpen ? undefined : toggleContextNavCollapsed}
+            collapsed={isMobile ? false : contextNavCollapsed}
+            onToggleCollapsed={isMobile ? undefined : toggleContextNavCollapsed}
           />
         </div>
         {contextNavOpen && (
