@@ -78,6 +78,59 @@ describe("useResources", () => {
     });
   });
 
+  it("drops cached content when a watched file is deleted (type: deleted)", async () => {
+    mockClient.readResource.mockResolvedValueOnce({
+      data: "v1",
+      encoding: "utf-8",
+      contentType: "",
+    });
+    const { result } = renderHook(() => useResources());
+    await act(async () => {
+      await result.current.readResource("env-1", "file:///w/doc.md");
+    });
+    expect(result.current.getResourceContent("env-1", "file:///w/doc.md")?.data).toBe("v1");
+
+    act(() => {
+      result.current.domainHook.handleEvent(
+        changedEvent({
+          environmentId: "env-1",
+          uri: "file:///w/doc.md",
+          changes: [{ uri: "file:///w/doc.md", type: "deleted" }],
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.getResourceContent("env-1", "file:///w/doc.md")).toBeUndefined();
+    });
+    // A delete must not trigger a re-read of the now-missing file.
+    expect(mockClient.readResource).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops cached content when a re-read fails (file vanished after the event)", async () => {
+    mockClient.readResource
+      .mockResolvedValueOnce({ data: "v1", encoding: "utf-8", contentType: "" })
+      .mockRejectedValueOnce(new Error("NotFound"));
+    const { result } = renderHook(() => useResources());
+    await act(async () => {
+      await result.current.readResource("env-1", "file:///w/doc.md");
+    });
+
+    act(() => {
+      result.current.domainHook.handleEvent(
+        changedEvent({
+          environmentId: "env-1",
+          uri: "file:///w/doc.md",
+          changes: [{ uri: "file:///w/doc.md", type: "updated" }],
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(result.current.getResourceContent("env-1", "file:///w/doc.md")).toBeUndefined();
+    });
+  });
+
   it("ignores changes to files that were never read (nothing displaying them)", async () => {
     const { result } = renderHook(() => useResources());
     act(() => {

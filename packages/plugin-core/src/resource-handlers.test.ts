@@ -195,6 +195,44 @@ describe("watch registry", () => {
     expect(close).toHaveBeenCalledTimes(1);
   });
 
+  it("opens exactly one wire watch for concurrent watchResource calls on the same key", async () => {
+    let resolveCreate: ((sub: ResourceWatchSubscription) => void) | undefined;
+    const close = vi.fn(async () => {});
+    const createResourceWatch = vi.fn(
+      () =>
+        new Promise<ResourceWatchSubscription>((resolve) => {
+          // Stay pending so both calls race the create before either stores.
+          resolveCreate = resolve;
+        }),
+    );
+    getConnection.mockReturnValue(makeConnection({ createResourceWatch }));
+
+    const p1 = watchResource({
+      environmentId: "env-1",
+      uri: "file:///w/doc.md",
+      recursive: false,
+    } as never);
+    const p2 = watchResource({
+      environmentId: "env-1",
+      uri: "file:///w/doc.md",
+      recursive: false,
+    } as never);
+    // Let both calls reach the (still-pending) create before it settles.
+    await new Promise((r) => setTimeout(r, 0));
+    resolveCreate?.({ channel: "ahp-resource-watch:/w1", close });
+
+    const [a, b] = await Promise.all([p1, p2]);
+    // One underlying watch, two distinct handles sharing it.
+    expect(createResourceWatch).toHaveBeenCalledTimes(1);
+    expect(a.watchId).not.toBe(b.watchId);
+
+    // Releasing one keeps the shared watch; releasing the other closes it once.
+    await unwatchResource({ watchId: a.watchId } as never);
+    expect(close).not.toHaveBeenCalled();
+    await unwatchResource({ watchId: b.watchId } as never);
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
   it("treats different recursive flags as distinct watches", async () => {
     let n = 0;
     const createResourceWatch = vi.fn(
