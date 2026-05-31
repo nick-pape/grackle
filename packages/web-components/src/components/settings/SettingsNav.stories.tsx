@@ -14,12 +14,13 @@ export const AllTabsRendered: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Credentials/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /GitHub Accounts/ })).toBeInTheDocument();
-    await expect(canvas.getByRole("tab", { name: /Schedules/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Appearance/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Shortcuts/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /About/ })).toBeInTheDocument();
-    // Personas was moved to a top-level surface (#1413); it must not appear here.
+    // Personas (#1413) and Schedules (#1416) were moved to top-level surfaces;
+    // neither must appear in the Settings rail.
     await expect(canvas.queryByRole("tab", { name: /Personas/ })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /Schedules/ })).not.toBeInTheDocument();
   },
 };
 
@@ -42,10 +43,11 @@ export const KeyboardNavigation: Story = {
     const githubTab = canvas.getByRole("tab", { name: /GitHub Accounts/ });
     await expect(githubTab).toHaveFocus();
 
-    // ArrowDown again to Schedules (third tab — Personas is no longer here).
+    // ArrowDown again to Appearance (third tab — Personas (#1413) and
+    // Schedules (#1416) are no longer here).
     await userEvent.keyboard("{ArrowDown}");
-    const schedulesTab = canvas.getByRole("tab", { name: /Schedules/ });
-    await expect(schedulesTab).toHaveFocus();
+    const appearanceTab = canvas.getByRole("tab", { name: /Appearance/ });
+    await expect(appearanceTab).toHaveFocus();
 
     // Home goes to first tab.
     await userEvent.keyboard("{Home}");

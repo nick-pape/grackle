@@ -31,4 +31,12 @@ describe("getActiveView", () => {
     expect(getActiveView("/personas/new")).toBe("personas");
     expect(getActiveView("/personas/abc-123")).toBe("personas");
   });
+
+  it("maps the Schedules routes to the schedules view", () => {
+    // The list, the new-schedule form, and a schedule detail page all highlight
+    // the top-level Schedules tab (relocated out of Settings, #1416).
+    expect(getActiveView("/schedules")).toBe("schedules");
+    expect(getActiveView("/schedules/new")).toBe("schedules");
+    expect(getActiveView("/schedules/abc-123")).toBe("schedules");
+  });
 });
