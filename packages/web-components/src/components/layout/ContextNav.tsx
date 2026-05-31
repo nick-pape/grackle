@@ -153,14 +153,17 @@ export function ContextNav({
                   {!collapsed && <span className={styles.tabLabel}>{item.label}</span>}
                 </button>
               );
+              // Each item is a `listitem` so the `role="list"` has valid children.
               // When collapsed, labels live in a tooltip so the rail stays icon-only.
-              return collapsed ? (
-                <Tooltip key={item.id} text={item.label} placement="right" inline={false}>
-                  {button}
-                </Tooltip>
-              ) : (
-                <div key={item.id} className={styles.tabWrapper}>
-                  {button}
+              return (
+                <div key={item.id} role="listitem" className={styles.tabWrapper}>
+                  {collapsed ? (
+                    <Tooltip text={item.label} placement="right" inline={false}>
+                      {button}
+                    </Tooltip>
+                  ) : (
+                    button
+                  )}
                 </div>
               );
             })}
