@@ -116,10 +116,25 @@ export function useStreams(): UseStreamsResult {
     });
   }, []);
 
-  const handleEvent = useCallback((_event: GrackleEvent): boolean => {
-    // No stream domain events exist yet — nothing to consume.
-    return false;
-  }, []);
+  const handleEvent = useCallback(
+    (event: GrackleEvent): boolean => {
+      // Stream room lifecycle (#1309). The registry emits these for observable
+      // rooms as streams are created/joined/left/closed by agents or the
+      // operator; refetch the roster to reflect the new topology (ListStreams is
+      // cheap — same refresh-on-event pattern as useTasks).
+      switch (event.type) {
+        case "stream.created":
+        case "stream.attached":
+        case "stream.detached":
+        case "stream.closed":
+          loadStreams().catch(() => {});
+          return true;
+        default:
+          return false;
+      }
+    },
+    [loadStreams],
+  );
 
   const domainHook: DomainHook = {
     onConnect: loadStreams,

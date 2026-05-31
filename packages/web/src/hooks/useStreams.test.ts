@@ -145,11 +145,31 @@ describe("useStreams.loadStreams", () => {
 });
 
 describe("useStreams.handleEvent", () => {
-  it("returns false for all events (no stream domain events exist)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("consumes stream lifecycle events and refetches the roster", async () => {
+    mockClient.listStreams.mockResolvedValue({ streams: [] });
+    const { result } = renderHook(() => useStreams());
+
+    for (const type of ["stream.created", "stream.attached", "stream.detached", "stream.closed"]) {
+      const event = { id: "e1", type, timestamp: "2026-01-01T00:00:00Z", payload: {} };
+      let consumed = false;
+      await act(async () => {
+        consumed = result.current.handleEvent(event);
+      });
+      expect(consumed).toBe(true);
+    }
+
+    expect(mockClient.listStreams).toHaveBeenCalledTimes(4);
+  });
+
+  it("returns false for unrelated events", () => {
     const { result } = renderHook(() => useStreams());
     const event = {
       id: "e1",
-      type: "stream.created",
+      type: "task.created",
       timestamp: "2026-01-01T00:00:00Z",
       payload: {},
     };

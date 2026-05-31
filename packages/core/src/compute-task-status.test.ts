@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeTaskStatus } from "./compute-task-status.js";
+import { computeTaskStatus, getLatestLiveSessionId } from "./compute-task-status.js";
 import type { SessionRow } from "@grackle-ai/database";
 
 type SessionInput = Pick<SessionRow, "id" | "status" | "startedAt">;
@@ -168,5 +168,42 @@ describe("computeTaskStatus", () => {
       ];
       expect(computeTaskStatus("not_started", sessions).latestSessionId).toBe("b");
     });
+  });
+});
+
+describe("getLatestLiveSessionId", () => {
+  it("returns '' when there are no sessions", () => {
+    expect(getLatestLiveSessionId([])).toBe("");
+  });
+
+  it("returns '' when all sessions are terminal", () => {
+    const sessions = [
+      makeSession("s1", "stopped", "2025-01-01T00:00:00Z"),
+      makeSession("s2", "failed", "2025-01-01T00:01:00Z"),
+    ];
+    expect(getLatestLiveSessionId(sessions)).toBe("");
+  });
+
+  it("returns the only live session", () => {
+    const sessions = [
+      makeSession("s1", "stopped", "2025-01-01T00:00:00Z"),
+      makeSession("s2", "running", "2025-01-01T00:01:00Z"),
+    ];
+    expect(getLatestLiveSessionId(sessions)).toBe("s2");
+  });
+
+  it("picks the latest live session by startedAt, ignoring newer terminal ones", () => {
+    const sessions = [
+      makeSession("s1", "running", "2025-01-01T00:00:00Z"),
+      makeSession("s2", "idle", "2025-01-01T00:02:00Z"),
+      makeSession("s3", "stopped", "2025-01-01T00:03:00Z"),
+    ];
+    expect(getLatestLiveSessionId(sessions)).toBe("s2");
+  });
+
+  it("treats pending/running/idle as live", () => {
+    for (const status of ["pending", "running", "idle"]) {
+      expect(getLatestLiveSessionId([makeSession("s1", status)])).toBe("s1");
+    }
   });
 });

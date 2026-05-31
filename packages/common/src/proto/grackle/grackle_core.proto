@@ -75,6 +75,14 @@ service GrackleCore {
   rpc AttachStream(AttachStreamRequest) returns (AttachStreamResponse);
   rpc ListStreams(ListStreamsRequest) returns (ListStreamsResponse);
 
+  // Operator stream control plane (#1309) — human-drivable streams via the
+  // server (not an agent holding an fd) + the `operator:*` anchor principal.
+  rpc OperatorCreateStream(OperatorCreateStreamRequest) returns (OperatorCreateStreamResponse);
+  rpc OperatorAttachTask(OperatorAttachTaskRequest) returns (OperatorAttachTaskResponse);
+  rpc OperatorDetachTask(OperatorDetachTaskRequest) returns (OperatorDetachTaskResponse);
+  rpc ListTaskAttachments(ListTaskAttachmentsRequest) returns (ListTaskAttachmentsResponse);
+  rpc OperatorCloseStream(OperatorCloseStreamRequest) returns (OperatorCloseStreamResponse);
+
   // Version
   rpc GetVersionStatus(Empty) returns (VersionStatus);
 

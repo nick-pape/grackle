@@ -45,6 +45,18 @@ export type GrackleEventType =
   // `useResources` hook re-reads the affected URIs. payload:
   // { environmentId, uri, changes: [{ uri, type }] }
   | "resource.changed"
+  // IPC stream (room) lifecycle (#1309). Emitted from the stream registry for
+  // observable (non-reserved) rooms so the Coordination roster updates live as
+  // streams are created/joined/left/closed by either agents or the operator.
+  // payloads:
+  //   stream.created  { streamId, name, selfEcho }
+  //   stream.attached { streamId, name, sessionId, permission, deliveryMode }
+  //   stream.detached { streamId, name, sessionId }
+  //   stream.closed   { streamId, name }
+  | "stream.created"
+  | "stream.attached"
+  | "stream.detached"
+  | "stream.closed"
   // An agent asked the UI to open a read-only live view of a file (#1396 live
   // docs v0). Emitted when the `show_file` MCP tool's result carries a document
   // descriptor; the web `useDocuments` hook opens a tab bound to the URI
