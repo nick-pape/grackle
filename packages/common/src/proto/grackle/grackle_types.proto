@@ -571,6 +571,8 @@ message Task {
   int32 token_budget = 25; // Total token cap (input + output); 0 = unlimited
   int32 cost_budget_millicents = 26; // Cost cap in millicents ($0.00001 units); 0 = unlimited
   bool inject_knowledge = 27; // Inject knowledge-graph context at spawn (#1259); defaults true
+  string agent_id = 28; // Owning Grackle Agent (#1418); empty = user-driven (not the ACP runtime agent id)
+  string kind = 29; // Discriminator (#1418): task | root | schedule_rule | schedule_fire | channel_config | channel_thread
 }
 
 message TaskList {
@@ -907,6 +909,7 @@ message Agent {
   string primary_persona_id = 4; // Reference into the Persona Library (#1413)
   string created_at = 5;
   string updated_at = 6;
+  string environment_id = 7; // The Agent's home environment (#1418)
 }
 
 message AgentList {
@@ -921,6 +924,7 @@ message CreateAgentRequest {
   string name = 1;
   string avatar = 2;
   string primary_persona_id = 3;
+  string environment_id = 4; // Required (#1418) — validated at the handler layer
 }
 
 message UpdateAgentRequest {
