@@ -963,6 +963,43 @@ export interface UseGitHubAccountsResult {
   domainHook: DomainHook;
 }
 
+// ─── Resources hook result (AHP resource bridge, #1395) ──────────────────────
+
+/** A file's content read from an environment's worktree over the AHP bridge. */
+export interface ResourceContentState {
+  /** Content, encoded per {@link ResourceContentState.encoding}. */
+  data: string;
+  /** Encoding of {@link ResourceContentState.data} ("utf-8" or "base64"). */
+  encoding: string;
+  /** MIME type (e.g. "text/markdown"), or "" if unknown. */
+  contentType: string;
+}
+
+/**
+ * Values returned by the resources domain hook (#1395). Reads file content from
+ * an environment's PowerLine-owned worktree and live-tracks changes via the
+ * resource-watch wire. Consumed by the v0 live-document viewer (#1396).
+ */
+export interface UseResourcesResult {
+  /**
+   * Read a file's content by `file://` URI from an environment, updating the
+   * content cache and returning the result.
+   */
+  readResource: (environmentId: string, uri: string) => Promise<ResourceContentState>;
+  /** Cached content for an environment+URI, or `undefined` until first read. */
+  getResourceContent: (environmentId: string, uri: string) => ResourceContentState | undefined;
+  /**
+   * Start watching a `file://` URI. While watched, the content cache
+   * auto-refreshes when the file changes. Returns the watch id for
+   * {@link UseResourcesResult.unwatchResource}.
+   */
+  watchResource: (environmentId: string, uri: string, recursive?: boolean) => Promise<string>;
+  /** Stop a watch by its id (idempotent). */
+  unwatchResource: (watchId: string) => Promise<void>;
+  /** Lifecycle hook for connect/disconnect/event routing. */
+  domainHook: DomainHook;
+}
+
 /** Delay in milliseconds before attempting a WebSocket reconnect. */
 export const WS_RECONNECT_DELAY_MS: number = 3_000;
 

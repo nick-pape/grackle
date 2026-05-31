@@ -26,7 +26,12 @@
 import type {
   ActionEnvelope,
   CreateSessionParams as AhpCreateSessionParams,
+  ContentEncoding,
+  CreateResourceWatchResult,
   ListSessionsResult,
+  ResourceListResult,
+  ResourceReadResult,
+  ResourceWatchChangedAction,
   StateAction,
   URI,
   AhpNotification,
@@ -47,6 +52,9 @@ import type {
   HostSessionInfo,
   IHostTransport,
   ReanimateParams,
+  ResourceWatchListener,
+  ResourceWatchOptions,
+  ResourceWatchSubscription,
   ServerActionEnvelope,
 } from "./host-transport.js";
 
@@ -156,6 +164,12 @@ interface SessionStream {
 export class AhpHostTransport implements IHostTransport {
   private readonly socket: AhpClientSocket;
   private readonly sessions: Map<URI, SessionStream> = new Map();
+  /**
+   * Active resource-watch listeners keyed by their `ahp-resource-watch:/<id>`
+   * channel. Populated by {@link AhpHostTransport.createResourceWatch}; consulted by
+   * {@link AhpHostTransport.handleNotification} to route `resourceWatch/changed` action batches.
+   */
+  private readonly resourceWatchers: Map<URI, ResourceWatchListener> = new Map();
   private nextClientSeq: number = 0;
 
   /**
@@ -187,6 +201,17 @@ export class AhpHostTransport implements IHostTransport {
       return;
     }
     const envelope = notif.params as ActionEnvelope;
+    // Resource-watch change batches arrive as `action` notifications on a
+    // `ahp-resource-watch:/<id>` channel (not a session channel). Route them to
+    // the registered watch listener before the session lookup.
+    if (envelope.action.type === ActionType.ResourceWatchChanged) {
+      const listener = this.resourceWatchers.get(envelope.channel);
+      if (listener !== undefined) {
+        const { changes } = envelope.action as ResourceWatchChangedAction;
+        listener(changes.items);
+      }
+      return;
+    }
     const session = this.sessions.get(envelope.channel);
     if (session === undefined) {
       return;
@@ -329,6 +354,59 @@ export class AhpHostTransport implements IHostTransport {
       // so existing consumers (which treat status as opaque) still work.
       status: String(s.status),
     }));
+  }
+
+  /** Read a file's content via AHP `resourceRead`. */
+  public async resourceRead(uri: string, encoding?: ContentEncoding): Promise<ResourceReadResult> {
+    return this.socket.request("resourceRead", {
+      channel: ROOT_CHANNEL,
+      uri,
+      ...(encoding !== undefined ? { encoding } : {}),
+    });
+  }
+
+  /** List a directory's entries via AHP `resourceList`. */
+  public async resourceList(uri: string): Promise<ResourceListResult> {
+    return this.socket.request("resourceList", { channel: ROOT_CHANNEL, uri });
+  }
+
+  /**
+   * Start a watch via AHP `createResourceWatch` then `subscribe` to the
+   * returned watch channel. The listener is registered BEFORE `subscribe` so no
+   * change batch can race ahead of it. The watcher uses `ignoreInitial`, so no
+   * synthetic events fire for existing files at subscribe time.
+   */
+  public async createResourceWatch(
+    options: ResourceWatchOptions,
+    onChange: ResourceWatchListener,
+  ): Promise<ResourceWatchSubscription> {
+    const { channel } = (await this.socket.request("createResourceWatch", {
+      channel: ROOT_CHANNEL,
+      uri: options.uri,
+      ...(options.recursive !== undefined ? { recursive: options.recursive } : {}),
+    })) as CreateResourceWatchResult;
+    this.resourceWatchers.set(channel, onChange);
+    try {
+      await this.socket.request("subscribe", { channel });
+    } catch (err) {
+      // Subscribe failed — drop the listener so we don't leak it, and surface.
+      this.resourceWatchers.delete(channel);
+      throw err;
+    }
+    let closed = false;
+    return {
+      channel,
+      close: async (): Promise<void> => {
+        if (closed) {
+          return;
+        }
+        closed = true;
+        this.resourceWatchers.delete(channel);
+        // `unsubscribe` is a fire-and-forget notification on the wire; the host
+        // tears the watcher down on receipt (or on disconnect).
+        this.socket.notify("unsubscribe", { channel });
+      },
+    };
   }
 
   // ─── Internals ────────────────────────────────────────────────────

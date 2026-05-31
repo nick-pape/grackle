@@ -36,7 +36,12 @@ export type GrackleEventType =
   // A workspace's promoted-component set changed (promote/demote, or a promoted
   // component edited) — the MCP server pushes tools/list_changed to that
   // workspace's sessions so dynamic render_<name> tools refresh (#1297). payload: { workspaceId }
-  | "component.changed";
+  | "component.changed"
+  // A watched resource (file/dir) changed on an environment's PowerLine-owned
+  // worktree (#1395). Forwarded from the AHP resource-watch channel; the web
+  // `useResources` hook re-reads the affected URIs. payload:
+  // { environmentId, watchId, uri, changes: [{ uri, type }] }
+  | "resource.changed";
 
 /** A domain event emitted by the event bus. */
 export interface GrackleEvent {

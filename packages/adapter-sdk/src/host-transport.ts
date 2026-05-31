@@ -22,7 +22,13 @@
  */
 
 import type { AgentEventFields } from "@grackle-ai/common";
-import type { StateAction } from "@grackle-ai/ahp";
+import type {
+  StateAction,
+  ResourceReadResult,
+  ResourceListResult,
+  ResourceChange,
+  ContentEncoding,
+} from "@grackle-ai/ahp";
 
 /**
  * A single event from a session stream, in HR8c transitional form.
@@ -121,6 +127,29 @@ export interface HostSessionInfo {
   status: string;
 }
 
+/** Options for {@link IHostTransport.createResourceWatch}. */
+export interface ResourceWatchOptions {
+  /** Directory or file `file://` URI to watch. */
+  uri: string;
+  /** Report descendant changes (directories only); ignored for a single file. */
+  recursive?: boolean;
+}
+
+/**
+ * Callback invoked with each coalesced batch of resource changes delivered by
+ * the host over the watch channel. Never called after the subscription's
+ * `close()` resolves.
+ */
+export type ResourceWatchListener = (changes: ResourceChange[]) => void;
+
+/** A live resource watch. Call `close()` to release it (idempotent). */
+export interface ResourceWatchSubscription {
+  /** The host-assigned watch channel URI (`ahp-resource-watch:/<id>`). */
+  channel: string;
+  /** Stop the watch and detach the listener. Idempotent. */
+  close(): Promise<void>;
+}
+
 /** Result of {@link IHostTransport.createSession}: URI + live event stream. */
 export interface CreateSessionResult {
   /** Session URI (currently just the sessionId; AHP URI scheme reserved for HR8d). */
@@ -182,4 +211,39 @@ export interface IHostTransport {
 
   /** List active sessions on the host. */
   listSessions(): Promise<HostSessionInfo[]>;
+
+  /**
+   * Read a file's content by `file://` URI from the host's worktree.
+   *
+   * Maps to AHP `resourceRead`. The host sandboxes the URI to the working
+   * trees of sessions this connection created; out-of-sandbox or missing
+   * paths reject with the corresponding AHP error.
+   *
+   * @param uri - The `file://` URI to read.
+   * @param encoding - Preferred encoding; omitted lets the host choose
+   *   (utf-8 for text, base64 for binary).
+   */
+  resourceRead(uri: string, encoding?: ContentEncoding): Promise<ResourceReadResult>;
+
+  /**
+   * List a directory's entries by `file://` URI from the host's worktree.
+   *
+   * Maps to AHP `resourceList`. Same sandbox model as {@link IHostTransport.resourceRead}.
+   *
+   * @param uri - The directory `file://` URI to list.
+   */
+  resourceList(uri: string): Promise<ResourceListResult>;
+
+  /**
+   * Start a filesystem watch under `options.uri`. Maps to AHP
+   * `createResourceWatch` + `subscribe`. The returned subscription's listener
+   * fires for each coalesced change batch until {@link ResourceWatchSubscription.close} is called.
+   *
+   * @param options - Watch target + recursion.
+   * @param onChange - Invoked per change batch.
+   */
+  createResourceWatch(
+    options: ResourceWatchOptions,
+    onChange: ResourceWatchListener,
+  ): Promise<ResourceWatchSubscription>;
 }

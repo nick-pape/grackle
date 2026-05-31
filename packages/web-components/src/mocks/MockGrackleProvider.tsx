@@ -1335,6 +1335,23 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         },
       },
 
+      // ── Resources (AHP resource bridge #1395) ───────
+
+      resources: {
+        readResource: async (environmentId: string, uri: string) => {
+          console.log("[MockGrackle] readResource", environmentId, uri);
+          return { data: "", encoding: "utf-8", contentType: "" };
+        },
+        getResourceContent: () => undefined,
+        watchResource: async (environmentId: string, uri: string) => {
+          console.log("[MockGrackle] watchResource", environmentId, uri);
+          return "mock-watch-id";
+        },
+        unwatchResource: async (watchId: string) => {
+          console.log("[MockGrackle] unwatchResource", watchId);
+        },
+      },
+
       // ── Plugins ─────────────────────────────────────
 
       plugins: {

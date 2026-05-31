@@ -22,6 +22,7 @@ import type {
   UseSchedulesResult,
   UseStreamsResult,
   UseGitHubAccountsResult,
+  UseResourcesResult,
   ConnectionStatus,
 } from "../hooks/types.js";
 
@@ -60,6 +61,8 @@ export interface UseGrackleSocketResult {
   plugins: Omit<UsePluginsResult, "domainHook">;
   /** GitHub account state and actions. */
   githubAccounts: Omit<UseGitHubAccountsResult, "domainHook">;
+  /** Resource bridge: read/watch files from an environment's worktree (#1395). */
+  resources: Omit<UseResourcesResult, "domainHook">;
   /** App-level default persona ID setting. */
   appDefaultPersonaId: string;
   /** Update the app-level default persona ID. */

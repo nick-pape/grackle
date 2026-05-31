@@ -11,13 +11,18 @@
 
 import {
   ActionType,
+  ContentEncoding,
   MessageKind,
   AuthRequiredReason,
+  ResourceChangeType,
   ResponsePartKind,
   SessionStatus,
   type AhpNotification,
   type AuthenticateResult,
+  type CreateResourceWatchResult,
   type ListSessionsResult,
+  type ResourceListResult,
+  type ResourceReadResult,
   type SessionSummary,
   type StateAction,
   type SubscribeResult,
@@ -579,6 +584,132 @@ describe("AhpHostTransport", () => {
       expect(aSeen).toHaveLength(1);
       expect(bSeen).toHaveLength(0);
       void vi.fn(); // touch vi so it stays imported (tests use it indirectly via the test framework)
+    });
+  });
+
+  describe("resources (AHP resource bridge #1395)", () => {
+    it("resourceRead sends `resourceRead` on root channel with uri + encoding", async () => {
+      const { stub, socket } = makeStubSocket();
+      const result: ResourceReadResult = {
+        data: "# hello",
+        encoding: ContentEncoding.Utf8,
+        contentType: "text/markdown",
+      };
+      stub.requestResponder = (method) => (method === "resourceRead" ? result : null);
+      const transport = new AhpHostTransport(socket);
+      stub.bindHandler(bindNotificationHandler(transport));
+
+      const got = await transport.resourceRead("file:///w/doc.md", ContentEncoding.Utf8);
+      expect(got).toEqual(result);
+      const call = stub.recordedRequests.find((r) => r.method === "resourceRead");
+      expect(call?.params).toEqual({
+        channel: "ahp-root://",
+        uri: "file:///w/doc.md",
+        encoding: ContentEncoding.Utf8,
+      });
+    });
+
+    it("resourceRead omits encoding when not supplied", async () => {
+      const { stub, socket } = makeStubSocket();
+      stub.requestResponder = () =>
+        ({ data: "", encoding: ContentEncoding.Utf8 }) satisfies ResourceReadResult;
+      const transport = new AhpHostTransport(socket);
+      stub.bindHandler(bindNotificationHandler(transport));
+
+      await transport.resourceRead("file:///w/x");
+      const call = stub.recordedRequests.find((r) => r.method === "resourceRead");
+      expect(call?.params).toEqual({ channel: "ahp-root://", uri: "file:///w/x" });
+    });
+
+    it("resourceList sends `resourceList` on root channel", async () => {
+      const { stub, socket } = makeStubSocket();
+      const result: ResourceListResult = {
+        entries: [
+          { name: "a.md", type: "file" },
+          { name: "sub", type: "directory" },
+        ],
+      };
+      stub.requestResponder = (method) => (method === "resourceList" ? result : null);
+      const transport = new AhpHostTransport(socket);
+      stub.bindHandler(bindNotificationHandler(transport));
+
+      const got = await transport.resourceList("file:///w");
+      expect(got).toEqual(result);
+      const call = stub.recordedRequests.find((r) => r.method === "resourceList");
+      expect(call?.params).toEqual({ channel: "ahp-root://", uri: "file:///w" });
+    });
+
+    it("createResourceWatch requests create+subscribe and routes change batches to the listener", async () => {
+      const { stub, socket } = makeStubSocket();
+      const watchChannel = "ahp-resource-watch:/wid-1";
+      stub.requestResponder = (method) => {
+        if (method === "createResourceWatch") {
+          return { channel: watchChannel } satisfies CreateResourceWatchResult;
+        }
+        if (method === "subscribe") {
+          return { snapshot: undefined } satisfies SubscribeResult;
+        }
+        return null;
+      };
+      const transport = new AhpHostTransport(socket);
+      stub.bindHandler(bindNotificationHandler(transport));
+
+      const batches: Array<Array<{ uri: string; type: string }>> = [];
+      const sub = await transport.createResourceWatch({ uri: "file:///w/doc.md" }, (changes) => {
+        batches.push(changes.map((c) => ({ uri: c.uri, type: c.type })));
+      });
+      expect(sub.channel).toBe(watchChannel);
+
+      // create came before subscribe, both on the right channels.
+      const methods = stub.recordedRequests.map((r) => r.method);
+      expect(methods).toEqual(["createResourceWatch", "subscribe"]);
+      expect((stub.recordedRequests[1]?.params as { channel: string }).channel).toBe(watchChannel);
+
+      // A change batch on the watch channel reaches the listener.
+      stub.pushNotification("action", {
+        channel: watchChannel,
+        serverSeq: 1,
+        action: {
+          type: ActionType.ResourceWatchChanged,
+          changes: { items: [{ uri: "file:///w/doc.md", type: ResourceChangeType.Updated }] },
+        },
+        origin: undefined,
+      });
+      expect(batches).toEqual([[{ uri: "file:///w/doc.md", type: ResourceChangeType.Updated }]]);
+
+      // After close(): unsubscribe is sent and further batches are dropped.
+      await sub.close();
+      expect(stub.recordedNotifies.find((n) => n.method === "unsubscribe")?.params).toEqual({
+        channel: watchChannel,
+      });
+      stub.pushNotification("action", {
+        channel: watchChannel,
+        serverSeq: 2,
+        action: {
+          type: ActionType.ResourceWatchChanged,
+          changes: { items: [{ uri: "file:///w/doc.md", type: ResourceChangeType.Deleted }] },
+        },
+        origin: undefined,
+      });
+      expect(batches).toHaveLength(1); // no new batch after close
+    });
+
+    it("a ResourceWatchChanged action on an unknown channel is a no-op", () => {
+      const { stub, socket } = makeStubSocket();
+      const transport = new AhpHostTransport(socket);
+      stub.bindHandler(bindNotificationHandler(transport));
+
+      expect(() =>
+        stub.pushNotification("action", {
+          channel: "ahp-resource-watch:/never-registered",
+          serverSeq: 1,
+          action: {
+            type: ActionType.ResourceWatchChanged,
+            changes: { items: [{ uri: "file:///x", type: ResourceChangeType.Added }] },
+          },
+          origin: undefined,
+        }),
+      ).not.toThrow();
     });
   });
 });

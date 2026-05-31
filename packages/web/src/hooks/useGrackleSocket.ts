@@ -28,6 +28,7 @@ import { useNotifications } from "./useNotifications.js";
 import { useStreams } from "./useStreams.js";
 import { usePlugins } from "./usePlugins.js";
 import { useGitHubAccounts } from "./useGitHubAccounts.js";
+import { useResources } from "./useResources.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToUsageStats } from "./proto-converters.js";
 
@@ -103,6 +104,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
   const streamsHook = useStreams();
   const pluginsHook = usePlugins();
   const githubAccountsHook = useGitHubAccounts();
+  const resourcesHook = useResources();
 
   // --- Domain hook registry ---
   // Plugin-scoped hooks are only registered when their plugin is active.
@@ -124,6 +126,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     ...(activeHookKeys.has("streams") ? [streamsHook.domainHook] : []),
     ...(activeHookKeys.has("plugins") ? [pluginsHook.domainHook] : []),
     githubAccountsHook.domainHook, // core hook — always active
+    resourcesHook.domainHook, // core hook — always active (AHP resource bridge #1395)
   ];
 
   // --- Transport (ConnectRPC server-streaming) ---
@@ -406,6 +409,12 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       updateGitHubAccount: githubAccountsHook.updateGitHubAccount,
       removeGitHubAccount: githubAccountsHook.removeGitHubAccount,
       importGitHubAccounts: githubAccountsHook.importGitHubAccounts,
+    },
+    resources: {
+      readResource: resourcesHook.readResource,
+      getResourceContent: resourcesHook.getResourceContent,
+      watchResource: resourcesHook.watchResource,
+      unwatchResource: resourcesHook.unwatchResource,
     },
     appDefaultPersonaId,
     setAppDefaultPersonaId,

@@ -1255,6 +1255,22 @@ declare namespace grackle {
         PluginListSchema,
         SetPluginEnabledRequest,
         SetPluginEnabledRequestSchema,
+        ReadResourceRequest,
+        ReadResourceRequestSchema,
+        ResourceContent,
+        ResourceContentSchema,
+        ListResourceRequest,
+        ListResourceRequestSchema,
+        ResourceDirectoryEntry,
+        ResourceDirectoryEntrySchema,
+        ResourceListing,
+        ResourceListingSchema,
+        WatchResourceRequest,
+        WatchResourceRequestSchema,
+        WatchHandle,
+        WatchHandleSchema,
+        UnwatchResourceRequest,
+        UnwatchResourceRequestSchema,
         EventType_2 as EventType,
         EventTypeSchema,
         TaskStatus_2 as TaskStatus,
@@ -1575,6 +1591,26 @@ const GrackleCore: GenService<{
         methodKind: "unary";
         input: typeof GetSessionActionsRequestSchema;
         output: typeof SessionActionListSchema;
+    };
+    readResource: {
+        methodKind: "unary";
+        input: typeof ReadResourceRequestSchema;
+        output: typeof ResourceContentSchema;
+    };
+    listResource: {
+        methodKind: "unary";
+        input: typeof ListResourceRequestSchema;
+        output: typeof ResourceListingSchema;
+    };
+    watchResource: {
+        methodKind: "unary";
+        input: typeof WatchResourceRequestSchema;
+        output: typeof WatchHandleSchema;
+    };
+    unwatchResource: {
+        methodKind: "unary";
+        input: typeof UnwatchResourceRequestSchema;
+        output: typeof EmptySchema;
     };
 }>;
 
@@ -1966,6 +2002,15 @@ type ListRecentKnowledgeNodesResponse = Message<"grackle.ListRecentKnowledgeNode
 const ListRecentKnowledgeNodesResponseSchema: GenMessage<ListRecentKnowledgeNodesResponse>;
 
 // @public
+type ListResourceRequest = Message<"grackle.ListResourceRequest"> & {
+    environmentId: string;
+    uri: string;
+};
+
+// @public
+const ListResourceRequestSchema: GenMessage<ListResourceRequest>;
+
+// @public
 type ListRuntimesResponse = Message<"grackle.ListRuntimesResponse"> & {
     runtimes: RuntimeInfo[];
 };
@@ -2299,6 +2344,16 @@ export function readAgentResultStatus(result: string): ReadAgentStatus | undefin
 export type ReadAgentStatus = "completed" | "running" | "failed" | "error" | "cancelled";
 
 // @public
+type ReadResourceRequest = Message<"grackle.ReadResourceRequest"> & {
+    environmentId: string;
+    uri: string;
+    encoding: string;
+};
+
+// @public
+const ReadResourceRequestSchema: GenMessage<ReadResourceRequest>;
+
+// @public
 type RegisterComponentRequest = Message<"grackle.RegisterComponentRequest"> & {
     workspaceId: string;
     name: string;
@@ -2343,6 +2398,33 @@ type ResolveComponentGraphResponse = Message<"grackle.ResolveComponentGraphRespo
 
 // @public
 const ResolveComponentGraphResponseSchema: GenMessage<ResolveComponentGraphResponse>;
+
+// @public
+type ResourceContent = Message<"grackle.ResourceContent"> & {
+    data: string;
+    encoding: string;
+    contentType: string;
+};
+
+// @public
+const ResourceContentSchema: GenMessage<ResourceContent>;
+
+// @public
+type ResourceDirectoryEntry = Message<"grackle.ResourceDirectoryEntry"> & {
+    name: string;
+    type: string;
+};
+
+// @public
+const ResourceDirectoryEntrySchema: GenMessage<ResourceDirectoryEntry>;
+
+// @public
+type ResourceListing = Message<"grackle.ResourceListing"> & {
+    entries: ResourceDirectoryEntry[];
+};
+
+// @public
+const ResourceListingSchema: GenMessage<ResourceListing>;
 
 // @public
 type ResumeRequest = Message<"grackle.ResumeRequest"> & {
@@ -3219,6 +3301,14 @@ type UnlinkEnvironmentRequest = Message<"grackle.UnlinkEnvironmentRequest"> & {
 const UnlinkEnvironmentRequestSchema: GenMessage<UnlinkEnvironmentRequest>;
 
 // @public
+type UnwatchResourceRequest = Message<"grackle.UnwatchResourceRequest"> & {
+    watchId: string;
+};
+
+// @public
+const UnwatchResourceRequestSchema: GenMessage<UnwatchResourceRequest>;
+
+// @public
 type UpdateComponentRequest = Message<"grackle.UpdateComponentRequest"> & {
     id: string;
     workspaceId: string;
@@ -3357,6 +3447,24 @@ type WaitForPipeResponse = Message<"grackle.WaitForPipeResponse"> & {
 
 // @public
 const WaitForPipeResponseSchema: GenMessage<WaitForPipeResponse>;
+
+// @public
+type WatchHandle = Message<"grackle.WatchHandle"> & {
+    watchId: string;
+};
+
+// @public
+const WatchHandleSchema: GenMessage<WatchHandle>;
+
+// @public
+type WatchResourceRequest = Message<"grackle.WatchResourceRequest"> & {
+    environmentId: string;
+    uri: string;
+    recursive: boolean;
+};
+
+// @public
+const WatchResourceRequestSchema: GenMessage<WatchResourceRequest>;
 
 // @public
 export const WORKER_MCP_TOOLS: readonly string[];

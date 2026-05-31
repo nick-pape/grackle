@@ -1138,3 +1138,55 @@ message SetPluginEnabledRequest {
   string name = 1;
   bool enabled = 2;
 }
+
+// ─── Resources (AHP resource bridge, #1395) ──────────────────
+// The Server is an AHP client of PowerLine (the host that owns the worktree
+// filesystem). These messages bridge PowerLine's resourceRead/resourceList/
+// createResourceWatch capability to the web UI. `uri` values are file:// URIs
+// sandboxed (on the wire) to the environment's session working trees.
+
+// Read a file's content by URI from an environment's worktree.
+message ReadResourceRequest {
+  string environment_id = 1;
+  string uri = 2;       // file:// URI within a session working tree
+  string encoding = 3;  // "" (server default), "utf-8", or "base64"
+}
+
+message ResourceContent {
+  string data = 1;          // content encoded per `encoding`
+  string encoding = 2;      // "utf-8" or "base64"
+  string content_type = 3;  // e.g. "text/markdown" ("" if unknown)
+}
+
+// List a directory's entries by URI from an environment's worktree.
+message ListResourceRequest {
+  string environment_id = 1;
+  string uri = 2; // directory file:// URI
+}
+
+message ResourceDirectoryEntry {
+  string name = 1;
+  string type = 2; // "file" or "directory"
+}
+
+message ResourceListing {
+  repeated ResourceDirectoryEntry entries = 1;
+}
+
+// Subscribe to file-change notifications under a URI. Changes are delivered as
+// "resource.changed" domain events on StreamEvents (not on this RPC's
+// response). Release the watch with UnwatchResource (or it is reaped when the
+// environment disconnects).
+message WatchResourceRequest {
+  string environment_id = 1;
+  string uri = 2;        // file or directory URI to watch
+  bool recursive = 3;    // watch descendants (directories only)
+}
+
+message WatchHandle {
+  string watch_id = 1; // server-assigned token; pass to UnwatchResource
+}
+
+message UnwatchResourceRequest {
+  string watch_id = 1;
+}
