@@ -2,6 +2,23 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.143.0",
+      "tag": "@grackle-ai/cli_v0.143.0",
+      "date": "Sun, 31 May 2026 23:10:15 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417)."
+          }
+        ],
+        "none": [
+          {
+            "comment": "placeholder"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.142.0",
       "tag": "@grackle-ai/cli_v0.142.0",
       "date": "Sun, 31 May 2026 19:50:14 GMT",
