@@ -5,8 +5,8 @@ import { grackle, SESSION_STATUS } from "@grackle-ai/common";
 import Table from "cli-table3";
 import { formatTokens, formatCost } from "../format.js";
 
-/** Register agent-related commands: `spawn`, `resume`, `status`, `kill`, and `attach`. */
-export function registerAgentCommands(program: Command): void {
+/** Register session-lifecycle verbs: `spawn`, `resume`, `status`, `kill`, `send-input`, and `attach`. */
+export function registerSessionVerbCommands(program: Command): void {
   program
     .command("spawn <env-id> <prompt>")
     .description("Start a new agent session")

@@ -18,7 +18,7 @@ import { createGrackleClients } from "../client.js";
  *
  * @param program - The root Commander program.
  */
-export function registerAgentEntityCommands(program: Command): void {
+export function registerAgentCommands(program: Command): void {
   const agent = program.command("agent").description("Create and manage standing agents");
 
   agent
