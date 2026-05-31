@@ -174,7 +174,7 @@ test.describe("Live docs v0 viewer", { tag: ["@session"] }, () => {
       // Now send input to resume the stub — it calls show_file, the broker
       // captures the _meta, publishDocumentShow emits the domain event, and the
       // web useDocuments hook (already listening) opens a tab.
-      await client.core.sendInput({ id: sessionId, text: "go" });
+      await client.core.sendInput({ sessionId, text: "go" });
 
       // The doc pane opened from the agent's show_file, not a user click.
       await expect(page.getByTestId("doc-pane")).toBeVisible({ timeout: 15_000 });
