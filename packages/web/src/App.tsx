@@ -152,11 +152,6 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
     };
   }, []);
 
-  // Selecting a context is inert in Phase 0 (Code is the only/default context);
-  // it just dismisses the mobile drawer. Agent contexts + real switching arrive
-  // in #1417.
-  const handleSelectContext = useCallback(() => setContextNavOpen(false), []);
-
   // Fleet/overview altitude (#1415): the `fleet`-group tabs (Coordination today)
   // are pulled out of the view bar and rendered at the top of the context rail.
   // Data-driven from `tabs`, so any future `fleet` tab appears here automatically.
@@ -167,6 +162,13 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   );
   const activeView = getActiveView(location.pathname);
   const activeFleetId = fleetTabs.some((t) => t.view === activeView) ? activeView : undefined;
+
+  const handleSelectContext = useCallback(() => {
+    if (activeFleetId) {
+      navigate("/");
+    }
+    setContextNavOpen(false);
+  }, [activeFleetId, navigate]);
   const handleSelectFleet = useCallback(
     (id: string) => {
       const tab = fleetTabs.find((t) => t.view === id);
@@ -235,9 +237,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
           />
         )}
         <div className={styles.contextPane}>
-          {/* Fleet tabs (Coordination) live at the fleet altitude in the context
-              rail (#1415); the view bar shows only workbench + global tabs. */}
-          <AppNav tabs={tabs} groups={["workbench", "global"]} />
+          {!activeFleetId && <AppNav tabs={tabs} groups={["workbench", "global"]} />}
           <div className={styles.body}>
             {hasSidebar && (
               <div className={styles.sidebarWrapper} data-sidebar-open={sidebarOpen}>
