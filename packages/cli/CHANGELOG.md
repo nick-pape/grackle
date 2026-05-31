@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 31 May 2026 03:01:56 GMT and should not be manually modified.
+This log was last generated on Sun, 31 May 2026 05:24:54 GMT and should not be manually modified.
+
+## 0.139.0
+Sun, 31 May 2026 05:24:54 GMT
+
+### Minor changes
+
+- Add Server AHP-client resource bridge: ReadResource/ListResource/WatchResource/UnwatchResource RPCs over PowerLine's resource capability, IHostTransport resourceRead/resourceList/createResourceWatch wrappers, and a resource.changed domain event for live file-change notifications (#1395).
 
 ## 0.138.1
 Sun, 31 May 2026 03:01:56 GMT
