@@ -1290,6 +1290,38 @@ describe("createResourceWatch", () => {
     }
   });
 
+  it("rejects a null glob set and a non-string glob item with InvalidParams", async () => {
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      await client.socket.request("createSession", {
+        channel: "ahp-session:/watch-badglob-2",
+        provider: TEST_RUNTIME.name,
+        config: { workingDirectory: workdir },
+      });
+      const uri = pathToFileURL(workdir).href;
+      const nullCode = await expectRequestErrorCode(
+        client.socket.request("createResourceWatch", {
+          channel: "ahp-root://",
+          uri,
+          excludes: null as unknown as { items: string[] },
+        }),
+      );
+      expect(nullCode).toBe(JsonRpcErrorCodes.InvalidParams);
+      const itemCode = await expectRequestErrorCode(
+        client.socket.request("createResourceWatch", {
+          channel: "ahp-root://",
+          uri,
+          includes: { items: ["ok", 2] } as unknown as { items: string[] },
+        }),
+      );
+      expect(itemCode).toBe(JsonRpcErrorCodes.InvalidParams);
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
   it("caps the number of concurrent watches per connection", async () => {
     const lb = await spinUpLoopback();
     const client = await openClient(lb.port);
