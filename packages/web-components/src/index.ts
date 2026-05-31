@@ -77,8 +77,24 @@ export {
 } from "./components/knowledge/index.js";
 
 // Layout
-export { StatusBar, AppNav, Sidebar, BottomStatusBar, TABS } from "./components/layout/index.js";
-export type { AppTab } from "./components/layout/index.js";
+export {
+  StatusBar,
+  AppNav,
+  Sidebar,
+  BottomStatusBar,
+  TABS,
+  ContextNav,
+  CONTEXTS,
+  DEFAULT_CONTEXT_ID,
+} from "./components/layout/index.js";
+export type {
+  AppTab,
+  AppNavProps,
+  AppView,
+  NavGroup,
+  ContextItem,
+  ContextNavProps,
+} from "./components/layout/index.js";
 
 // Lists
 export { EnvironmentNav } from "./components/lists/index.js";
