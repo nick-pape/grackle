@@ -1,6 +1,13 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Sun, 31 May 2026 00:56:51 GMT and should not be manually modified.
+This log was last generated on Sun, 31 May 2026 03:01:56 GMT and should not be manually modified.
+
+## 0.138.1
+Sun, 31 May 2026 03:01:56 GMT
+
+### Patches
+
+- Add the context-axis workbench shell: a left ContextNav rail (Code) with the existing tabs reframed as Code's views (web UI only).
 
 ## 0.138.0
 Sun, 31 May 2026 00:56:51 GMT

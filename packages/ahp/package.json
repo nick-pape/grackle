@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/ahp",
-  "version": "0.138.0",
+  "version": "0.138.1",
   "description": "Agent Host Protocol (AHP) type definitions and reducers — vendored from Microsoft's open-source AHP repo, built via prebuild transform step.",
   "license": "MIT",
   "repository": {
