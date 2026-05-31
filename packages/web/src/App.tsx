@@ -250,6 +250,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   );
   const activeView = getActiveView(location.pathname);
   const activeFleetId = fleetTabs.some((t) => t.view === activeView) ? activeView : undefined;
+
   const handleSelectFleet = useCallback(
     (id: string) => {
       const tab = fleetTabs.find((t) => t.view === id);
@@ -319,9 +320,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
           />
         )}
         <div className={styles.contextPane}>
-          {/* Fleet tabs (Coordination) live at the fleet altitude in the context
-              rail (#1415); the view bar shows only workbench + global tabs. */}
-          <AppNav tabs={tabs} groups={["workbench", "global"]} />
+          {!activeFleetId && <AppNav tabs={tabs} groups={["workbench", "global"]} />}
           <div className={styles.body}>
             {hasSidebar && (
               <div className={styles.sidebarWrapper} data-sidebar-open={sidebarOpen}>
