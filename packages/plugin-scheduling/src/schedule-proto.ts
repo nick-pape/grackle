@@ -4,10 +4,10 @@
 
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import type { scheduleStore } from "@grackle-ai/database";
+import type { ScheduleRow } from "@grackle-ai/database";
 
 /** Convert a schedule database row to its proto representation. */
-export function scheduleRowToProto(row: scheduleStore.ScheduleRow): grackle.Schedule {
+export function scheduleRowToProto(row: ScheduleRow): grackle.Schedule {
   return create(grackle.ScheduleSchema, {
     id: row.id,
     title: row.title,

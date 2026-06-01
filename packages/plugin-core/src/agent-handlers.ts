@@ -217,10 +217,11 @@ export async function setAgentHeartbeat(
     }
   }
 
-  // Recompute next fire time whenever cadence changes; otherwise leave the
-  // schedule's existing nextRunAt alone (advanceSchedule keeps it current).
-  const recomputeNext = req.cadence !== undefined;
-
+  // Manage `nextRunAt` consistently with `setScheduleEnabled` semantics:
+  //   - pause (enabled=false) clears nextRunAt so the cron-phase ignores it
+  //   - resume (enabled=true on a previously-disabled row) recomputes nextRunAt
+  //   - cadence change on an enabled row recomputes nextRunAt
+  // Otherwise leave nextRunAt alone (advanceSchedule keeps it current).
   if (existing) {
     const updates: scheduleStore.ScheduleUpdate = {};
     if (req.cadence !== undefined) {
@@ -232,13 +233,24 @@ export async function setAgentHeartbeat(
     if (req.enabled !== undefined) {
       updates.enabled = req.enabled;
     }
-    if (recomputeNext) {
-      updates.nextRunAt = computeNextRunAt(effectiveCadence);
+    if (req.enabled === false) {
+      updates.nextRunAt = null;
+    } else {
+      const resumingFromDisabled = req.enabled === true && !existing.enabled;
+      const cadenceChangedOnEnabledRow =
+        req.cadence !== undefined && (existing.enabled || req.enabled === true);
+      if (resumingFromDisabled || cadenceChangedOnEnabledRow) {
+        updates.nextRunAt = computeNextRunAt(effectiveCadence);
+      }
     }
     scheduleStore.updateSchedule(existing.id, updates);
   } else {
     // Brand-new heartbeat: create the row, persona inherits from the Agent.
+    // When the caller creates it already-paused (enabled=false), don't pre-arm
+    // nextRunAt — disabled schedules carry `nextRunAt = null` by convention.
     const id = uuid();
+    const createWithEnabled = req.enabled !== false;
+    const initialNextRunAt = createWithEnabled ? computeNextRunAt(effectiveCadence) : null;
     scheduleStore.createSchedule(
       id,
       agent.name, // Title — surfaces in the schedule table; mirrors the agent.
@@ -247,11 +259,10 @@ export async function setAgentHeartbeat(
       agent.primaryPersonaId,
       "", // workspaceId — heartbeat is system-level.
       rootTask.id, // parentTaskId — the root task is the natural parent.
-      computeNextRunAt(effectiveCadence),
+      initialNextRunAt,
       rootTask.id, // taskId — the heartbeat discriminator.
     );
-    // If the request explicitly disabled at creation, honor it.
-    if (req.enabled === false) {
+    if (!createWithEnabled) {
       scheduleStore.updateSchedule(id, { enabled: false });
     }
   }

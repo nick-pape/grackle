@@ -566,6 +566,39 @@ describe("agent-handlers", () => {
     );
     expect(paused.enabled).toBe(false);
     expect(paused.scheduleExpression).toBe("30s");
+    // Pausing clears nextRunAt — matches setScheduleEnabled semantics so the
+    // cron-phase doesn't fire a paused schedule.
+    expect(paused.nextRunAt).toBe("");
+  });
+
+  it("setAgentHeartbeat resumes a paused heartbeat and recomputes nextRunAt", async () => {
+    const { id } = await createAgentWithRoot("HB Resume");
+    await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, cadence: "30s", rules: "r" }),
+    );
+    await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, enabled: false }),
+    );
+    const resumed = await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, enabled: true }),
+    );
+    expect(resumed.enabled).toBe(true);
+    expect(resumed.nextRunAt).toBeTruthy();
+  });
+
+  it("setAgentHeartbeat creating with enabled=false leaves nextRunAt unset", async () => {
+    const { id } = await createAgentWithRoot("HB CreatePaused");
+    const created = await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, {
+        agentId: id,
+        cadence: "30s",
+        rules: "r",
+        enabled: false,
+      }),
+    );
+    expect(created.enabled).toBe(false);
+    // No pending wake on a freshly-created paused row.
+    expect(created.nextRunAt).toBe("");
   });
 
   it("getAgent embeds the heartbeat when a schedule exists for the agent's root task", async () => {

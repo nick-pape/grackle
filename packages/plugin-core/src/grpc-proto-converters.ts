@@ -179,7 +179,15 @@ export function agentRowToProto(
   });
 }
 
-/** Convert a schedule database row to its proto representation. */
+/**
+ * Convert a schedule database row to its proto representation.
+ *
+ * Duplicated intentionally with `@grackle-ai/plugin-scheduling`'s
+ * `schedule-proto.ts` — re-exporting through that package's barrel crashes
+ * api-extractor on the `grackle.Schedule` return type (the common barrel
+ * symbol "is not (yet?) supported by API Extractor"). Until the toolchain
+ * supports this, the two copies must stay in sync.
+ */
 export function scheduleRowToProto(row: scheduleStore.ScheduleRow): grackle.Schedule {
   return create(grackle.ScheduleSchema, {
     id: row.id,

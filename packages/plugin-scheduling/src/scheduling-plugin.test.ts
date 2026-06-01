@@ -40,6 +40,7 @@ vi.mock("@grackle-ai/core", () => ({
 
 vi.mock("@grackle-ai/common", () => ({
   grackle: { GrackleScheduling: { typeName: "grackle.GrackleScheduling" } },
+  SESSION_STATUS: { PENDING: "pending", RUNNING: "running", IDLE: "idle", STOPPED: "stopped" },
 }));
 
 import { createSchedulingPlugin } from "./scheduling-plugin.js";

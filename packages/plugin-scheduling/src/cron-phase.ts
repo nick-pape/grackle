@@ -12,14 +12,20 @@ import { computeNextRunAt } from "./schedule-expression.js";
 import type { ScheduleRow, TaskRow, SessionRow } from "@grackle-ai/database";
 import type { GrackleEventType } from "@grackle-ai/core";
 import type { ReconciliationPhase } from "@grackle-ai/plugin-sdk";
-import { ROOT_TASK_ID } from "@grackle-ai/common";
+import { ROOT_TASK_ID, SESSION_STATUS, type SessionStatus } from "@grackle-ai/common";
 
 /**
  * Session statuses considered "alive" — a heartbeat tick whose target task
  * has a session in any of these states is treated as overrun and skipped.
- * Mirrors `ACTIVE_SESSION_STATUSES` in `@grackle-ai/database/session-store.ts`.
+ * Complement of `TERMINAL_SESSION_STATUSES` from `@grackle-ai/common` (#1438).
+ * Widened to `ReadonlySet<string>` so we can `.has(session.status)` without
+ * casting at every call site — sessionStore returns raw strings.
  */
-const ALIVE_SESSION_STATUSES: ReadonlySet<string> = new Set(["pending", "running", "idle"]);
+const ALIVE_SESSION_STATUSES: ReadonlySet<string> = new Set<SessionStatus>([
+  SESSION_STATUS.PENDING,
+  SESSION_STATUS.RUNNING,
+  SESSION_STATUS.IDLE,
+]);
 
 /** Dependencies injected into the cron phase for testability. */
 export interface CronPhaseDeps {
@@ -203,13 +209,17 @@ async function fireScheduleAsHeartbeat(deps: CronPhaseDeps, schedule: ScheduleRo
     environmentId,
     rawPrompt: schedule.description,
   });
+  // Always advance the schedule (otherwise the same tick fires every poll
+  // until success); but only emit `schedule.fired` when work actually started.
+  // Mirrors {@link fireScheduleAsTask}'s emit-on-success-only behavior.
+  deps.advanceSchedule(schedule.id, now, nextRunAt);
   if (errMsg) {
     deps.logger.error(
       { scheduleId: schedule.id, taskId: targetTaskId, err: errMsg },
       "Heartbeat fresh-spawn failed",
     );
+    return;
   }
-  deps.advanceSchedule(schedule.id, now, nextRunAt);
   deps.emit("schedule.fired", {
     scheduleId: schedule.id,
     taskId: targetTaskId,
