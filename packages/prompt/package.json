@@ -35,7 +35,9 @@
     "_phase:build": "heft run --only build -- --clean",
     "_phase:test": "vitest run --coverage"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@grackle-ai/common": "workspace:*"
+  },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.7",

@@ -28,7 +28,7 @@ import {
   resolvePersona,
   buildOrchestratorContext,
   SystemPromptBuilder,
-  buildTaskPrompt,
+  selectTaskPrompt,
 } from "@grackle-ai/prompt";
 import { logger } from "./logger.js";
 import { processEventStream } from "./event-processor.js";
@@ -46,11 +46,16 @@ import { hasSpawnContextProviders, runSpawnContextProviders } from "./spawn-cont
  * the runtime on the environment's PowerLine connection. The environment must
  * already be connected — this function does not auto-provision.
  *
+ * Pass `options.rawPrompt` to bypass the default title/description wrapping and
+ * use the given bytes as the first user message verbatim. This matches the
+ * shape that `publishToStdin` would deliver to a reanimated session, used by
+ * the heartbeat fresh-spawn fallback (#1438) and inbound channels (#1421).
+ *
  * @returns An error message string on failure, `undefined` on success.
  */
 export async function startTaskSession(
   task: taskStore.TaskRow,
-  options?: { personaId?: string; environmentId?: string; notes?: string },
+  options?: { personaId?: string; environmentId?: string; notes?: string; rawPrompt?: string },
 ): Promise<string | undefined> {
   const workspace = task.workspaceId ? workspaceStore.getWorkspace(task.workspaceId) : undefined;
   if (task.workspaceId && !workspace) {
@@ -96,13 +101,7 @@ export async function startTaskSession(
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const freshTask = taskStore.getTask(task.id) || task;
-  // For the root/System task, use the user's chat message (passed as notes)
-  // as the initial prompt instead of the task title "System".
-  // For regular tasks, build the prompt from title + description.
-  const taskPrompt =
-    freshTask.id === ROOT_TASK_ID
-      ? options.notes || ""
-      : buildTaskPrompt(freshTask.title, freshTask.description, options.notes);
+  const taskPrompt = selectTaskPrompt(freshTask, options);
 
   const isOrchestrator = freshTask.canDecompose && freshTask.depth <= 1 && !!freshTask.workspaceId;
   const orchestratorCtx = isOrchestrator

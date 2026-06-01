@@ -1,5 +1,5 @@
 // ─── System Prompt Builder ──────────────────────────────────
-export { SystemPromptBuilder, buildTaskPrompt } from "./system-prompt-builder.js";
+export { SystemPromptBuilder, buildTaskPrompt, selectTaskPrompt } from "./system-prompt-builder.js";
 export type {
   SystemPromptOptions,
   TaskTreeNode,
