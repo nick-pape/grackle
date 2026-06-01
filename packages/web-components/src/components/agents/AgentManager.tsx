@@ -6,7 +6,7 @@
  * @module
  */
 
-import { useState, type FormEvent, type JSX } from "react";
+import { useEffect, useState, type FormEvent, type JSX } from "react";
 import type { AgentData, Environment, PersonaData } from "../../hooks/types.js";
 import { Button } from "../display/Button.js";
 import styles from "./AgentManager.module.scss";
@@ -210,6 +210,21 @@ function AgentCreateForm({
   // glance; user can change it. If there are no environments the form's
   // submit button stays disabled (we can't create an agent without a home).
   const [environmentId, setEnvironmentId] = useState(environments[0]?.id ?? "");
+
+  // Environments are loaded async via useGrackleSocket — if the form mounts
+  // before the fetch lands, useState above captures `""` once and the user
+  // gets a permanently disabled submit unless they manually change the
+  // select. Sync the selection to the first environment when one arrives
+  // (and only if the user hasn't picked one already that's still valid).
+  useEffect(() => {
+    if (environments.length === 0) {
+      return;
+    }
+    const stillValid = environmentId && environments.some((e) => e.id === environmentId);
+    if (!stillValid) {
+      setEnvironmentId(environments[0].id);
+    }
+  }, [environments, environmentId]);
 
   const canSubmit = name.trim().length > 0 && environmentId.length > 0;
 

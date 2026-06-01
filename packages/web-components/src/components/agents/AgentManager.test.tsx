@@ -390,4 +390,73 @@ describe("AgentManager", () => {
     );
     expect(screen.getByTestId("agent-environment").textContent).toBe("local");
   });
+
+  it("create form syncs environment selection when environments load async (Copilot review)", () => {
+    // Mount with no environments (simulating mid-fetch state).
+    const { rerender } = render(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={[]}
+        onCreate={NOOP_CREATE}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+    fireEvent.change(screen.getByTestId("agent-name-input"), { target: { value: "RaceBot" } });
+    // Submit disabled because environmentId is still "".
+    expect((screen.getByTestId("agent-submit") as HTMLButtonElement).disabled).toBe(true);
+
+    // Environments arrive (the useGrackleSocket fetch lands).
+    rerender(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={ENVIRONMENTS}
+        onCreate={NOOP_CREATE}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+
+    // The useEffect should now populate environmentId with the first env.
+    const select = screen.getByTestId("agent-environment-select") as HTMLSelectElement;
+    expect(select.value).toBe("local");
+    expect((screen.getByTestId("agent-submit") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("create form keeps user's env selection when the environments list updates", () => {
+    const { rerender } = render(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={ENVIRONMENTS}
+        onCreate={NOOP_CREATE}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+    // User picks sandbox.
+    fireEvent.change(screen.getByTestId("agent-environment-select"), {
+      target: { value: "sandbox" },
+    });
+
+    // Environments list re-renders (e.g. an env was added/changed elsewhere).
+    rerender(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={ENVIRONMENTS}
+        onCreate={NOOP_CREATE}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+
+    // Selection still sandbox — the user's choice survives because it's
+    // still present in the new list.
+    expect((screen.getByTestId("agent-environment-select") as HTMLSelectElement).value).toBe(
+      "sandbox",
+    );
+  });
 });
