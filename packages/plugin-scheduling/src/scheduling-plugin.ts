@@ -9,7 +9,20 @@
 
 import type { GracklePlugin, PluginContext } from "@grackle-ai/plugin-sdk";
 import { grackle } from "@grackle-ai/common";
-import { scheduleStore, taskStore, personaStore, dispatchQueueStore } from "@grackle-ai/database";
+import {
+  scheduleStore,
+  taskStore,
+  personaStore,
+  agentStore,
+  sessionStore,
+  dispatchQueueStore,
+} from "@grackle-ai/database";
+import {
+  findFirstConnectedEnvironment,
+  reanimateAgent,
+  publishToStdin,
+  startTaskSession,
+} from "@grackle-ai/core";
 import { createScheduleHandlers } from "./schedule-handlers.js";
 import { createCronPhase } from "./cron-phase.js";
 
@@ -40,6 +53,26 @@ export function createSchedulingPlugin(): GracklePlugin {
         emit: ctx.emit,
         getPersona: personaStore.getPersona,
         setScheduleEnabled: scheduleStore.setScheduleEnabled,
+        // Heartbeat branch wiring (#1438)
+        getTask: taskStore.getTask,
+        getLatestSessionForTask: sessionStore.getLatestSessionForTask,
+        reanimateAgent: async (sessionId: string) => {
+          await reanimateAgent(sessionId);
+        },
+        publishToStdin,
+        startTaskSession,
+        resolveEnvironment: (task) => {
+          // Heartbeats target Agent root tasks; the natural environment is the
+          // Agent's home environment (#1418). Fall back to first-connected if
+          // the agent or env can't be resolved.
+          if (task.agentId) {
+            const agent = agentStore.getAgent(task.agentId);
+            if (agent?.environmentId) {
+              return agent.environmentId;
+            }
+          }
+          return findFirstConnectedEnvironment()?.id;
+        },
         logger: ctx.logger,
       }),
     ],

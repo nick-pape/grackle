@@ -12,6 +12,7 @@ export interface ScheduleUpdate {
   personaId?: string;
   enabled?: boolean;
   nextRunAt?: string | null;
+  taskId?: string | null;
 }
 
 /**
@@ -25,6 +26,8 @@ export interface ScheduleUpdate {
  * @param workspaceId - Optional workspace scope (empty = system-level)
  * @param parentTaskId - Parent task for spawned children (empty = ROOT_TASK_ID)
  * @param nextRunAt - Pre-computed next fire time (null if disabled)
+ * @param taskId - Heartbeat target task (non-null = reanimate that task's session
+ *   each tick; null = today's fresh-task-spawn schedule). Defaults to null. #1438.
  */
 export function createSchedule(
   id: string,
@@ -35,6 +38,7 @@ export function createSchedule(
   workspaceId: string,
   parentTaskId: string,
   nextRunAt: string | null,
+  taskId: string | null = null,
 ): void {
   db.insert(schedules)
     .values({
@@ -46,6 +50,7 @@ export function createSchedule(
       workspaceId,
       parentTaskId,
       nextRunAt,
+      taskId,
     })
     .run();
 }
@@ -90,7 +95,21 @@ export function updateSchedule(id: string, update: ScheduleUpdate): void {
   if (update.nextRunAt !== undefined) {
     sets.nextRunAt = update.nextRunAt;
   }
+  if (update.taskId !== undefined) {
+    sets.taskId = update.taskId;
+  }
   db.update(schedules).set(sets).where(eq(schedules.id, id)).run();
+}
+
+/**
+ * Retrieve the heartbeat schedule (if any) whose `task_id` matches.
+ *
+ * Used by Agent handlers to read the derived `Agent.heartbeat` field via
+ * `getRootTaskForAgent → getHeartbeatForTask`, and by the cron-phase heartbeat
+ * branch as part of its target-resolution path. #1438.
+ */
+export function getHeartbeatForTask(taskId: string): ScheduleRow | undefined {
+  return db.select().from(schedules).where(eq(schedules.taskId, taskId)).get();
 }
 
 /** Delete a schedule by ID. */

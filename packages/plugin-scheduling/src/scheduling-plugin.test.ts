@@ -12,13 +12,30 @@ vi.mock("@grackle-ai/database", () => ({
   taskStore: {
     createTask: vi.fn(),
     setTaskScheduleId: vi.fn(),
+    getTask: vi.fn(),
   },
   personaStore: {
     getPersona: vi.fn(),
   },
+  agentStore: {
+    getAgent: vi.fn(),
+  },
+  sessionStore: {
+    getLatestSessionForTask: vi.fn(),
+  },
   dispatchQueueStore: {
     enqueue: vi.fn(),
   },
+}));
+
+// The heartbeat branch (#1438) reads core helpers (reanimate, stdin, spawn,
+// env resolver). Mock the surface to avoid pulling in the real event-bus,
+// which expects more of @grackle-ai/common than we mock here.
+vi.mock("@grackle-ai/core", () => ({
+  findFirstConnectedEnvironment: vi.fn(),
+  reanimateAgent: vi.fn(),
+  publishToStdin: vi.fn(),
+  startTaskSession: vi.fn(),
 }));
 
 vi.mock("@grackle-ai/common", () => ({

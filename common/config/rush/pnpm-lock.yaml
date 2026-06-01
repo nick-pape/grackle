@@ -632,6 +632,9 @@ importers:
       '@grackle-ai/knowledge':
         specifier: workspace:*
         version: link:../knowledge
+      '@grackle-ai/plugin-scheduling':
+        specifier: workspace:*
+        version: link:../plugin-scheduling
       '@grackle-ai/plugin-sdk':
         specifier: workspace:*
         version: link:../plugin-sdk

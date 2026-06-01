@@ -33,6 +33,12 @@ export type GrackleEventType =
   | "agent.created"
   | "agent.updated"
   | "agent.deleted"
+  // Heartbeat schedule for an Agent's root task was created/updated/paused (#1438).
+  // payload: { agentId }
+  | "agent.heartbeat.updated"
+  // Heartbeat schedule for an Agent was deleted via SetAgentHeartbeat({ cadence: "" }).
+  // payload: { agentId }
+  | "agent.heartbeat.cleared"
   | "notification.escalated"
   | "plugin.changed"
   | "github_account.changed"

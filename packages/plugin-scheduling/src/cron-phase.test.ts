@@ -17,6 +17,7 @@ function makeSchedule(overrides: Partial<ScheduleRow> = {}): ScheduleRow {
     lastRunAt: null,
     nextRunAt: "2026-03-25T10:00:00Z",
     runCount: 0,
+    taskId: null,
     createdAt: "2026-03-25T09:59:30Z",
     updatedAt: "2026-03-25T09:59:30Z",
     ...overrides,
@@ -33,6 +34,13 @@ function createMockDeps(): CronPhaseDeps {
     emit: vi.fn(),
     getPersona: vi.fn().mockReturnValue({ id: "persona-1", name: "Test", runtime: "stub" }),
     setScheduleEnabled: vi.fn(),
+    // ── Heartbeat branch (#1438) ──
+    getTask: vi.fn(),
+    getLatestSessionForTask: vi.fn(),
+    reanimateAgent: vi.fn().mockResolvedValue(undefined),
+    publishToStdin: vi.fn(),
+    startTaskSession: vi.fn().mockResolvedValue(undefined),
+    resolveEnvironment: vi.fn().mockReturnValue("env-1"),
     logger: {
       info: vi.fn(),
       warn: vi.fn(),
@@ -41,6 +49,18 @@ function createMockDeps(): CronPhaseDeps {
     } as unknown as Pick<Logger, "debug" | "info" | "warn" | "error">,
   };
 }
+
+const ALIVE_SESSION = {
+  id: "sess-1",
+  taskId: "task-A",
+  status: "idle" as const,
+};
+const DEAD_SESSION = {
+  id: "sess-1",
+  taskId: "task-A",
+  status: "complete" as const,
+};
+const TARGET_TASK = { id: "task-A", title: "Agent Root" };
 
 describe("createCronPhase", () => {
   beforeEach(() => {
@@ -163,5 +183,110 @@ describe("createCronPhase", () => {
     const deps = createMockDeps();
     const phase = createCronPhase(deps);
     expect(phase.name).toBe("cron");
+  });
+
+  // ── #1438 — Heartbeat branch (schedule.taskId is non-null) ────────
+
+  it("heartbeat: skips fire when the target's latest session is alive (overrun)", async () => {
+    const deps = createMockDeps();
+    const sched = makeSchedule({ taskId: "task-A", description: "PING" });
+    vi.mocked(deps.getDueSchedules).mockReturnValue([sched]);
+    vi.mocked(deps.getTask).mockReturnValue(TARGET_TASK);
+    vi.mocked(deps.getLatestSessionForTask).mockReturnValue(ALIVE_SESSION);
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    // Did NOT reanimate, did NOT publish, did NOT fresh-spawn.
+    expect(deps.reanimateAgent).not.toHaveBeenCalled();
+    expect(deps.publishToStdin).not.toHaveBeenCalled();
+    expect(deps.startTaskSession).not.toHaveBeenCalled();
+    // But DID advance the schedule.
+    expect(deps.advanceSchedule).toHaveBeenCalledTimes(1);
+    // And did NOT fall through to the fresh-task path.
+    expect(deps.createTask).not.toHaveBeenCalled();
+  });
+
+  it("heartbeat: reanimates the latest dead session and pipes description as stdin", async () => {
+    const deps = createMockDeps();
+    const sched = makeSchedule({ taskId: "task-A", description: "PING" });
+    vi.mocked(deps.getDueSchedules).mockReturnValue([sched]);
+    vi.mocked(deps.getTask).mockReturnValue(TARGET_TASK);
+    vi.mocked(deps.getLatestSessionForTask).mockReturnValue(DEAD_SESSION);
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    expect(deps.reanimateAgent).toHaveBeenCalledWith("sess-1");
+    expect(deps.publishToStdin).toHaveBeenCalledWith("sess-1", "PING");
+    expect(deps.startTaskSession).not.toHaveBeenCalled();
+    expect(deps.advanceSchedule).toHaveBeenCalledTimes(1);
+    expect(deps.emit).toHaveBeenCalledWith(
+      "schedule.fired",
+      expect.objectContaining({ scheduleId: "sched-1", mode: "reanimate" }),
+    );
+  });
+
+  it("heartbeat: falls back to fresh-spawn when reanimate throws", async () => {
+    const deps = createMockDeps();
+    const sched = makeSchedule({ taskId: "task-A", description: "PING" });
+    vi.mocked(deps.getDueSchedules).mockReturnValue([sched]);
+    vi.mocked(deps.getTask).mockReturnValue(TARGET_TASK);
+    vi.mocked(deps.getLatestSessionForTask).mockReturnValue(DEAD_SESSION);
+    vi.mocked(deps.reanimateAgent).mockRejectedValue(new Error("env offline"));
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    // Reanimate was attempted but threw; fresh-spawn should pick up via rawPrompt.
+    expect(deps.reanimateAgent).toHaveBeenCalledWith("sess-1");
+    expect(deps.publishToStdin).not.toHaveBeenCalled();
+    expect(deps.startTaskSession).toHaveBeenCalledWith(
+      TARGET_TASK,
+      expect.objectContaining({
+        rawPrompt: "PING",
+        personaId: "persona-1",
+        environmentId: "env-1",
+      }),
+    );
+    expect(deps.advanceSchedule).toHaveBeenCalledTimes(1);
+    expect(deps.emit).toHaveBeenCalledWith(
+      "schedule.fired",
+      expect.objectContaining({ scheduleId: "sched-1", mode: "fresh-spawn" }),
+    );
+  });
+
+  it("heartbeat: with no latest session, goes straight to fresh-spawn (no reanimate)", async () => {
+    const deps = createMockDeps();
+    const sched = makeSchedule({ taskId: "task-A", description: "PING" });
+    vi.mocked(deps.getDueSchedules).mockReturnValue([sched]);
+    vi.mocked(deps.getTask).mockReturnValue(TARGET_TASK);
+    vi.mocked(deps.getLatestSessionForTask).mockReturnValue(undefined);
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    expect(deps.reanimateAgent).not.toHaveBeenCalled();
+    expect(deps.publishToStdin).not.toHaveBeenCalled();
+    expect(deps.startTaskSession).toHaveBeenCalledWith(
+      TARGET_TASK,
+      expect.objectContaining({ rawPrompt: "PING" }),
+    );
+    expect(deps.advanceSchedule).toHaveBeenCalledTimes(1);
+  });
+
+  it("heartbeat: disables the schedule when the target task is missing", async () => {
+    const deps = createMockDeps();
+    const sched = makeSchedule({ taskId: "task-A", description: "PING" });
+    vi.mocked(deps.getDueSchedules).mockReturnValue([sched]);
+    vi.mocked(deps.getTask).mockReturnValue(undefined);
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    expect(deps.setScheduleEnabled).toHaveBeenCalledWith("sched-1", false, null);
+    expect(deps.reanimateAgent).not.toHaveBeenCalled();
+    expect(deps.startTaskSession).not.toHaveBeenCalled();
+    expect(deps.createTask).not.toHaveBeenCalled();
   });
 });

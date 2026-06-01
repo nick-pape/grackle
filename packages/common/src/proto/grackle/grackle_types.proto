@@ -910,6 +910,10 @@ message Agent {
   string created_at = 5;
   string updated_at = 6;
   string environment_id = 7; // The Agent's home environment (#1418)
+  // Derived: populated by server on read (join schedules ON task_id equal
+  // to the agent's root task id). Unset when no heartbeat schedule exists.
+  // Not settable via UpdateAgentRequest — use SetAgentHeartbeat. #1438.
+  Schedule heartbeat = 8;
 }
 
 message AgentList {
@@ -932,6 +936,16 @@ message UpdateAgentRequest {
   optional string name = 2;
   optional string avatar = 3;
   optional string primary_persona_id = 4;
+}
+
+// Upsert the Agent's heartbeat (#1438). All fields are presence-tracked:
+// undefined = keep existing, value = set. `cadence = ""` clears the
+// heartbeat (deletes the schedule row).
+message SetAgentHeartbeatRequest {
+  string agent_id = 1;
+  optional string cadence = 2; // Interval shorthand ("30s") or 5-field cron; "" = clear
+  optional string rules = 3; // First-user-message bytes piped in per wake
+  optional bool enabled = 4;
 }
 
 // ─── Schedules ─────────────────────────────────────────────

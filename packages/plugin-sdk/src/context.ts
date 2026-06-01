@@ -70,6 +70,8 @@ export type GrackleEventType =
   | "agent.created"
   | "agent.updated"
   | "agent.deleted"
+  | "agent.heartbeat.updated"
+  | "agent.heartbeat.cleared"
   | "notification.escalated"
   | "plugin.changed"
   | "github_account.changed"

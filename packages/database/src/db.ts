@@ -445,6 +445,31 @@ const MIGRATIONS: Migration[] = [
       conn.exec("CREATE INDEX IF NOT EXISTS idx_agents_environment_id ON agents(environment_id)");
     },
   },
+  {
+    version: 22,
+    name: "schedule-task-heartbeat",
+    up: (conn) => {
+      // Agent heartbeat (#1438, epic #1412): adds `schedules.task_id` as a
+      // nullable FK to tasks. A schedule with task_id set is a heartbeat —
+      // each tick reanimates that task's latest session and pipes
+      // schedule.description in as stdin. A schedule with task_id NULL is
+      // today's fresh-task-spawn schedule (behavior unchanged). The
+      // discriminator is the target, not a `kind` column — this generalizes
+      // heartbeat semantics to any task.
+      const scheduleCols = conn.prepare("PRAGMA table_info(schedules)").all() as Array<{
+        name: string;
+      }>;
+      if (!scheduleCols.some((c) => c.name === "task_id")) {
+        // Nullable FK, no ON DELETE CASCADE — app-layer cleanup in deleteTask.
+        conn.exec("ALTER TABLE schedules ADD COLUMN task_id TEXT REFERENCES tasks(id)");
+      }
+      // Partial unique: one heartbeat per task. Multiple NULL task_ids are
+      // allowed (today's fresh-spawn schedules are unconstrained).
+      conn.exec(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_schedules_heartbeat_per_task ON schedules(task_id) WHERE task_id IS NOT NULL",
+      );
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
@@ -795,6 +820,7 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       last_run_at         TEXT,
       next_run_at         TEXT,
       run_count           INTEGER NOT NULL DEFAULT 0,
+      task_id             TEXT REFERENCES tasks(id),
       created_at          TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -836,6 +862,11 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
     );
 
     CREATE INDEX IF NOT EXISTS idx_schedules_due ON schedules(enabled, next_run_at);
+
+    -- One heartbeat per task. Transitively enforces one heartbeat per Agent
+    -- (Agent → exactly one root task per #1418). NULL task_ids are unbounded.
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_schedules_heartbeat_per_task
+      ON schedules(task_id) WHERE task_id IS NOT NULL;
   `);
 
   // Mark unversioned databases as baseline now that tables are confirmed

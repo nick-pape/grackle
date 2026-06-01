@@ -9,6 +9,8 @@ import type { GracklePlugin } from '@grackle-ai/plugin-sdk';
 import type { Logger } from 'pino';
 import type { ReconciliationPhase } from '@grackle-ai/plugin-sdk';
 import type { ScheduleRow } from '@grackle-ai/database';
+import type { SessionRow } from '@grackle-ai/database';
+import type { TaskRow } from '@grackle-ai/database';
 
 // @public
 export function computeNextRunAt(expr: string, lastRunAt?: string): string;
@@ -31,14 +33,24 @@ export interface CronPhaseDeps {
         personaId?: string;
     }) => void;
     getDueSchedules: () => ScheduleRow[];
+    getLatestSessionForTask: (taskId: string) => SessionRow | undefined;
     getPersona: (id: string) => {
         id: string;
         name: string;
         runtime: string;
     } | undefined;
+    getTask: (id: string) => TaskRow | undefined;
     logger: Pick<Logger, "debug" | "info" | "warn" | "error">;
+    publishToStdin: (sessionId: string, text: string) => void;
+    reanimateAgent: (sessionId: string) => Promise<void>;
+    resolveEnvironment: (task: TaskRow) => string | undefined;
     setScheduleEnabled: (id: string, enabled: boolean, nextRunAt: string | null) => void;
     setTaskScheduleId: (taskId: string, scheduleId: string) => void;
+    startTaskSession: (task: TaskRow, options?: {
+        personaId?: string;
+        environmentId?: string;
+        rawPrompt?: string;
+    }) => Promise<string | undefined>;
 }
 
 // @public
