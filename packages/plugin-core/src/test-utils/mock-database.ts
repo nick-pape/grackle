@@ -87,6 +87,16 @@ export function createDatabaseMock() {
       countWorkspacesByEnvironment: vi.fn(() => 0),
     },
 
+    agentStore: {
+      listAgents: vi.fn(() => []),
+      getAgent: vi.fn(() => undefined),
+      getAgentByName: vi.fn(() => undefined),
+      createAgent: vi.fn(),
+      updateAgent: vi.fn(),
+      deleteAgent: vi.fn(),
+      getAgentsByEnvironment: vi.fn(() => []),
+    },
+
     personaStore: {
       createPersona: vi.fn(),
       getPersona: vi.fn(() => undefined),

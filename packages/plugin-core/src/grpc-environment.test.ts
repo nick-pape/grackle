@@ -202,3 +202,39 @@ describe("gRPC updateEnvironment handlers", () => {
     expect(err.message).toContain("Environment not found");
   });
 });
+
+describe("gRPC removeEnvironment — agent home guard (#1418)", () => {
+  /** Helper to create an environment and return its ID. */
+  async function createEnv(displayName: string): Promise<string> {
+    const response = (await handlers.addEnvironment({
+      displayName,
+      adapterType: "local",
+      adapterConfig: "{}",
+    })) as EnvironmentInfo;
+    return response.id;
+  }
+
+  it("rejects removeEnvironment when standing agents still call it home", async () => {
+    // Create an env, then an agent on it.
+    const envId = await createEnv("guard-env");
+    const created = (await handlers.createAgent({
+      name: "Homed Bot",
+      avatar: "",
+      primaryPersonaId: "",
+      environmentId: envId,
+    })) as { id: string };
+
+    // Attempt to remove the env — should be blocked.
+    const err = (await handlers.removeEnvironment({ id: envId }).catch((e: unknown) => e)) as
+      | ConnectError
+      | Error;
+    expect(err).toBeInstanceOf(ConnectError);
+    expect((err as ConnectError).code).toBe(Code.FailedPrecondition);
+    expect((err as ConnectError).message).toContain("standing agent");
+    expect((err as ConnectError).message).toContain("Homed Bot");
+
+    // Delete the agent → removeEnvironment now succeeds.
+    await handlers.deleteAgent({ id: created.id });
+    await handlers.removeEnvironment({ id: envId });
+  });
+});
