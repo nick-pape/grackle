@@ -31,6 +31,7 @@ vi.mock("@grackle-ai/plugin-core", () => ({
   })),
   createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createRootTaskBootSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
+  createAgentRootTaskSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createDispatchPhase: vi.fn(() => ({ name: "dispatch", execute: vi.fn() })),
   lifecycleCleanupPhase: { name: "lifecycle-cleanup", execute: vi.fn() },
   createEnvironmentReconciliationPhase: vi.fn(() => ({
@@ -50,6 +51,7 @@ vi.mock("@grackle-ai/common", () => ({
 }));
 
 vi.mock("@grackle-ai/database", () => ({
+  agentStore: { getAgent: vi.fn() },
   taskStore: {
     createTask: vi.fn(),
     setTaskScheduleId: vi.fn(),
@@ -57,6 +59,8 @@ vi.mock("@grackle-ai/database", () => ({
     listTasks: vi.fn(),
     reparentTask: vi.fn(),
     areDependenciesMet: vi.fn(),
+    getRootTaskForAgent: vi.fn(),
+    insertTask: vi.fn(),
   },
   workspaceStore: { listWorkspaces: vi.fn(() => []) },
   personaStore: { getPersona: vi.fn() },
@@ -139,20 +143,23 @@ describe("createCorePlugin", () => {
     expect(names).not.toContain("orphan-reparent");
   });
 
-  it("eventSubscribers returns only lifecycle when skipRootAutostart is true", () => {
+  it("eventSubscribers returns lifecycle + agent-root when skipRootAutostart is true", () => {
+    // #1418: the agent-root-task subscriber runs regardless of the system
+    // root-task autostart flag — 2 disposables: lifecycle + agent-root.
     const plugin = createCorePlugin();
     const ctx = createMockContext({ skipRootAutostart: true });
     const disposables = plugin.eventSubscribers!(ctx);
 
-    expect(disposables.length).toBe(1);
+    expect(disposables.length).toBe(2);
     expect(disposables[0]).toHaveProperty("dispose");
   });
 
   it("eventSubscribers includes root boot when skipRootAutostart is false", () => {
+    // 3 disposables: lifecycle + system-root-boot + agent-root.
     const plugin = createCorePlugin();
     const ctx = createMockContext({ skipRootAutostart: false });
     const disposables = plugin.eventSubscribers!(ctx);
 
-    expect(disposables.length).toBe(2);
+    expect(disposables.length).toBe(3);
   });
 });
