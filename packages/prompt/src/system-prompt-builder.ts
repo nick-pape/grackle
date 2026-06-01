@@ -9,6 +9,8 @@
  * belong in the user prompt (see {@link buildTaskPrompt}).
  */
 
+import { ROOT_TASK_ID } from "@grackle-ai/common";
+
 /** Build the user-facing prompt from task title, description, and optional notes. */
 export function buildTaskPrompt(title: string, description: string, notes?: string): string {
   const parts = [title];
@@ -19,6 +21,35 @@ export function buildTaskPrompt(title: string, description: string, notes?: stri
     parts.push(`## Notes\n${notes}`);
   }
   return parts.join("\n\n");
+}
+
+/**
+ * Select the first user message bytes for a task spawn.
+ *
+ * Precedence:
+ *   1. explicit `rawPrompt` — verbatim, ignoring title/description/notes
+ *   2. ROOT_TASK_ID special-case — `notes` used raw (chat-as-prompt)
+ *   3. default — {@link buildTaskPrompt} wrapping with title + description
+ *
+ * Heartbeat fires (#1438) and inbound channels (#1421) pass `rawPrompt` so the
+ * fresh-spawn path produces the same bytes that `publishToStdin` would deliver
+ * to a reanimated session. Without that escape hatch, the title/description
+ * wrapping would silently diverge across the reanimate vs. fresh-spawn paths.
+ *
+ * Empty string for `rawPrompt` is a defined value (send empty prompt) — checked
+ * with `!== undefined`, not truthiness.
+ */
+export function selectTaskPrompt(
+  task: { id: string; title: string; description: string },
+  options: { notes?: string; rawPrompt?: string },
+): string {
+  if (options.rawPrompt !== undefined) {
+    return options.rawPrompt;
+  }
+  if (task.id === ROOT_TASK_ID) {
+    return options.notes || "";
+  }
+  return buildTaskPrompt(task.title, task.description, options.notes);
 }
 
 // ─── Orchestrator Data Types ─────────────────────────────────

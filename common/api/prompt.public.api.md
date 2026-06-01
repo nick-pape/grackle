@@ -98,6 +98,16 @@ export interface ResolvedPersona {
 export function resolvePersona(requestPersonaId: string, taskDefaultPersonaId: string | undefined, workspaceDefaultPersonaId: string | undefined, appDefaultPersonaId: string | undefined, lookupPersona: (id: string) => PersonaResolveInput | undefined): ResolvedPersona;
 
 // @public
+export function selectTaskPrompt(task: {
+    id: string;
+    title: string;
+    description: string;
+}, options: {
+    notes?: string;
+    rawPrompt?: string;
+}): string;
+
+// @public
 export class SystemPromptBuilder {
     constructor(options: SystemPromptOptions);
     build(): string;

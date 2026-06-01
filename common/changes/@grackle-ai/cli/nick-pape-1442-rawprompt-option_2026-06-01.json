@@ -1,0 +1,21 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).",
+      "type": "patch"
+    },
+    {
+      "packageName": "@grackle-ai/prompt",
+      "comment": "Add `selectTaskPrompt(task, options)` — picks the first user message bytes for a task spawn, with precedence `rawPrompt` > ROOT_TASK_ID notes > `buildTaskPrompt` wrapping (#1442).",
+      "type": "patch"
+    },
+    {
+      "packageName": "@grackle-ai/core",
+      "comment": "`startTaskSession` accepts a new optional `rawPrompt` argument that bypasses title/description wrapping; existing callers unchanged. Used by the heartbeat fresh-spawn fallback (#1438) and inbound channels (#1421) to match `publishToStdin` bytes (#1442).",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

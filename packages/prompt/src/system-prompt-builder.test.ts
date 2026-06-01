@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
+import { ROOT_TASK_ID } from "@grackle-ai/common";
 import {
   SystemPromptBuilder,
   buildTaskPrompt,
+  selectTaskPrompt,
   type SystemPromptOptions,
   type TaskTreeNode,
 } from "./system-prompt-builder.js";
@@ -175,6 +177,42 @@ describe("buildTaskPrompt", () => {
 
   it("omits notes when notes are empty", () => {
     expect(buildTaskPrompt("My Task", "Do the thing", "")).toBe("My Task\n\nDo the thing");
+  });
+});
+
+describe("selectTaskPrompt", () => {
+  const leafTask = { id: "task-1", title: "Refactor X", description: "Background notes" };
+  const rootTask = { id: ROOT_TASK_ID, title: "System", description: "" };
+
+  it("returns rawPrompt verbatim, ignoring title/description/notes", () => {
+    expect(
+      selectTaskPrompt(leafTask, { rawPrompt: "exact bytes", notes: "should be ignored" }),
+    ).toBe("exact bytes");
+  });
+
+  it("treats empty rawPrompt as a defined value (not a fallback to wrapping)", () => {
+    expect(selectTaskPrompt(leafTask, { rawPrompt: "", notes: "should be ignored" })).toBe("");
+  });
+
+  it("returns notes raw for ROOT_TASK_ID when rawPrompt is unset", () => {
+    expect(selectTaskPrompt(rootTask, { notes: "hello" })).toBe("hello");
+  });
+
+  it("returns empty string for ROOT_TASK_ID when neither rawPrompt nor notes are set", () => {
+    expect(selectTaskPrompt(rootTask, {})).toBe("");
+  });
+
+  it("wraps via buildTaskPrompt for non-root tasks when rawPrompt is unset", () => {
+    expect(selectTaskPrompt(leafTask, {})).toBe("Refactor X\n\nBackground notes");
+    expect(selectTaskPrompt(leafTask, { notes: "extra context" })).toBe(
+      "Refactor X\n\nBackground notes\n\n## Notes\nextra context",
+    );
+  });
+
+  it("rawPrompt precedence wins over the ROOT_TASK_ID special-case", () => {
+    expect(selectTaskPrompt(rootTask, { rawPrompt: "verbatim", notes: "ignored" })).toBe(
+      "verbatim",
+    );
   });
 });
 
