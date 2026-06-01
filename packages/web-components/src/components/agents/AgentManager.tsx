@@ -216,8 +216,13 @@ function AgentCreateForm({
   // gets a permanently disabled submit unless they manually change the
   // select. Sync the selection to the first environment when one arrives
   // (and only if the user hasn't picked one already that's still valid).
+  // If the list goes empty (last env was removed), clear the selection so
+  // the disabled-submit guard fires instead of carrying a stale id forward.
   useEffect(() => {
     if (environments.length === 0) {
+      if (environmentId !== "") {
+        setEnvironmentId("");
+      }
       return;
     }
     const stillValid = environmentId && environments.some((e) => e.id === environmentId);

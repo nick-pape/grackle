@@ -425,6 +425,39 @@ describe("AgentManager", () => {
     expect((screen.getByTestId("agent-submit") as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it("create form clears env selection and disables submit if environments transition to empty (Copilot review)", () => {
+    const onCreate = vi.fn();
+    const { rerender } = render(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={ENVIRONMENTS}
+        onCreate={onCreate}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+    fireEvent.change(screen.getByTestId("agent-name-input"), { target: { value: "Stale" } });
+    // Now both name and env are present → submit enabled.
+    expect((screen.getByTestId("agent-submit") as HTMLButtonElement).disabled).toBe(false);
+
+    // Environments list goes empty (e.g. all environments removed).
+    rerender(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={[]}
+        onCreate={onCreate}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+
+    // Submit should now be disabled — environmentId got cleared to "" by
+    // the effect, so canSubmit is false and a stale id can't be submitted.
+    expect((screen.getByTestId("agent-submit") as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("create form keeps user's env selection when the environments list updates", () => {
     const { rerender } = render(
       <AgentManager
