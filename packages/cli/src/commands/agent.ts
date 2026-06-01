@@ -79,6 +79,7 @@ export function registerAgentCommands(program: Command): void {
       console.log(`Name:     ${a.name}`);
       console.log(`Avatar:   ${a.avatar || "-"}`);
       console.log(`Persona:  ${a.primaryPersonaId || "-"}`);
+      console.log(`Env:      ${a.environmentId || "-"}`);
       console.log(`Created:  ${a.createdAt}`);
       console.log(`Updated:  ${a.updatedAt}`);
     });
@@ -86,17 +87,21 @@ export function registerAgentCommands(program: Command): void {
   agent
     .command("create <name>")
     .description("Create an agent")
+    .requiredOption("--environment <id>", "Home environment id (where the agent lives)")
     .option("--avatar <value>", "Avatar: emoji, URL, or base64 data URI", "")
     .option("--persona <id>", "Primary persona id", "")
-    .action(async (name: string, opts: { avatar: string; persona: string }) => {
-      const { orchestration } = createGrackleClients();
-      const res = await orchestration.createAgent({
-        name,
-        avatar: opts.avatar,
-        primaryPersonaId: opts.persona,
-      });
-      console.log(chalk.green(`Created agent ${chalk.bold(res.name)} (${res.id})`));
-    });
+    .action(
+      async (name: string, opts: { avatar: string; persona: string; environment: string }) => {
+        const { orchestration } = createGrackleClients();
+        const res = await orchestration.createAgent({
+          name,
+          avatar: opts.avatar,
+          primaryPersonaId: opts.persona,
+          environmentId: opts.environment,
+        });
+        console.log(chalk.green(`Created agent ${chalk.bold(res.name)} (${res.id})`));
+      },
+    );
 
   agent
     .command("edit <id>")

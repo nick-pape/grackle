@@ -1108,13 +1108,19 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         agents,
         agentsLoading: false,
         loadAgents: async () => {},
-        createAgent: async (name: string, avatar?: string, primaryPersonaId?: string) => {
-          console.log("[MockGrackle] createAgent", { name });
+        createAgent: async (
+          name: string,
+          avatar: string,
+          primaryPersonaId: string,
+          environmentId: string,
+        ) => {
+          console.log("[MockGrackle] createAgent", { name, environmentId });
           const created: AgentData = {
             id: `mock-agent-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
             name,
-            avatar: avatar ?? "",
-            primaryPersonaId: primaryPersonaId ?? "",
+            avatar,
+            primaryPersonaId,
+            environmentId,
           };
           setAgents((prev) => [...prev, created]);
           return created;

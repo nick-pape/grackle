@@ -212,8 +212,9 @@ export interface PersonaData {
 }
 
 /**
- * A standing agent as the web UI consumes it (#1417). Phase 0: a minimal
- * context-axis entity with no lifecycle — identity plus a primary persona.
+ * A standing agent as the web UI consumes it (#1417, #1418). Phase 0
+ * shipped identity + a primary persona; #1418 adds the home environment
+ * (required) so the Agent can spawn sessions when wake-up surfaces fire.
  */
 export interface AgentData {
   id: string;
@@ -221,6 +222,8 @@ export interface AgentData {
   /** Emoji, image URL, or base64 data URI. Empty string renders a monogram. */
   avatar: string;
   primaryPersonaId: string;
+  /** The Agent's home environment id (#1418). Required at creation time. */
+  environmentId: string;
 }
 
 /** Fields accepted when updating an agent. Omitted fields are left unchanged. */
@@ -582,8 +585,13 @@ export interface UseAgentsResult {
   agentsLoading: boolean;
   /** Request the current agent list from the server. */
   loadAgents: () => Promise<void>;
-  /** Create a new agent. */
-  createAgent: (name: string, avatar?: string, primaryPersonaId?: string) => Promise<AgentData>;
+  /** Create a new agent. Requires `environmentId` (the agent's home environment, #1418). */
+  createAgent: (
+    name: string,
+    avatar: string,
+    primaryPersonaId: string,
+    environmentId: string,
+  ) => Promise<AgentData>;
   /** Update an existing agent; omitted fields are preserved. */
   updateAgent: (id: string, updates: UpdateAgentFields) => Promise<AgentData>;
   /** Delete an agent by ID. */

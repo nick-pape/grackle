@@ -7,7 +7,7 @@
  */
 
 import { useState, type FormEvent, type JSX } from "react";
-import type { AgentData, PersonaData } from "../../hooks/types.js";
+import type { AgentData, Environment, PersonaData } from "../../hooks/types.js";
 import { Button } from "../display/Button.js";
 import styles from "./AgentManager.module.scss";
 
@@ -17,6 +17,11 @@ export interface AgentManagerProps {
   agents: AgentData[];
   /** Personas available to be chosen as the primary persona. */
   personas: PersonaData[];
+  /**
+   * Environments available as the Agent's home (#1418). Required in the
+   * create form; rendered as a chip in the read-only view.
+   */
+  environments: Environment[];
   /** When set and found in `agents`, render the read-only view; else create form. */
   agentId?: string;
   /**
@@ -26,7 +31,7 @@ export interface AgentManagerProps {
    */
   agentsLoading?: boolean;
   /** Create a new agent. Called only in create mode. */
-  onCreate: (name: string, avatar: string, primaryPersonaId: string) => void;
+  onCreate: (name: string, avatar: string, primaryPersonaId: string, environmentId: string) => void;
   /** Delete the viewed agent. Called only in view mode. */
   onDelete: (id: string) => void;
   /** Navigate away (after create/delete, or via the back affordance). */
@@ -93,6 +98,7 @@ function AvatarPreview({ name, avatar }: { name: string; avatar: string }): JSX.
 export function AgentManager({
   agents,
   personas,
+  environments,
   agentId,
   agentsLoading = false,
   onCreate,
@@ -136,6 +142,7 @@ export function AgentManager({
   // ── Read-only view ───────────────────────────────────────────────────────
   if (agentId && agent) {
     const persona = personas.find((p) => p.id === agent.primaryPersonaId);
+    const env = environments.find((e) => e.id === agent.environmentId);
     return (
       <div className={styles.container} data-testid="agent-view">
         <div className={styles.header}>
@@ -149,6 +156,8 @@ export function AgentManager({
           <dd data-testid="agent-persona">
             {persona ? persona.name : agent.primaryPersonaId || "(none)"}
           </dd>
+          <dt>Environment</dt>
+          <dd data-testid="agent-environment">{env ? env.displayName : agent.environmentId}</dd>
         </dl>
         <section className={styles.history} data-testid="agent-history">
           <h2 className={styles.sectionTitle}>History</h2>
@@ -169,30 +178,47 @@ export function AgentManager({
   }
 
   // ── Create form ──────────────────────────────────────────────────────────
-  return <AgentCreateForm personas={personas} onCreate={onCreate} onCancel={onNavigateBack} />;
+  return (
+    <AgentCreateForm
+      personas={personas}
+      environments={environments}
+      onCreate={onCreate}
+      onCancel={onNavigateBack}
+    />
+  );
 }
 
 /** Props for the internal create form. */
 interface AgentCreateFormProps {
   personas: PersonaData[];
-  onCreate: (name: string, avatar: string, primaryPersonaId: string) => void;
+  environments: Environment[];
+  onCreate: (name: string, avatar: string, primaryPersonaId: string, environmentId: string) => void;
   onCancel: () => void;
 }
 
 /** Controlled create form for a new agent. */
-function AgentCreateForm({ personas, onCreate, onCancel }: AgentCreateFormProps): JSX.Element {
+function AgentCreateForm({
+  personas,
+  environments,
+  onCreate,
+  onCancel,
+}: AgentCreateFormProps): JSX.Element {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState("");
   const [primaryPersonaId, setPrimaryPersonaId] = useState("");
+  // Default to the first environment so the form is submittable on first
+  // glance; user can change it. If there are no environments the form's
+  // submit button stays disabled (we can't create an agent without a home).
+  const [environmentId, setEnvironmentId] = useState(environments[0]?.id ?? "");
 
-  const canSubmit = name.trim().length > 0;
+  const canSubmit = name.trim().length > 0 && environmentId.length > 0;
 
   const handleSubmit = (e: FormEvent): void => {
     e.preventDefault();
     if (!canSubmit) {
       return;
     }
-    onCreate(name.trim(), avatar.trim(), primaryPersonaId);
+    onCreate(name.trim(), avatar.trim(), primaryPersonaId, environmentId);
   };
 
   return (
@@ -241,6 +267,27 @@ function AgentCreateForm({ personas, onCreate, onCancel }: AgentCreateFormProps)
         {personas.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}
+          </option>
+        ))}
+      </select>
+
+      <label className={styles.label} htmlFor="agent-environment-select">
+        Environment <span className={styles.hint}>(where the agent lives)</span>
+      </label>
+      <select
+        id="agent-environment-select"
+        className={styles.input}
+        value={environmentId}
+        onChange={(e) => setEnvironmentId(e.target.value)}
+        data-testid="agent-environment-select"
+        required
+      >
+        {environments.length === 0 && (
+          <option value="">(no environments — create one first)</option>
+        )}
+        {environments.map((env) => (
+          <option key={env.id} value={env.id}>
+            {env.displayName}
           </option>
         ))}
       </select>
