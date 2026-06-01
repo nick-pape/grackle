@@ -140,6 +140,7 @@ export function authenticateMcpRequest(
       workspaceId: claims.pid || undefined,
       personaId: claims.per,
       taskSessionId: claims.sid,
+      agentId: claims.agt,
     };
   }
 

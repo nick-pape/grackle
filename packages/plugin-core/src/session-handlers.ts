@@ -209,15 +209,29 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
   // Resolve workspace scope for the token: prefer explicit workspaceId, then inherit from the
   // parent session's task (for piped child sessions spawned from a task-based session).
   let resolvedWorkspaceId = cfg?.workspaceId || "";
-  if (!resolvedWorkspaceId && parentSessionId) {
+  // #1418: agent_id is inherited from the parent task (the only "task" in
+  // scope here is the parent session's, since spawnAgent doesn't take a
+  // taskId of its own). Subagents of an agent-owned task carry the same
+  // agent principal.
+  let resolvedAgentId: string | undefined;
+  if (parentSessionId) {
     const parentSession = sessionStore.getSession(parentSessionId);
     if (parentSession?.taskId) {
       const parentTask = taskStore.getTask(parentSession.taskId);
-      resolvedWorkspaceId = parentTask?.workspaceId || "";
+      if (!resolvedWorkspaceId) {
+        resolvedWorkspaceId = parentTask?.workspaceId || "";
+      }
+      resolvedAgentId = parentTask?.agentId || undefined;
     }
   }
   const mcpToken = createScopedToken(
-    { sub: sessionId, pid: resolvedWorkspaceId, per: resolved.personaId, sid: sessionId },
+    {
+      sub: sessionId,
+      pid: resolvedWorkspaceId,
+      per: resolved.personaId,
+      sid: sessionId,
+      agt: resolvedAgentId,
+    },
     loadOrCreateApiKey(grackleHome),
   );
 

@@ -13,6 +13,12 @@ export interface ScopedTokenClaims {
   per: string;
   /** Session ID. */
   sid: string;
+  /**
+   * Owning Grackle Agent id (#1418). Optional — present when the task was
+   * spawned under an Agent's principal. Distinct from the ACP runtime
+   * "agent id" inside session metadata.
+   */
+  agt?: string;
   /** Issued-at time (epoch seconds). */
   iat: number;
   /** Expiry time (epoch seconds). */
@@ -51,7 +57,7 @@ function sign(payload: string, secret: string): Buffer {
  * the revoke-on-terminal-state wiring.
  */
 export function createScopedToken(
-  claims: Pick<ScopedTokenClaims, "sub" | "pid" | "per" | "sid">,
+  claims: Pick<ScopedTokenClaims, "sub" | "pid" | "per" | "sid"> & { agt?: string },
   signingSecret: string,
   ttlMs: number = DEFAULT_TTL_MS,
 ): string {
@@ -130,6 +136,11 @@ export function verifyScopedToken(
     !Number.isFinite(claims.iat) ||
     !Number.isFinite(claims.exp)
   ) {
+    return undefined;
+  }
+  // `agt` is optional (#1418). When present it must be a string; tokens
+  // minted before this field existed simply omit it.
+  if (claims.agt !== undefined && typeof claims.agt !== "string") {
     return undefined;
   }
 

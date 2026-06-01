@@ -206,6 +206,9 @@ export async function startTaskSession(
       pid: freshTask.workspaceId || "",
       per: resolved.personaId,
       sid: sessionId,
+      // #1418: agent-owned tasks carry the agent_id through to the scoped
+      // token so MCP requests can be attributed to the principal.
+      agt: freshTask.agentId || undefined,
     },
     loadOrCreateApiKey(grackleHome),
   );

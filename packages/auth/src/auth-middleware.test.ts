@@ -50,6 +50,22 @@ describe("authenticateMcpRequest", () => {
       workspaceId: "workspace-1",
       personaId: "persona-1",
       taskSessionId: "session-1",
+      agentId: undefined,
+    });
+  });
+
+  /** Scoped token minted with `agt` exposes `agentId` on the context (#1418). */
+  test("scoped token with agt populates agentId on the context", () => {
+    const token = createScopedToken({ ...CLAIMS, agt: "agent-42" }, API_KEY);
+    const req = mockRequest(`Bearer ${token}`);
+    const result = authenticateMcpRequest(req, API_KEY);
+    expect(result).toEqual({
+      type: "scoped",
+      taskId: "task-1",
+      workspaceId: "workspace-1",
+      personaId: "persona-1",
+      taskSessionId: "session-1",
+      agentId: "agent-42",
     });
   });
 

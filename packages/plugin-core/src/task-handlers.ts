@@ -511,7 +511,15 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   const taskMcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
   const taskMcpUrl = `http://${taskMcpDialHost}:${taskMcpPort}/mcp`;
   const taskMcpToken = createScopedToken(
-    { sub: task.id, pid: task.workspaceId || "", per: resolved.personaId, sid: sessionId },
+    {
+      sub: task.id,
+      pid: task.workspaceId || "",
+      per: resolved.personaId,
+      sid: sessionId,
+      // #1418: tasks owned by an Agent carry the agent_id through to the
+      // scoped token so MCP requests can be attributed to the principal.
+      agt: task.agentId || undefined,
+    },
     loadOrCreateApiKey(grackleHome),
   );
 
