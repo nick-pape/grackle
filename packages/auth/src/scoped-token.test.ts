@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach, vi } from "vitest";
+import { createHmac } from "node:crypto";
 import {
   createScopedToken,
   verifyScopedToken,
@@ -145,5 +146,43 @@ describe("scoped-token", () => {
     revokeTask("task-recent");
     pruneRevocations();
     expect(isRevokedTask("task-recent")).toBe(true);
+  });
+
+  // ── #1418: optional `agt` claim ──────────────────────────────────────
+
+  /** A token minted with `agt` round-trips with `agt` set on verify. */
+  test("createScopedToken with agt round-trips", () => {
+    const token = createScopedToken({ ...CLAIMS, agt: "agent-1" }, SIGNING_SECRET);
+    const claims = verifyScopedToken(token, SIGNING_SECRET);
+    expect(claims).toBeDefined();
+    expect(claims!.agt).toBe("agent-1");
+  });
+
+  /** A token minted without `agt` is still valid and has `agt === undefined`. */
+  test("createScopedToken without agt round-trips with agt undefined", () => {
+    const token = createScopedToken(CLAIMS, SIGNING_SECRET);
+    const claims = verifyScopedToken(token, SIGNING_SECRET);
+    expect(claims).toBeDefined();
+    expect(claims!.agt).toBeUndefined();
+  });
+
+  /** A crafted token with a non-string `agt` is rejected. */
+  test("verifyScopedToken rejects a non-string agt claim", () => {
+    const now = Math.floor(Date.now() / 1000);
+    // Manually craft a payload with agt as a number.
+    const payload = {
+      sub: "task-x",
+      pid: "ws",
+      per: "p",
+      sid: "s",
+      agt: 42,
+      iat: now,
+      exp: now + 3600,
+    };
+    const payloadStr = JSON.stringify(payload);
+    const payloadEncoded = Buffer.from(payloadStr, "utf8").toString("base64url");
+    const sig = createHmac("sha256", SIGNING_SECRET).update(payloadEncoded).digest("base64url");
+    const token = `${payloadEncoded}.${sig}`;
+    expect(verifyScopedToken(token, SIGNING_SECRET)).toBeUndefined();
   });
 });

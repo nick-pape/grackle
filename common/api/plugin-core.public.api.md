@@ -4,6 +4,7 @@
 
 ```ts
 
+import type { AgentRow } from '@grackle-ai/database';
 import { cleanupLifecycleStream } from '@grackle-ai/core';
 import type { ConnectRouter } from '@connectrpc/connect';
 import type { DispatchQueueRow } from '@grackle-ai/database';
@@ -24,12 +25,38 @@ import { VALID_PIPE_MODES } from '@grackle-ai/core';
 import { validatePipeInputs } from '@grackle-ai/core';
 
 // @public
+export interface AgentRootTaskBootDeps {
+    getAgent: (id: string) => AgentRow | undefined;
+    getRootTaskForAgent: (agentId: string) => TaskRow | undefined;
+    insertTask: (fields: {
+        id: string;
+        title: string;
+        description: string;
+        branch: string;
+        dependsOn: string[];
+        parentTaskId: string;
+        depth: number;
+        canDecompose: boolean;
+        injectKnowledge: boolean;
+        defaultPersonaId: string;
+        tokenBudget: number;
+        costBudgetMillicents: number;
+        agentId?: string;
+        kind?: string;
+    }) => void;
+    newId: () => string;
+}
+
+// @public
 export interface ChannelConfig {
     ingressBaseUrl: string;
     signingSecret: string;
 }
 
 export { cleanupLifecycleStream }
+
+// @public
+export function createAgentRootTaskSubscriber(ctx: PluginContext, deps: AgentRootTaskBootDeps): Disposable_2;
 
 // @public
 export function createCoreCollector(): ServiceCollector;
@@ -94,6 +121,11 @@ export interface EnvironmentReconciliationDeps {
     removeConnection: (environmentId: string) => void;
     updateEnvironmentStatus: (id: string, status: EnvironmentStatus) => void;
 }
+
+// @public
+export function handleAgentCreated(deps: AgentRootTaskBootDeps, payload: {
+    agentId: string;
+}): void;
 
 // @public
 export interface IngestBody {

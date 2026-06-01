@@ -56,11 +56,17 @@ export function useAgents(): UseAgentsResult {
   );
 
   const createAgent = useCallback(
-    async (name: string, avatar?: string, primaryPersonaId?: string): Promise<AgentData> => {
+    async (
+      name: string,
+      avatar: string,
+      primaryPersonaId: string,
+      environmentId: string,
+    ): Promise<AgentData> => {
       const resp = await grackleClient.createAgent({
         name,
-        avatar: avatar ?? "",
-        primaryPersonaId: primaryPersonaId ?? "",
+        avatar,
+        primaryPersonaId,
+        environmentId,
       });
       const created = protoToAgent(resp);
       setAgents((prev) => [...prev.filter((a) => a.id !== created.id), created]);

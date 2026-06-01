@@ -4,12 +4,19 @@ import { eq, asc, sql } from "drizzle-orm";
 
 export type { AgentRow };
 
-/** Insert a new agent record. */
+/**
+ * Insert a new agent record.
+ *
+ * `environmentId` is required (the Agent's home environment, #1418).
+ * Validation that the environment exists happens at the handler layer;
+ * the store accepts any non-empty string.
+ */
 export function createAgent(
   id: string,
   name: string,
   avatar: string,
   primaryPersonaId: string,
+  environmentId: string,
 ): void {
   db.insert(agents)
     .values({
@@ -17,6 +24,7 @@ export function createAgent(
       name,
       avatar,
       primaryPersonaId,
+      environmentId,
     })
     .run();
 }
@@ -62,4 +70,14 @@ export function updateAgent(
 /** Delete an agent by ID. */
 export function deleteAgent(id: string): void {
   db.delete(agents).where(eq(agents.id, id)).run();
+}
+
+/** Return all agents in a given environment, ordered by name. */
+export function getAgentsByEnvironment(environmentId: string): AgentRow[] {
+  return db
+    .select()
+    .from(agents)
+    .where(eq(agents.environmentId, environmentId))
+    .orderBy(asc(agents.name))
+    .all();
 }

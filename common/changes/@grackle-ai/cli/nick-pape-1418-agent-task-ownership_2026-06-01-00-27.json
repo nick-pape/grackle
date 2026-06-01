@@ -1,0 +1,46 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "`grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).",
+      "type": "patch"
+    },
+    {
+      "packageName": "@grackle-ai/common",
+      "comment": "Add Task.agent_id, Task.kind, Agent.environment_id, CreateAgentRequest.environment_id to the proto (#1418).",
+      "type": "patch"
+    },
+    {
+      "packageName": "@grackle-ai/auth",
+      "comment": "Add optional `agt` claim to scoped tokens and `agentId` to the scoped AuthContext, preserving backwards compatibility with tokens minted before #1418.",
+      "type": "patch"
+    },
+    {
+      "packageName": "@grackle-ai/core",
+      "comment": "Thread `agt: task.agentId` into the scoped MCP token at `task-session.startTaskSession` (#1418).",
+      "type": "patch"
+    },
+    {
+      "packageName": "@grackle-ai/database",
+      "comment": "Migration v21 adds `tasks.agent_id`, `tasks.kind`, `agents.environment_id` + indices; stamps the system root task with `kind='root'`. New `agentStore.getAgentsByEnvironment`, `taskStore.getRootTaskForAgent`, `taskStore.getTasksForAgent`. `agentStore.createAgent` requires `environmentId` (#1418).",
+      "type": "patch"
+    },
+    {
+      "packageName": "@grackle-ai/powerline",
+      "comment": "Lockstep version bump for the Agent task-ownership feature (#1418).",
+      "type": "patch"
+    },
+    {
+      "packageName": "@grackle-ai/server",
+      "comment": "Wire the `agent.created → auto-create root task` subscriber into `event-subscribers.ts` (#1418).",
+      "type": "patch"
+    },
+    {
+      "packageName": "@grackle-ai/web-server",
+      "comment": "Lockstep version bump for the Agent task-ownership feature (#1418).",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

@@ -161,11 +161,13 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
   }
 
   // Seed: create root task (well-known "system" task) if it doesn't exist.
+  // `kind='root'` matches the v21 migration's UPDATE — fresh installs and
+  // migrated installs both end up with the system root tagged consistently.
   conn
     .prepare(
       `
-      INSERT OR IGNORE INTO tasks (id, workspace_id, title, description, status, branch, parent_task_id, depth, can_decompose, default_persona_id)
-      VALUES (?, NULL, 'System', '', 'not_started', 'system', '', 0, 1, ?)
+      INSERT OR IGNORE INTO tasks (id, workspace_id, title, description, status, branch, parent_task_id, depth, can_decompose, default_persona_id, kind)
+      VALUES (?, NULL, 'System', '', 'not_started', 'system', '', 0, 1, ?, 'root')
     `,
     )
     .run(ROOT_TASK_ID, SYSTEM_PERSONA_ID);

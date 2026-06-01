@@ -1635,12 +1635,14 @@ export const MOCK_AGENTS: AgentData[] = [
     name: "Refactor Bot",
     avatar: "",
     primaryPersonaId: "persona-fe",
+    environmentId: "local",
   },
   {
     id: "security-auditor",
     name: "Security Auditor",
     avatar: "",
     primaryPersonaId: "persona-arch",
+    environmentId: "local",
   },
 ];
 

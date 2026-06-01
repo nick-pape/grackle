@@ -18,10 +18,16 @@ export function AgentDetailPage(): JSX.Element {
   const {
     agents: { agents, agentsLoading, createAgent, deleteAgent },
     personas: { personas },
+    environments: { environments },
   } = useGrackle();
 
-  const handleCreate = (name: string, avatar: string, primaryPersonaId: string): void => {
-    createAgent(name, avatar, primaryPersonaId).then(
+  const handleCreate = (
+    name: string,
+    avatar: string,
+    primaryPersonaId: string,
+    environmentId: string,
+  ): void => {
+    createAgent(name, avatar, primaryPersonaId, environmentId).then(
       (created) => {
         navigate(agentUrl(created.id));
       },
@@ -50,6 +56,7 @@ export function AgentDetailPage(): JSX.Element {
     <AgentManager
       agents={agents}
       personas={personas}
+      environments={environments}
       agentId={agentId}
       agentsLoading={agentsLoading}
       onCreate={handleCreate}

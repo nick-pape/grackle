@@ -52,7 +52,9 @@ function applySchema(): void {
       workpad       TEXT NOT NULL DEFAULT '',
       schedule_id   TEXT NOT NULL DEFAULT '',
       token_budget  INTEGER NOT NULL DEFAULT 0,
-      cost_budget_millicents INTEGER NOT NULL DEFAULT 0
+      cost_budget_millicents INTEGER NOT NULL DEFAULT 0,
+      agent_id      TEXT,
+      kind          TEXT NOT NULL DEFAULT 'task'
     );
   `);
 }

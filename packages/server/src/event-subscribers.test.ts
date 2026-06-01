@@ -16,10 +16,16 @@ vi.mock("@grackle-ai/core", () => ({
 vi.mock("@grackle-ai/plugin-core", () => ({
   createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createRootTaskBootSubscriber: vi.fn(() => mockDisposable),
+  createAgentRootTaskSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
 }));
 
 vi.mock("@grackle-ai/database", () => ({
-  taskStore: { getTask: vi.fn() },
+  agentStore: { getAgent: vi.fn() },
+  taskStore: {
+    getTask: vi.fn(),
+    getRootTaskForAgent: vi.fn(),
+    insertTask: vi.fn(),
+  },
   sessionStore: { listSessionsForTask: vi.fn(), getLatestSessionForTask: vi.fn() },
   settingsStore: { getSetting: vi.fn() },
 }));
@@ -41,14 +47,18 @@ describe("wireEventSubscribers (core-only)", () => {
     );
   });
 
-  it("returns only lifecycle disposable when skipRootAutostart is true", () => {
+  it("returns lifecycle + agent-root subscribers when skipRootAutostart is true", () => {
+    // #1418: the agent-root-task subscriber runs regardless of the system
+    // root-task autostart flag (those are independent concerns), so we get
+    // 2 disposables here: lifecycle + agent-root.
     const disposables = wireEventSubscribers({ skipRootAutostart: true });
-    expect(disposables).toHaveLength(1);
+    expect(disposables).toHaveLength(2);
     expect(disposables[0]).toHaveProperty("dispose");
   });
 
   it("includes root task boot when skipRootAutostart is false", () => {
+    // 3 disposables: lifecycle + system-root-boot + agent-root.
     const disposables = wireEventSubscribers({ skipRootAutostart: false });
-    expect(disposables).toHaveLength(2);
+    expect(disposables).toHaveLength(3);
   });
 });

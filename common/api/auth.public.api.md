@@ -34,6 +34,7 @@ export type AuthContext = {
     workspaceId?: string;
     personaId: string;
     taskSessionId: string;
+    agentId?: string;
 } | {
     type: "oauth";
     clientId: string;
@@ -107,7 +108,9 @@ export function createOAuthAccessToken(clientId: string, resource: string, signi
 export function createRefreshToken(clientId: string, resource: string): string;
 
 // @public
-export function createScopedToken(claims: Pick<ScopedTokenClaims, "sub" | "pid" | "per" | "sid">, signingSecret: string, ttlMs?: number): string;
+export function createScopedToken(claims: Pick<ScopedTokenClaims, "sub" | "pid" | "per" | "sid"> & {
+    agt?: string;
+}, signingSecret: string, ttlMs?: number): string;
 
 // @public
 export function createSession(apiKey: string, options?: {
@@ -178,6 +181,7 @@ export function revokeTask(taskId: string): void;
 
 // @public
 export interface ScopedTokenClaims {
+    agt?: string;
     exp: number;
     iat: number;
     per: string;
@@ -242,7 +246,7 @@ export const WEB_CONTENT_SECURITY_POLICY: string;
 
 // Warnings were encountered during analysis:
 //
-// src/scoped-token.ts:178:1 - (ae-internal-missing-underscore) The name "clearRevocations" should be prefixed with an underscore because the declaration is marked as @internal
+// src/scoped-token.ts:189:1 - (ae-internal-missing-underscore) The name "clearRevocations" should be prefixed with an underscore because the declaration is marked as @internal
 
 // (No @packageDocumentation comment for this package)
 

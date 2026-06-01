@@ -177,6 +177,20 @@ export const tasks = sqliteTable("tasks", {
   scheduleId: text("schedule_id").notNull().default(""),
   tokenBudget: integer("token_budget").notNull().default(0),
   costBudgetMillicents: integer("cost_budget_millicents").notNull().default(0),
+  /**
+   * Owning Agent (#1418, epic #1412). NULL = today's user-driven path; set =
+   * task is part of an Agent's tree (root, schedule fire, channel thread, etc.).
+   * Note: this is the Grackle Agent entity id, NOT the ACP runtime "agent id"
+   * used inside session metadata — those are unrelated despite the name collision.
+   */
+  agentId: text("agent_id").references(() => agents.id),
+  /**
+   * Discriminator for agent-owned tasks (#1418). Default `task` matches today's
+   * user-driven tasks. Reserved values: `root | schedule_rule | schedule_fire |
+   * channel_config | channel_thread` — only `task` and `root` are populated in
+   * #1418; the others are reserved for #1439 / #1421.
+   */
+  kind: text("kind").notNull().default("task"),
 });
 
 /** Row shape returned by a SELECT on the tasks table. */
@@ -255,6 +269,14 @@ export const agents = sqliteTable("agents", {
   name: text("name").notNull().unique(),
   avatar: text("avatar").notNull().default(""),
   primaryPersonaId: text("primary_persona_id").notNull().default(""),
+  /**
+   * The Agent's home environment (#1418, epic #1412). Required at the handler
+   * layer (`agent-handlers.createAgent` validates non-empty + existence).
+   * Defaults to '' at the column level so the v21 ALTER succeeds on
+   * pre-existing rows; the only such rows in the wild are dev-only #1417
+   * test fixtures.
+   */
+  environmentId: text("environment_id").notNull().default(""),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

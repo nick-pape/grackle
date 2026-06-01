@@ -57,6 +57,7 @@ type Agent = Message<"grackle.Agent"> & {
     primaryPersonaId: string;
     createdAt: string;
     updatedAt: string;
+    environmentId: string;
 };
 
 // @public
@@ -440,6 +441,7 @@ type CreateAgentRequest = Message<"grackle.CreateAgentRequest"> & {
     name: string;
     avatar: string;
     primaryPersonaId: string;
+    environmentId: string;
 };
 
 // @public
@@ -3344,6 +3346,8 @@ type Task = Message<"grackle.Task"> & {
     tokenBudget: number;
     costBudgetMillicents: number;
     injectKnowledge: boolean;
+    agentId: string;
+    kind: string;
 };
 
 // @public

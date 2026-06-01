@@ -213,6 +213,7 @@ export function protoToAgent(p: grackle.Agent): AgentData {
     name: p.name,
     avatar: p.avatar,
     primaryPersonaId: p.primaryPersonaId,
+    environmentId: p.environmentId,
   };
 }
 

@@ -24,6 +24,16 @@ export interface InsertTaskFields {
   defaultPersonaId: string;
   tokenBudget: number;
   costBudgetMillicents: number;
+  /**
+   * Owning Agent id (#1418). NULL/undefined = user-driven task (today's path).
+   * Set = the task is part of an Agent's tree.
+   */
+  agentId?: string;
+  /**
+   * Discriminator for agent-spawned tasks (#1418). Defaults to `task`.
+   * Reserved values: `root | schedule_rule | schedule_fire | channel_config | channel_thread`.
+   */
+  kind?: string;
 }
 
 /**
@@ -59,6 +69,8 @@ export function insertTask(fields: InsertTaskFields): void {
       defaultPersonaId: fields.defaultPersonaId,
       tokenBudget: fields.tokenBudget,
       costBudgetMillicents: fields.costBudgetMillicents,
+      agentId: fields.agentId ?? null,
+      kind: fields.kind ?? "task",
     })
     .run();
 }
@@ -81,6 +93,8 @@ export function createTask(
   tokenBudget: number = 0,
   costBudgetMillicents: number = 0,
   injectKnowledge: boolean = true,
+  agentId?: string,
+  kind?: string,
 ): void {
   let depth = 0;
   let branch: string;
@@ -122,6 +136,8 @@ export function createTask(
     defaultPersonaId,
     tokenBudget,
     costBudgetMillicents,
+    agentId,
+    kind,
   });
 }
 
@@ -477,4 +493,22 @@ export function reparentTask(taskId: string, newParentTaskId: string): void {
  */
 export function getOrphanedTasks(parentTaskId: string): TaskRow[] {
   return getChildren(parentTaskId).filter((child) => !TERMINAL_TASK_STATUSES.has(child.status));
+}
+
+/**
+ * Return the root task for a given Agent — the singleton task with
+ * `agent_id = agentId AND kind = 'root'`. Returns `undefined` when the
+ * Agent has no root yet (the auto-create subscriber runs on `agent.created`).
+ */
+export function getRootTaskForAgent(agentId: string): TaskRow | undefined {
+  return db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.agentId, agentId), eq(tasks.kind, "root")))
+    .get();
+}
+
+/** Return all tasks owned by an Agent (root + descendants). Used for cascade-delete. */
+export function getTasksForAgent(agentId: string): TaskRow[] {
+  return db.select().from(tasks).where(eq(tasks.agentId, agentId)).all();
 }

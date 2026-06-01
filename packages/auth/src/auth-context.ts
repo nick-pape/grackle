@@ -13,5 +13,11 @@ export type AuthContext =
       workspaceId?: string;
       personaId: string;
       taskSessionId: string;
+      /**
+       * Owning Grackle Agent id (#1418). Present when the task was spawned
+       * under an Agent's principal. Distinct from the ACP runtime "agent id"
+       * used in session metadata.
+       */
+      agentId?: string;
     }
   | { type: "oauth"; clientId: string };

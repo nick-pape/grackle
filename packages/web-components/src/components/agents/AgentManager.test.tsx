@@ -2,11 +2,23 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent } from "@testing-library/react";
 import { AgentManager, isImageAvatar } from "./AgentManager.js";
-import type { AgentData, PersonaData } from "../../hooks/types.js";
+import type { AgentData, Environment, PersonaData } from "../../hooks/types.js";
 
 const AGENTS: AgentData[] = [
-  { id: "refactor-bot", name: "Refactor Bot", avatar: "B", primaryPersonaId: "claude-code" },
-  { id: "doc-writer", name: "Doc Writer", avatar: "D", primaryPersonaId: "" },
+  {
+    id: "refactor-bot",
+    name: "Refactor Bot",
+    avatar: "B",
+    primaryPersonaId: "claude-code",
+    environmentId: "local",
+  },
+  {
+    id: "doc-writer",
+    name: "Doc Writer",
+    avatar: "D",
+    primaryPersonaId: "",
+    environmentId: "sandbox",
+  },
 ];
 
 const PERSONAS: PersonaData[] = [
@@ -28,8 +40,29 @@ const PERSONAS: PersonaData[] = [
   },
 ];
 
+const ENVIRONMENTS: Environment[] = [
+  {
+    id: "local",
+    displayName: "Local",
+    adapterType: "local",
+    adapterConfig: "{}",
+    status: "connected",
+    bootstrapped: true,
+    githubAccountId: "",
+  },
+  {
+    id: "sandbox",
+    displayName: "Sandbox",
+    adapterType: "docker",
+    adapterConfig: "{}",
+    status: "connected",
+    bootstrapped: true,
+    githubAccountId: "",
+  },
+];
+
 const NOOP = (): void => {};
-const NOOP_CREATE = (_n: string, _a: string, _p: string): void => {};
+const NOOP_CREATE = (_n: string, _a: string, _p: string, _e: string): void => {};
 const NOOP_DELETE = (_id: string): void => {};
 
 describe("isImageAvatar", () => {
@@ -74,6 +107,7 @@ describe("AgentManager", () => {
       <AgentManager
         agents={AGENTS}
         personas={PERSONAS}
+        environments={ENVIRONMENTS}
         agentId="refactor-bot"
         onCreate={NOOP_CREATE}
         onDelete={NOOP_DELETE}
@@ -91,6 +125,7 @@ describe("AgentManager", () => {
       <AgentManager
         agents={AGENTS}
         personas={[]}
+        environments={ENVIRONMENTS}
         agentId="refactor-bot"
         onCreate={NOOP_CREATE}
         onDelete={NOOP_DELETE}
@@ -105,6 +140,7 @@ describe("AgentManager", () => {
       <AgentManager
         agents={AGENTS}
         personas={PERSONAS}
+        environments={ENVIRONMENTS}
         agentId="doc-writer"
         onCreate={NOOP_CREATE}
         onDelete={NOOP_DELETE}
@@ -119,6 +155,7 @@ describe("AgentManager", () => {
       <AgentManager
         agents={AGENTS}
         personas={PERSONAS}
+        environments={ENVIRONMENTS}
         onCreate={NOOP_CREATE}
         onDelete={NOOP_DELETE}
         onNavigateBack={NOOP}
@@ -139,6 +176,7 @@ describe("AgentManager", () => {
       <AgentManager
         agents={[]}
         personas={PERSONAS}
+        environments={ENVIRONMENTS}
         onCreate={onCreate}
         onDelete={NOOP_DELETE}
         onNavigateBack={NOOP}
@@ -151,7 +189,9 @@ describe("AgentManager", () => {
     const submit = screen.getByTestId("agent-submit") as HTMLButtonElement;
     expect(submit.disabled).toBe(false);
     fireEvent.click(submit);
-    expect(onCreate).toHaveBeenCalledWith("New Bot", "X", "");
+    // Form defaults environment to the first option ("local") so submit
+    // carries 4 args including environmentId.
+    expect(onCreate).toHaveBeenCalledWith("New Bot", "X", "", "local");
   });
 
   it("renders the not-found view when agentId is set but missing from agents", () => {
@@ -159,6 +199,7 @@ describe("AgentManager", () => {
       <AgentManager
         agents={AGENTS}
         personas={PERSONAS}
+        environments={ENVIRONMENTS}
         agentId="ghost"
         onCreate={NOOP_CREATE}
         onDelete={NOOP_DELETE}
@@ -175,6 +216,7 @@ describe("AgentManager", () => {
       <AgentManager
         agents={[]}
         personas={PERSONAS}
+        environments={ENVIRONMENTS}
         agentId="loading-bot"
         agentsLoading
         onCreate={NOOP_CREATE}
@@ -191,8 +233,11 @@ describe("AgentManager", () => {
   it("renders an inline glyph for emoji avatars and an <img> for URL avatars", () => {
     const { rerender } = render(
       <AgentManager
-        agents={[{ id: "a", name: "Emoji", avatar: "🐦", primaryPersonaId: "" }]}
+        agents={[
+          { id: "a", name: "Emoji", avatar: "🐦", primaryPersonaId: "", environmentId: "local" },
+        ]}
         personas={[]}
+        environments={ENVIRONMENTS}
         agentId="a"
         onCreate={NOOP_CREATE}
         onDelete={NOOP_DELETE}
@@ -203,8 +248,17 @@ describe("AgentManager", () => {
 
     rerender(
       <AgentManager
-        agents={[{ id: "a", name: "Url", avatar: "https://x.test/a.png", primaryPersonaId: "" }]}
+        agents={[
+          {
+            id: "a",
+            name: "Url",
+            avatar: "https://x.test/a.png",
+            primaryPersonaId: "",
+            environmentId: "local",
+          },
+        ]}
         personas={[]}
+        environments={ENVIRONMENTS}
         agentId="a"
         onCreate={NOOP_CREATE}
         onDelete={NOOP_DELETE}
@@ -220,8 +274,11 @@ describe("AgentManager", () => {
   it("falls back to a monogram derived from the name when avatar is empty", () => {
     render(
       <AgentManager
-        agents={[{ id: "a", name: "monica", avatar: "", primaryPersonaId: "" }]}
+        agents={[
+          { id: "a", name: "monica", avatar: "", primaryPersonaId: "", environmentId: "local" },
+        ]}
         personas={[]}
+        environments={ENVIRONMENTS}
         agentId="a"
         onCreate={NOOP_CREATE}
         onDelete={NOOP_DELETE}
@@ -237,6 +294,7 @@ describe("AgentManager", () => {
       <AgentManager
         agents={AGENTS}
         personas={PERSONAS}
+        environments={ENVIRONMENTS}
         agentId="refactor-bot"
         onCreate={NOOP_CREATE}
         onDelete={onDelete}
@@ -245,5 +303,193 @@ describe("AgentManager", () => {
     );
     fireEvent.click(screen.getByTestId("agent-delete"));
     expect(onDelete).toHaveBeenCalledWith("refactor-bot");
+  });
+
+  // ── #1418: environment selector + view chip ──────────────────────────
+
+  it("create form renders an environment selector with all options", () => {
+    render(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={ENVIRONMENTS}
+        onCreate={NOOP_CREATE}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+    const select = screen.getByTestId("agent-environment-select") as HTMLSelectElement;
+    expect(select).toBeTruthy();
+    expect(select.value).toBe("local"); // defaults to the first environment
+    const optionLabels = Array.from(select.options).map((o) => o.textContent);
+    expect(optionLabels).toEqual(["Local", "Sandbox"]);
+  });
+
+  it("create form changing the environment updates onCreate's 4th arg", () => {
+    const onCreate = vi.fn();
+    render(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={ENVIRONMENTS}
+        onCreate={onCreate}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+    fireEvent.change(screen.getByTestId("agent-name-input"), { target: { value: "Pickier" } });
+    fireEvent.change(screen.getByTestId("agent-environment-select"), {
+      target: { value: "sandbox" },
+    });
+    fireEvent.click(screen.getByTestId("agent-submit"));
+    expect(onCreate).toHaveBeenCalledWith("Pickier", "", "", "sandbox");
+  });
+
+  it("create form disables submit when no environments are available", () => {
+    render(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={[]}
+        onCreate={NOOP_CREATE}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+    fireEvent.change(screen.getByTestId("agent-name-input"), { target: { value: "WantsEnv" } });
+    const submit = screen.getByTestId("agent-submit") as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+  });
+
+  it("read-only view shows the environment display name", () => {
+    render(
+      <AgentManager
+        agents={AGENTS}
+        personas={PERSONAS}
+        environments={ENVIRONMENTS}
+        agentId="refactor-bot"
+        onCreate={NOOP_CREATE}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+    expect(screen.getByTestId("agent-environment").textContent).toBe("Local");
+  });
+
+  it("read-only view falls back to the raw environment id when the env is unknown", () => {
+    render(
+      <AgentManager
+        agents={AGENTS}
+        personas={PERSONAS}
+        environments={[]}
+        agentId="refactor-bot"
+        onCreate={NOOP_CREATE}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+    expect(screen.getByTestId("agent-environment").textContent).toBe("local");
+  });
+
+  it("create form syncs environment selection when environments load async (Copilot review)", () => {
+    // Mount with no environments (simulating mid-fetch state).
+    const { rerender } = render(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={[]}
+        onCreate={NOOP_CREATE}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+    fireEvent.change(screen.getByTestId("agent-name-input"), { target: { value: "RaceBot" } });
+    // Submit disabled because environmentId is still "".
+    expect((screen.getByTestId("agent-submit") as HTMLButtonElement).disabled).toBe(true);
+
+    // Environments arrive (the useGrackleSocket fetch lands).
+    rerender(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={ENVIRONMENTS}
+        onCreate={NOOP_CREATE}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+
+    // The useEffect should now populate environmentId with the first env.
+    const select = screen.getByTestId("agent-environment-select") as HTMLSelectElement;
+    expect(select.value).toBe("local");
+    expect((screen.getByTestId("agent-submit") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("create form clears env selection and disables submit if environments transition to empty (Copilot review)", () => {
+    const onCreate = vi.fn();
+    const { rerender } = render(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={ENVIRONMENTS}
+        onCreate={onCreate}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+    fireEvent.change(screen.getByTestId("agent-name-input"), { target: { value: "Stale" } });
+    // Now both name and env are present → submit enabled.
+    expect((screen.getByTestId("agent-submit") as HTMLButtonElement).disabled).toBe(false);
+
+    // Environments list goes empty (e.g. all environments removed).
+    rerender(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={[]}
+        onCreate={onCreate}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+
+    // Submit should now be disabled — environmentId got cleared to "" by
+    // the effect, so canSubmit is false and a stale id can't be submitted.
+    expect((screen.getByTestId("agent-submit") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("create form keeps user's env selection when the environments list updates", () => {
+    const { rerender } = render(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={ENVIRONMENTS}
+        onCreate={NOOP_CREATE}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+    // User picks sandbox.
+    fireEvent.change(screen.getByTestId("agent-environment-select"), {
+      target: { value: "sandbox" },
+    });
+
+    // Environments list re-renders (e.g. an env was added/changed elsewhere).
+    rerender(
+      <AgentManager
+        agents={[]}
+        personas={PERSONAS}
+        environments={ENVIRONMENTS}
+        onCreate={NOOP_CREATE}
+        onDelete={NOOP_DELETE}
+        onNavigateBack={NOOP}
+      />,
+    );
+
+    // Selection still sandbox — the user's choice survives because it's
+    // still present in the new list.
+    expect((screen.getByTestId("agent-environment-select") as HTMLSelectElement).value).toBe(
+      "sandbox",
+    );
   });
 });

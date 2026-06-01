@@ -7,6 +7,7 @@ import {
   workspaceEnvironmentLinkStore,
   sessionStore,
   sqlite,
+  agentStore,
 } from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { adapterManager } from "@grackle-ai/core";
@@ -100,6 +101,25 @@ export async function removeEnvironment(req: grackle.EnvironmentId): Promise<gra
   if (wsCount > 0) {
     throw new ConnectError(
       `Cannot remove environment: ${wsCount} active workspace(s) still reference it. Archive or reparent them first.`,
+      Code.FailedPrecondition,
+    );
+  }
+  // Block deletion if standing Agents still call this their home (#1418).
+  // The agents.environment_id column is application-validated (no FK on the
+  // table because the column was added with a default of '' for migration
+  // compatibility), so the guard lives here next to the workspace check.
+  const homedAgents = agentStore.getAgentsByEnvironment(req.id);
+  if (homedAgents.length > 0) {
+    const names = homedAgents
+      .slice(0, 3)
+      .map((a) => a.name)
+      .join(", ");
+    const tail = homedAgents.length > 3 ? `, +${homedAgents.length - 3} more` : "";
+    // Note: only "delete" is currently actionable — agent.environment_id is
+    // immutable in the Phase-0 update RPC, so we don't tell the user they
+    // can reassign (the option doesn't exist yet).
+    throw new ConnectError(
+      `Cannot remove environment: ${homedAgents.length} standing agent(s) still call it home (${names}${tail}). Delete those agents first.`,
       Code.FailedPrecondition,
     );
   }

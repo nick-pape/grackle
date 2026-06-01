@@ -115,6 +115,8 @@ export function taskRowToProto(
     scheduleId: row.scheduleId,
     tokenBudget: row.tokenBudget,
     costBudgetMillicents: row.costBudgetMillicents,
+    agentId: row.agentId ?? "",
+    kind: row.kind,
   });
 }
 
@@ -153,13 +155,14 @@ export function safeParseJson<T>(value: string | undefined, fallback: T): T {
   }
 }
 
-/** Convert an agent database row to an Agent proto message (#1417). */
+/** Convert an agent database row to an Agent proto message (#1417, #1418). */
 export function agentRowToProto(row: agentStore.AgentRow): grackle.Agent {
   return create(grackle.AgentSchema, {
     id: row.id,
     name: row.name,
     avatar: row.avatar,
     primaryPersonaId: row.primaryPersonaId,
+    environmentId: row.environmentId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });

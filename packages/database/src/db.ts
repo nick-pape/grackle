@@ -404,6 +404,47 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 21,
+    name: "agent-task-ownership",
+    up: (conn) => {
+      // Agent task ownership (#1418, epic #1412): Agent becomes the principal
+      // that owns tasks. Adds `tasks.agent_id` (nullable FK), `tasks.kind`
+      // discriminator (reserved values root | schedule_rule | schedule_fire |
+      // channel_config | channel_thread), and `agents.environment_id` (the
+      // Agent's home environment — required at the handler layer; defaults
+      // to '' at the column level so the ALTER succeeds on existing rows).
+      const taskCols = conn.prepare("PRAGMA table_info(tasks)").all() as Array<{ name: string }>;
+      if (!taskCols.some((c) => c.name === "agent_id")) {
+        // Nullable FK so today's user-driven tasks (agent_id = NULL) keep
+        // working unchanged. Per repo convention (see schema.ts) FKs are
+        // declared but ON DELETE CASCADE is not used; application-level
+        // cleanup runs in agent-handlers.deleteAgent.
+        conn.exec("ALTER TABLE tasks ADD COLUMN agent_id TEXT REFERENCES agents(id)");
+      }
+      if (!taskCols.some((c) => c.name === "kind")) {
+        conn.exec("ALTER TABLE tasks ADD COLUMN kind TEXT NOT NULL DEFAULT 'task'");
+      }
+
+      const agentCols = conn.prepare("PRAGMA table_info(agents)").all() as Array<{
+        name: string;
+      }>;
+      if (!agentCols.some((c) => c.name === "environment_id")) {
+        conn.exec("ALTER TABLE agents ADD COLUMN environment_id TEXT NOT NULL DEFAULT ''");
+      }
+
+      // Stamp the long-standing system root task with kind='root' so the
+      // discriminator is consistent across fresh installs (see db-seed.ts)
+      // and migrated installs.
+      conn.exec("UPDATE tasks SET kind = 'root' WHERE id = 'system' AND kind = 'task'");
+
+      // Indices: agent_id is the merged-feed lookup key (#1419); kind is the
+      // chip filter; environment_id supports listing agents per environment.
+      conn.exec("CREATE INDEX IF NOT EXISTS idx_tasks_agent_id ON tasks(agent_id)");
+      conn.exec("CREATE INDEX IF NOT EXISTS idx_tasks_kind ON tasks(kind)");
+      conn.exec("CREATE INDEX IF NOT EXISTS idx_agents_environment_id ON agents(environment_id)");
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */

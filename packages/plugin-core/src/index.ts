@@ -16,6 +16,8 @@ export {
 } from "./signals/orphan-reparent.js";
 export { createRootTaskBootSubscriber } from "./root-task-boot.js";
 export type { RootTaskBootDeps } from "./root-task-boot.js";
+export { createAgentRootTaskSubscriber, handleAgentCreated } from "./agent-root-task-boot.js";
+export type { AgentRootTaskBootDeps } from "./agent-root-task-boot.js";
 
 // ─── Reconciliation Phases ──────────────────────────────────
 export { createDispatchPhase } from "./dispatch-phase.js";
