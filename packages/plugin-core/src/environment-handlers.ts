@@ -115,8 +115,11 @@ export async function removeEnvironment(req: grackle.EnvironmentId): Promise<gra
       .map((a) => a.name)
       .join(", ");
     const tail = homedAgents.length > 3 ? `, +${homedAgents.length - 3} more` : "";
+    // Note: only "delete" is currently actionable — agent.environment_id is
+    // immutable in the Phase-0 update RPC, so we don't tell the user they
+    // can reassign (the option doesn't exist yet).
     throw new ConnectError(
-      `Cannot remove environment: ${homedAgents.length} standing agent(s) still call it home (${names}${tail}). Delete or reassign those agents first.`,
+      `Cannot remove environment: ${homedAgents.length} standing agent(s) still call it home (${names}${tail}). Delete those agents first.`,
       Code.FailedPrecondition,
     );
   }

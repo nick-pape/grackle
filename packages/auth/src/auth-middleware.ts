@@ -134,13 +134,19 @@ export function authenticateMcpRequest(
     if (isRevokedTask(claims.sub)) {
       return undefined;
     }
+    // Only include `agentId` when the claim is actually present so the
+    // AuthContext shape for legacy scoped tokens (minted before #1418
+    // added the `agt` claim) is byte-for-byte unchanged. Spreading a
+    // conditional object preserves backwards compatibility for any code
+    // doing `Object.keys(ctx)` or deep-equality checks against legacy
+    // contexts.
     return {
       type: "scoped",
       taskId: claims.sub,
       workspaceId: claims.pid || undefined,
       personaId: claims.per,
       taskSessionId: claims.sid,
-      agentId: claims.agt,
+      ...(claims.agt !== undefined ? { agentId: claims.agt } : {}),
     };
   }
 

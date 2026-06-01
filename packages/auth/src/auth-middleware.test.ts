@@ -39,8 +39,13 @@ describe("authenticateMcpRequest", () => {
     expect(result).toEqual({ type: "api-key" });
   });
 
-  /** Valid scoped token returns scoped auth context with claims. */
-  test("valid scoped token returns scoped context", () => {
+  /**
+   * Valid scoped token (no `agt` claim) returns scoped auth context with
+   * the legacy shape — `agentId` is OMITTED from the object entirely, not
+   * present-with-undefined. This keeps the AuthContext byte-for-byte
+   * compatible for tokens minted before #1418 added the `agt` claim.
+   */
+  test("valid scoped token returns scoped context without agentId key", () => {
     const token = createScopedToken(CLAIMS, API_KEY);
     const req = mockRequest(`Bearer ${token}`);
     const result = authenticateMcpRequest(req, API_KEY);
@@ -50,8 +55,10 @@ describe("authenticateMcpRequest", () => {
       workspaceId: "workspace-1",
       personaId: "persona-1",
       taskSessionId: "session-1",
-      agentId: undefined,
     });
+    // Explicit shape check — agentId must not be present at all on
+    // legacy tokens (Object.keys() would expose a spurious key otherwise).
+    expect(Object.keys(result!)).not.toContain("agentId");
   });
 
   /** Scoped token minted with `agt` exposes `agentId` on the context (#1418). */
