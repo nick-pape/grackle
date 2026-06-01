@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Agent task ownership: agent_id on tasks, root task auto-create, cascade delete (#1418)",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
