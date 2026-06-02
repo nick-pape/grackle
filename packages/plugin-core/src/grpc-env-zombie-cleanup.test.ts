@@ -1,8 +1,14 @@
 /**
  * Unit tests for session cleanup in stopEnvironment / destroyEnvironment.
  *
- * Verifies that any active sessions are killed BEFORE the adapter is stopped
- * or destroyed, so the kill signal can reach PowerLine via the live connection.
+ * Verifies the two paths:
+ *   - stopEnvironment SUSPENDS active sessions before adapter.stop. Stop is a
+ *     recoverable transition — recoverSuspendedSessions reanimates them when
+ *     the env is re-provisioned. Lifecycle/subscription streams are left in
+ *     place because they are reused by the resumed session.
+ *   - destroyEnvironment KILLS active sessions before adapter.destroy (kill
+ *     signal needs the live PowerLine connection) and cleans up lifecycle +
+ *     subscription streams since the environment is gone for good.
  *
  * Regression coverage for #1485 (zombie sessions on env stop/destroy).
  */

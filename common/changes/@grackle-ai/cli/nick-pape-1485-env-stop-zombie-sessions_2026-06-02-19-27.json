@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Fix: env stop and env destroy now terminate active sessions instead of leaving zombie 'running'/'idle' rows in the DB and lingering streams in memory (#1485).",
+      "comment": "Fix: env stop now suspends active sessions (recoverable on re-provision via the existing suspend/reanimate path) and env destroy terminates them. Previously both left sessions zombied at 'running'/'idle' even after the environment was gone (#1485).",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
