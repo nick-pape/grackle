@@ -258,12 +258,18 @@ export class SshAdapter implements EnvironmentAdapter {
     const tunnel = new SshTunnel(localPort, cfg);
     await tunnel.open();
 
-    // Open reverse tunnel (remote → host MCP server) for agent tool calls
-    const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-    const reverseTunnel = new SshReverseTunnel(mcpPort, mcpPort, cfg, this.sleepFn);
-    await reverseTunnel.open();
+    // Open reverse tunnel (remote → host MCP server) for agent tool calls.
+    // Wrap in try/catch so the forward tunnel is cleaned up if the reverse fails.
+    try {
+      const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+      const reverseTunnel = new SshReverseTunnel(mcpPort, mcpPort, cfg, this.sleepFn);
+      await reverseTunnel.open();
 
-    registerTunnel(environmentId, { tunnel, reverseTunnel });
+      registerTunnel(environmentId, { tunnel, reverseTunnel });
+    } catch (err) {
+      await tunnel.close();
+      throw err;
+    }
 
     yield {
       stage: "connecting",
@@ -317,11 +323,16 @@ export class SshAdapter implements EnvironmentAdapter {
     const tunnel = new SshTunnel(localPort, cfg);
     await tunnel.open();
 
-    const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-    const reverseTunnel = new SshReverseTunnel(mcpPort, mcpPort, cfg, this.sleepFn);
-    await reverseTunnel.open();
+    try {
+      const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+      const reverseTunnel = new SshReverseTunnel(mcpPort, mcpPort, cfg, this.sleepFn);
+      await reverseTunnel.open();
 
-    registerTunnel(environmentId, { tunnel, reverseTunnel });
+      registerTunnel(environmentId, { tunnel, reverseTunnel });
+    } catch (err) {
+      await tunnel.close();
+      throw err;
+    }
 
     yield { stage: "reconnecting", message: "Reconnected via SSH", progress: 0.9 };
   }

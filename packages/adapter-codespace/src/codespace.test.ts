@@ -4,11 +4,21 @@ import { FatalAdapterError } from "@grackle-ai/adapter-sdk";
 import { CodespaceNotFoundError } from "./codespace.js";
 
 // ── Mock adapter-sdk (tunnel/process functions that can't be DI'd) ──
+interface MockTunnelInstance {
+  localPort: number;
+  open: ReturnType<typeof vi.fn>;
+  close: ReturnType<typeof vi.fn>;
+}
+
 const mocks = vi.hoisted(() => ({
   closeTunnel: vi.fn().mockResolvedValue(undefined),
   registerTunnel: vi.fn(),
   findFreePort: vi.fn().mockResolvedValue(9999),
   startRemotePowerLine: vi.fn().mockResolvedValue({ alreadyRunning: true }),
+  bootstrapPowerLine: vi.fn(),
+  tunnelInstances: [] as MockTunnelInstance[],
+  tunnelOpenCallCount: 0,
+  tunnelOpenFailOnCall: -1,
 }));
 
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
@@ -19,20 +29,23 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
     registerTunnel: mocks.registerTunnel,
     findFreePort: mocks.findFreePort,
     startRemotePowerLine: mocks.startRemotePowerLine,
+    bootstrapPowerLine: async function* () {
+      yield { stage: "bootstrapping", message: "mock", progress: 0.5 };
+    },
     // Stub ProcessTunnel so CodespaceTunnel doesn't spawn real processes (tested in tunnel.test.ts)
     ProcessTunnel: class {
       public localPort: number;
+      public close = vi.fn();
+      public open = vi.fn().mockImplementation(async () => {
+        mocks.tunnelOpenCallCount++;
+        if (mocks.tunnelOpenCallCount === mocks.tunnelOpenFailOnCall) {
+          throw new Error("tunnel open failed");
+        }
+      });
+      public isAlive = vi.fn().mockReturnValue(true);
       public constructor(localPort: number) {
         this.localPort = localPort;
-      }
-      public async open(): Promise<void> {
-        /* no-op */
-      }
-      public async close(): Promise<void> {
-        /* no-op */
-      }
-      public isAlive(): boolean {
-        return true;
+        mocks.tunnelInstances.push(this as unknown as MockTunnelInstance);
       }
     },
   };
@@ -64,6 +77,9 @@ describe("CodespaceAdapter.reconnect()", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.tunnelInstances.length = 0;
+    mocks.tunnelOpenCallCount = 0;
+    mocks.tunnelOpenFailOnCall = -1;
     mocks.startRemotePowerLine.mockResolvedValue({ alreadyRunning: true });
     adapter = new CodespaceAdapter({
       exec: mockExec,
@@ -140,6 +156,18 @@ describe("CodespaceAdapter.reconnect()", () => {
     await expect(
       collectEvents(adapter.reconnect!(envId, {} as Record<string, unknown>, token)),
     ).rejects.toThrow("codespaceName");
+  });
+
+  it("closes forward tunnel when reverse tunnel open() fails", async () => {
+    mocks.tunnelOpenFailOnCall = 2;
+
+    await expect(
+      collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token)),
+    ).rejects.toThrow("tunnel open failed");
+
+    expect(mocks.tunnelInstances).toHaveLength(2);
+    expect(mocks.tunnelInstances[0]!.close).toHaveBeenCalledOnce();
+    expect(mocks.registerTunnel).not.toHaveBeenCalled();
   });
 });
 
@@ -242,5 +270,34 @@ describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()"
 
     expect(err).not.toBeInstanceOf(CodespaceNotFoundError);
     expect(err).not.toBeInstanceOf(FatalAdapterError);
+  });
+});
+
+// ── Tunnel leak tests for provision ────────────────────────
+
+describe("CodespaceAdapter.provision() — tunnel cleanup", () => {
+  let adapter: CodespaceAdapter;
+  const config = { codespaceName: "test-cs" };
+  const token = "test-token";
+  const envId = "env-1";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.tunnelInstances.length = 0;
+    mocks.tunnelOpenCallCount = 0;
+    mocks.tunnelOpenFailOnCall = -1;
+    adapter = new CodespaceAdapter({ exec: mockExec, sleep: mockSleep });
+  });
+
+  it("closes forward tunnel when reverse tunnel open() fails", async () => {
+    mocks.tunnelOpenFailOnCall = 2;
+
+    await expect(
+      collectEvents(adapter.provision(envId, config as Record<string, unknown>, token)),
+    ).rejects.toThrow("tunnel open failed");
+
+    expect(mocks.tunnelInstances).toHaveLength(2);
+    expect(mocks.tunnelInstances[0]!.close).toHaveBeenCalledOnce();
+    expect(mocks.registerTunnel).not.toHaveBeenCalled();
   });
 });
