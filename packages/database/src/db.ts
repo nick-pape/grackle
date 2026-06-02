@@ -470,6 +470,24 @@ const MIGRATIONS: Migration[] = [
       );
     },
   },
+  {
+    version: 23,
+    name: "add-missing-query-indexes",
+    up: (conn) => {
+      conn.exec(`
+        CREATE INDEX IF NOT EXISTS idx_tasks_parent_task_id
+          ON tasks(parent_task_id);
+        CREATE INDEX IF NOT EXISTS idx_sessions_env_id
+          ON sessions(env_id);
+        CREATE INDEX IF NOT EXISTS idx_tasks_workspace_id
+          ON tasks(workspace_id);
+        CREATE INDEX IF NOT EXISTS idx_sessions_parent_session_id
+          ON sessions(parent_session_id);
+        CREATE INDEX IF NOT EXISTS idx_schedules_task_id
+          ON schedules(task_id) WHERE task_id IS NOT NULL;
+      `);
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
@@ -866,6 +884,11 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
     );
 
     CREATE INDEX IF NOT EXISTS idx_schedules_due ON schedules(enabled, next_run_at);
+
+    CREATE INDEX IF NOT EXISTS idx_tasks_parent_task_id ON tasks(parent_task_id);
+    CREATE INDEX IF NOT EXISTS idx_sessions_env_id ON sessions(env_id);
+    CREATE INDEX IF NOT EXISTS idx_tasks_workspace_id ON tasks(workspace_id);
+    CREATE INDEX IF NOT EXISTS idx_sessions_parent_session_id ON sessions(parent_session_id);
   `);
 
   // Mark unversioned databases as baseline now that tables are confirmed

@@ -446,6 +446,7 @@ describe("initDatabase", () => {
     // ALTER TABLE DROP COLUMN can proceed), drop the task_id column, set
     // user_version back to 21.
     mem.exec("DROP INDEX IF EXISTS uq_schedules_heartbeat_per_task");
+    mem.exec("DROP INDEX IF EXISTS idx_schedules_task_id");
     mem.exec("ALTER TABLE schedules DROP COLUMN task_id");
     mem.pragma("user_version = 21");
 
@@ -541,6 +542,81 @@ describe("initDatabase", () => {
     // migration itself doesn't disturb FK integrity).
     const fkViolations = mem.prepare("PRAGMA foreign_key_check").all();
     expect(fkViolations).toHaveLength(0);
+  });
+
+  it("migration v23 — adds missing query-performance indexes (#1489)", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+
+    // Step 1: create the current schema so all tables + indexes exist.
+    initDatabase(mem);
+
+    // Step 2: rewind to v22 and drop the new indexes.
+    mem.pragma("user_version = 22");
+    mem.exec("DROP INDEX IF EXISTS idx_tasks_parent_task_id");
+    mem.exec("DROP INDEX IF EXISTS idx_sessions_env_id");
+    mem.exec("DROP INDEX IF EXISTS idx_tasks_workspace_id");
+    mem.exec("DROP INDEX IF EXISTS idx_sessions_parent_session_id");
+    mem.exec("DROP INDEX IF EXISTS idx_schedules_task_id");
+
+    // Sanity: indexes gone.
+    const preIndexes = mem
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_tasks_parent_task_id'",
+      )
+      .all();
+    expect(preIndexes).toHaveLength(0);
+
+    // Step 3: re-run initDatabase → v23 fires.
+    initDatabase(mem);
+
+    // Schema version advanced.
+    expect(getUserVersion(mem)).toBe(CURRENT_VERSION);
+
+    // Assert: all five indexes exist.
+    const indexNames = (
+      mem
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name IN ('idx_tasks_parent_task_id', 'idx_sessions_env_id', 'idx_tasks_workspace_id', 'idx_sessions_parent_session_id', 'idx_schedules_task_id')",
+        )
+        .all() as Array<{ name: string }>
+    )
+      .map((i) => i.name)
+      .sort();
+
+    expect(indexNames).toEqual([
+      "idx_schedules_task_id",
+      "idx_sessions_env_id",
+      "idx_sessions_parent_session_id",
+      "idx_tasks_parent_task_id",
+      "idx_tasks_workspace_id",
+    ]);
+
+    // Assert: the schedules index is partial (WHERE task_id IS NOT NULL).
+    const schedIdx = mem
+      .prepare(
+        "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_schedules_task_id'",
+      )
+      .get() as { sql: string } | undefined;
+    expect(schedIdx?.sql).toContain("WHERE task_id IS NOT NULL");
+  });
+
+  it("creates query-performance indexes on fresh database (#1489)", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+    initDatabase(mem);
+
+    const allIndexes = (
+      mem.prepare("SELECT name FROM sqlite_master WHERE type = 'index'").all() as Array<{
+        name: string;
+      }>
+    ).map((i) => i.name);
+
+    expect(allIndexes).toContain("idx_tasks_parent_task_id");
+    expect(allIndexes).toContain("idx_sessions_env_id");
+    expect(allIndexes).toContain("idx_tasks_workspace_id");
+    expect(allIndexes).toContain("idx_sessions_parent_session_id");
+    expect(allIndexes).toContain("idx_schedules_task_id");
   });
 });
 
