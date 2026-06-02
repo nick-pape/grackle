@@ -8,7 +8,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type {
   AgentData,
   GrackleEvent,
@@ -100,11 +100,14 @@ export function useAgents(): UseAgentsResult {
     setAgents((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
-  const domainHook: DomainHook = {
-    onConnect: () => loadAgents(),
-    onDisconnect: () => {},
-    handleEvent,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: () => loadAgents(),
+      onDisconnect: () => {},
+      handleEvent,
+    }),
+    [loadAgents, handleEvent],
+  );
 
   return {
     agents,

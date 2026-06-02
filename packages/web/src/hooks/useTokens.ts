@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { TokenInfo, GrackleEvent, UseTokensResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
@@ -64,11 +64,14 @@ export function useTokens(): UseTokensResult {
     }
   }, []);
 
-  const domainHook: DomainHook = {
-    onConnect: () => loadTokens(),
-    onDisconnect: () => {},
-    handleEvent,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: () => loadTokens(),
+      onDisconnect: () => {},
+      handleEvent,
+    }),
+    [loadTokens, handleEvent],
+  );
 
   return { tokens, tokensLoading, loadTokens, setToken, deleteToken, handleEvent, domainHook };
 }

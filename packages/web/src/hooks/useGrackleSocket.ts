@@ -6,7 +6,7 @@
  * @module
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { GrackleEvent, UsageStats, UseGrackleSocketResult } from "@grackle-ai/web-components";
 import { useEventStream } from "./useEventStream.js";
 import { eventTypeToString } from "@grackle-ai/common";
@@ -290,9 +290,11 @@ export function useGrackleSocket(): UseGrackleSocketResult {
     tokensHook.loadTokens,
   ]);
 
-  return {
-    connectionStatus,
-    environments: {
+  // ─── Per-domain memoized slices (#1492) ──────────────────────────────────
+  // Each slice is referentially stable when its domain's state hasn't changed.
+
+  const environmentsSlice = useMemo(
+    () => ({
       environments: environmentsHook.environments,
       environmentsLoading: environmentsHook.environmentsLoading,
       provisionStatus: environmentsHook.provisionStatus,
@@ -305,8 +307,25 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       stopEnvironment: environmentsHook.stopEnvironment,
       removeEnvironment: environmentsHook.removeEnvironment,
       domainHook: environmentsHook.domainHook,
-    },
-    sessions: {
+    }),
+    [
+      environmentsHook.environments,
+      environmentsHook.environmentsLoading,
+      environmentsHook.provisionStatus,
+      environmentsHook.operationError,
+      environmentsHook.clearOperationError,
+      environmentsHook.loadEnvironments,
+      environmentsHook.addEnvironment,
+      environmentsHook.updateEnvironment,
+      environmentsHook.provisionEnvironment,
+      environmentsHook.stopEnvironment,
+      environmentsHook.removeEnvironment,
+      environmentsHook.domainHook,
+    ],
+  );
+
+  const sessionsSlice = useMemo(
+    () => ({
       sessions: sessionsHook.sessions,
       sessionsLoading: sessionsHook.sessionsLoading,
       events: sessionsHook.events,
@@ -321,8 +340,27 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       clearEvents: sessionsHook.clearEvents,
       loadTaskSessions: sessionsHook.loadTaskSessions,
       domainHook: sessionsHook.domainHook,
-    },
-    workspaces: {
+    }),
+    [
+      sessionsHook.sessions,
+      sessionsHook.sessionsLoading,
+      sessionsHook.events,
+      sessionsHook.eventsDropped,
+      sessionsHook.lastSpawnedId,
+      sessionsHook.taskSessions,
+      sessionsHook.spawn,
+      sessionsHook.sendInput,
+      sessionsHook.kill,
+      sessionsHook.stopGraceful,
+      sessionsHook.loadSessionEvents,
+      sessionsHook.clearEvents,
+      sessionsHook.loadTaskSessions,
+      sessionsHook.domainHook,
+    ],
+  );
+
+  const workspacesSlice = useMemo(
+    () => ({
       workspaces: workspacesHook.workspaces,
       workspacesLoading: workspacesHook.workspacesLoading,
       workspaceCreating: workspacesHook.workspaceCreating,
@@ -335,8 +373,25 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       linkOperationError: workspacesHook.linkOperationError,
       clearLinkOperationError: workspacesHook.clearLinkOperationError,
       domainHook: workspacesHook.domainHook,
-    },
-    tasks: {
+    }),
+    [
+      workspacesHook.workspaces,
+      workspacesHook.workspacesLoading,
+      workspacesHook.workspaceCreating,
+      workspacesHook.loadWorkspaces,
+      workspacesHook.createWorkspace,
+      workspacesHook.archiveWorkspace,
+      workspacesHook.updateWorkspace,
+      workspacesHook.linkEnvironment,
+      workspacesHook.unlinkEnvironment,
+      workspacesHook.linkOperationError,
+      workspacesHook.clearLinkOperationError,
+      workspacesHook.domainHook,
+    ],
+  );
+
+  const tasksSlice = useMemo(
+    () => ({
       tasks: tasksHook.tasks,
       tasksLoading: tasksHook.tasksLoading,
       taskStartingId: tasksHook.taskStartingId,
@@ -350,22 +405,60 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       updateTask: tasksHook.updateTask,
       deleteTask: tasksHook.deleteTask,
       domainHook: tasksHook.domainHook,
-    },
-    tokens: {
+    }),
+    [
+      tasksHook.tasks,
+      tasksHook.tasksLoading,
+      tasksHook.taskStartingId,
+      tasksHook.loadTasks,
+      tasksHook.loadAllTasks,
+      tasksHook.createTask,
+      tasksHook.startTask,
+      tasksHook.stopTask,
+      tasksHook.completeTask,
+      tasksHook.resumeTask,
+      tasksHook.updateTask,
+      tasksHook.deleteTask,
+      tasksHook.domainHook,
+    ],
+  );
+
+  const tokensSlice = useMemo(
+    () => ({
       tokens: tokensHook.tokens,
       tokensLoading: tokensHook.tokensLoading,
       loadTokens: tokensHook.loadTokens,
       setToken: tokensHook.setToken,
       deleteToken: tokensHook.deleteToken,
       domainHook: tokensHook.domainHook,
-    },
-    credentials: {
+    }),
+    [
+      tokensHook.tokens,
+      tokensHook.tokensLoading,
+      tokensHook.loadTokens,
+      tokensHook.setToken,
+      tokensHook.deleteToken,
+      tokensHook.domainHook,
+    ],
+  );
+
+  const credentialsSlice = useMemo(
+    () => ({
       credentialProviders: credentialsHook.credentialProviders,
       credentialsLoading: credentialsHook.credentialsLoading,
       updateCredentialProviders: credentialsHook.updateCredentialProviders,
       domainHook: credentialsHook.domainHook,
-    },
-    codespaces: {
+    }),
+    [
+      credentialsHook.credentialProviders,
+      credentialsHook.credentialsLoading,
+      credentialsHook.updateCredentialProviders,
+      credentialsHook.domainHook,
+    ],
+  );
+
+  const codespacesSlice = useMemo(
+    () => ({
       codespaces: codespacesHook.codespaces,
       codespaceError: codespacesHook.codespaceError,
       codespaceListError: codespacesHook.codespaceListError,
@@ -373,38 +466,92 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       listCodespaces: codespacesHook.listCodespaces,
       createCodespace: codespacesHook.createCodespace,
       domainHook: codespacesHook.domainHook,
-    },
-    dockerContainers: {
+    }),
+    [
+      codespacesHook.codespaces,
+      codespacesHook.codespaceError,
+      codespacesHook.codespaceListError,
+      codespacesHook.codespaceCreating,
+      codespacesHook.listCodespaces,
+      codespacesHook.createCodespace,
+      codespacesHook.domainHook,
+    ],
+  );
+
+  const dockerContainersSlice = useMemo(
+    () => ({
       dockerContainers: dockerContainersHook.dockerContainers,
       dockerContainersError: dockerContainersHook.dockerContainersError,
       listDockerContainers: dockerContainersHook.listDockerContainers,
       domainHook: dockerContainersHook.domainHook,
-    },
-    personas: {
+    }),
+    [
+      dockerContainersHook.dockerContainers,
+      dockerContainersHook.dockerContainersError,
+      dockerContainersHook.listDockerContainers,
+      dockerContainersHook.domainHook,
+    ],
+  );
+
+  const personasSlice = useMemo(
+    () => ({
       personas: personasHook.personas,
       personasLoading: personasHook.personasLoading,
       createPersona: personasHook.createPersona,
       updatePersona: personasHook.updatePersona,
       deletePersona: personasHook.deletePersona,
       domainHook: personasHook.domainHook,
-    },
-    agents: {
+    }),
+    [
+      personasHook.personas,
+      personasHook.personasLoading,
+      personasHook.createPersona,
+      personasHook.updatePersona,
+      personasHook.deletePersona,
+      personasHook.domainHook,
+    ],
+  );
+
+  const agentsSlice = useMemo(
+    () => ({
       agents: agentsHook.agents,
       agentsLoading: agentsHook.agentsLoading,
       createAgent: agentsHook.createAgent,
       updateAgent: agentsHook.updateAgent,
       deleteAgent: agentsHook.deleteAgent,
       domainHook: agentsHook.domainHook,
-    },
-    schedules: {
+    }),
+    [
+      agentsHook.agents,
+      agentsHook.agentsLoading,
+      agentsHook.createAgent,
+      agentsHook.updateAgent,
+      agentsHook.deleteAgent,
+      agentsHook.domainHook,
+    ],
+  );
+
+  const schedulesSlice = useMemo(
+    () => ({
       schedules: schedulesHook.schedules,
       schedulesLoading: schedulesHook.schedulesLoading,
       createSchedule: schedulesHook.createSchedule,
       updateSchedule: schedulesHook.updateSchedule,
       deleteSchedule: schedulesHook.deleteSchedule,
       domainHook: schedulesHook.domainHook,
-    },
-    streams: {
+    }),
+    [
+      schedulesHook.schedules,
+      schedulesHook.schedulesLoading,
+      schedulesHook.createSchedule,
+      schedulesHook.updateSchedule,
+      schedulesHook.deleteSchedule,
+      schedulesHook.domainHook,
+    ],
+  );
+
+  const streamsSlice = useMemo(
+    () => ({
       streams: streamsHook.streams,
       streamsLoading: streamsHook.streamsLoading,
       streamsLoadedOnce: streamsHook.streamsLoadedOnce,
@@ -414,15 +561,37 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       loadTranscript: streamsHook.loadTranscript,
       handleStreamMessage: streamsHook.handleStreamMessage,
       domainHook: streamsHook.domainHook,
-    },
-    knowledge: knowledgeHook,
-    plugins: {
+    }),
+    [
+      streamsHook.streams,
+      streamsHook.streamsLoading,
+      streamsHook.streamsLoadedOnce,
+      streamsHook.streamsLoadError,
+      streamsHook.loadStreams,
+      streamsHook.liveMessages,
+      streamsHook.loadTranscript,
+      streamsHook.handleStreamMessage,
+      streamsHook.domainHook,
+    ],
+  );
+
+  const pluginsSlice = useMemo(
+    () => ({
       plugins: pluginsHook.plugins,
       pluginsLoading: pluginsHook.pluginsLoading,
       loadPlugins: pluginsHook.loadPlugins,
       setPluginEnabled: pluginsHook.setPluginEnabled,
-    },
-    githubAccounts: {
+    }),
+    [
+      pluginsHook.plugins,
+      pluginsHook.pluginsLoading,
+      pluginsHook.loadPlugins,
+      pluginsHook.setPluginEnabled,
+    ],
+  );
+
+  const githubAccountsSlice = useMemo(
+    () => ({
       githubAccounts: githubAccountsHook.githubAccounts,
       githubAccountsLoading: githubAccountsHook.githubAccountsLoading,
       loadGitHubAccounts: githubAccountsHook.loadGitHubAccounts,
@@ -430,14 +599,35 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       updateGitHubAccount: githubAccountsHook.updateGitHubAccount,
       removeGitHubAccount: githubAccountsHook.removeGitHubAccount,
       importGitHubAccounts: githubAccountsHook.importGitHubAccounts,
-    },
-    resources: {
+    }),
+    [
+      githubAccountsHook.githubAccounts,
+      githubAccountsHook.githubAccountsLoading,
+      githubAccountsHook.loadGitHubAccounts,
+      githubAccountsHook.addGitHubAccount,
+      githubAccountsHook.updateGitHubAccount,
+      githubAccountsHook.removeGitHubAccount,
+      githubAccountsHook.importGitHubAccounts,
+    ],
+  );
+
+  const resourcesSlice = useMemo(
+    () => ({
       readResource: resourcesHook.readResource,
       getResourceContent: resourcesHook.getResourceContent,
       watchResource: resourcesHook.watchResource,
       unwatchResource: resourcesHook.unwatchResource,
-    },
-    documents: {
+    }),
+    [
+      resourcesHook.readResource,
+      resourcesHook.getResourceContent,
+      resourcesHook.watchResource,
+      resourcesHook.unwatchResource,
+    ],
+  );
+
+  const documentsSlice = useMemo(
+    () => ({
       tabs: documentsHook.tabs,
       activeTabId: documentsHook.activeTabId,
       paneOpen: documentsHook.paneOpen,
@@ -445,13 +635,74 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       openDocument: documentsHook.openDocument,
       closeTab: documentsHook.closeTab,
       setActiveTab: documentsHook.setActiveTab,
-    },
-    appDefaultPersonaId,
-    setAppDefaultPersonaId,
-    onboardingCompleted,
-    completeOnboarding,
-    usageCache,
-    loadUsage,
-    refresh,
-  };
+    }),
+    [
+      documentsHook.tabs,
+      documentsHook.activeTabId,
+      documentsHook.paneOpen,
+      documentsHook.unseenTabIds,
+      documentsHook.openDocument,
+      documentsHook.closeTab,
+      documentsHook.setActiveTab,
+    ],
+  );
+
+  // ─── Memoized aggregate (#1492) ────────────────────────────────────────────
+
+  return useMemo(
+    () => ({
+      connectionStatus,
+      environments: environmentsSlice,
+      sessions: sessionsSlice,
+      workspaces: workspacesSlice,
+      tasks: tasksSlice,
+      tokens: tokensSlice,
+      credentials: credentialsSlice,
+      codespaces: codespacesSlice,
+      dockerContainers: dockerContainersSlice,
+      personas: personasSlice,
+      agents: agentsSlice,
+      schedules: schedulesSlice,
+      streams: streamsSlice,
+      knowledge: knowledgeHook,
+      plugins: pluginsSlice,
+      githubAccounts: githubAccountsSlice,
+      resources: resourcesSlice,
+      documents: documentsSlice,
+      appDefaultPersonaId,
+      setAppDefaultPersonaId,
+      onboardingCompleted,
+      completeOnboarding,
+      usageCache,
+      loadUsage,
+      refresh,
+    }),
+    [
+      connectionStatus,
+      environmentsSlice,
+      sessionsSlice,
+      workspacesSlice,
+      tasksSlice,
+      tokensSlice,
+      credentialsSlice,
+      codespacesSlice,
+      dockerContainersSlice,
+      personasSlice,
+      agentsSlice,
+      schedulesSlice,
+      streamsSlice,
+      knowledgeHook,
+      pluginsSlice,
+      githubAccountsSlice,
+      resourcesSlice,
+      documentsSlice,
+      appDefaultPersonaId,
+      setAppDefaultPersonaId,
+      onboardingCompleted,
+      completeOnboarding,
+      usageCache,
+      loadUsage,
+      refresh,
+    ],
+  );
 }

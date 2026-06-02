@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import type { Workspace, GrackleEvent, UseWorkspacesResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
@@ -165,11 +165,14 @@ export function useWorkspaces(): UseWorkspacesResult {
     [loadWorkspaces],
   );
 
-  const domainHook: DomainHook = {
-    onConnect: () => loadWorkspaces(),
-    onDisconnect,
-    handleEvent,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: () => loadWorkspaces(),
+      onDisconnect,
+      handleEvent,
+    }),
+    [loadWorkspaces, onDisconnect, handleEvent],
+  );
 
   return {
     workspaces,

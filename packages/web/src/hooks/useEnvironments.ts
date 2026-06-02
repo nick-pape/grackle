@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import { warnBadPayload } from "@grackle-ai/web-components";
 import type {
@@ -227,11 +227,14 @@ export function useEnvironments(): UseEnvironmentsResult {
     }
   }, []);
 
-  const domainHook: DomainHook = {
-    onConnect: () => loadEnvironments(),
-    onDisconnect: () => {},
-    handleEvent,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: () => loadEnvironments(),
+      onDisconnect: () => {},
+      handleEvent,
+    }),
+    [loadEnvironments, handleEvent],
+  );
 
   return {
     environments,
