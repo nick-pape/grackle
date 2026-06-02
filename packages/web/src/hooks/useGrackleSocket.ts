@@ -623,6 +623,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       resourcesHook.getResourceContent,
       resourcesHook.watchResource,
       resourcesHook.unwatchResource,
+      resourcesHook.contentVersion,
     ],
   );
 

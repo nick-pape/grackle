@@ -66,7 +66,7 @@ export interface UseGrackleSocketResult {
   /** GitHub account state and actions. */
   githubAccounts: Omit<UseGitHubAccountsResult, "domainHook">;
   /** Resource bridge: read/watch files from an environment's worktree (#1395). */
-  resources: Omit<UseResourcesResult, "domainHook">;
+  resources: Omit<UseResourcesResult, "domainHook" | "contentVersion">;
   /** Live-docs pane: open/close/activate read-only document tabs (#1396). */
   documents: Omit<UseDocumentsResult, "domainHook">;
   /** App-level default persona ID setting. */
