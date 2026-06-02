@@ -1,0 +1,108 @@
+.container {
+  padding: var(--space-lg);
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  height: 100%;
+  padding: var(--space-lg);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.ctaButton {
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid var(--accent-green);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--accent-green);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+
+  &:hover {
+    background: var(--accent-green);
+    color: var(--bg-base);
+  }
+}
+
+.card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.badgeActive {
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--status-running-bg, rgba(34, 197, 94, 0.15));
+  color: var(--accent-green);
+}
+
+.badgePaused {
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--bg-overlay);
+  color: var(--text-tertiary);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-xs) var(--space-md);
+  margin: 0;
+
+  dt {
+    color: var(--text-tertiary);
+    font-size: var(--font-size-sm);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+  }
+}
+
+.rules {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.rulesTitle {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+}
+
+.rulesText {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}

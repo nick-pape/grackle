@@ -204,7 +204,11 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     await page.getByTestId("persona-new-button").click();
 
     await page.waitForURL("**/personas/new", { timeout: 5_000 });
-    await expect(page.getByRole("tab", { name: "Personas", selected: true })).toBeVisible();
+    // Personas is a fleet-rail item (#1419), not an AppNav tab.
+    await expect(page.locator('[data-testid="sidebar-tab-personas"]')).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
 
     await page.getByTestId("persona-detail-name").fill("Route Created Persona");
     await page
@@ -247,7 +251,11 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
 
     await page.getByTestId(`persona-card-${createdPersona!.id}`).click();
     await page.waitForURL(`**/personas/${createdPersona!.id}`, { timeout: 5_000 });
-    await expect(page.getByRole("tab", { name: "Personas", selected: true })).toBeVisible();
+    // Personas is a fleet-rail item (#1419), not an AppNav tab.
+    await expect(page.locator('[data-testid="sidebar-tab-personas"]')).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
 
     await page.getByTestId("persona-detail-name-button").click();
     await page.getByTestId("persona-detail-name-input").fill("Route Updated Persona");

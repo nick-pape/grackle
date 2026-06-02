@@ -17,7 +17,10 @@ describe("getActiveView", () => {
     expect(getActiveView("/chat")).toBe("chat");
     expect(getActiveView("/chat/stream-1")).toBe("chat");
     expect(getActiveView("/environments")).toBe("environments");
-    expect(getActiveView("/workspaces")).toBe("environments");
+    // Workspace routes return "tasks" so AppNav stays visible (#1419:
+    // environments moved to fleet, which hides AppNav).
+    expect(getActiveView("/workspaces")).toBe("tasks");
+    expect(getActiveView("/environments/env-1/workspaces/ws-1")).toBe("tasks");
     expect(getActiveView("/knowledge")).toBe("knowledge");
     expect(getActiveView("/settings")).toBe("settings");
     expect(getActiveView("/tasks")).toBe("tasks");

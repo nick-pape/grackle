@@ -145,9 +145,19 @@ export function personaUrl(personaId: string): string {
   return `/personas/${encodeURIComponent(personaId)}`;
 }
 
-/** Build URL for an agent's view (#1417). */
-export function agentUrl(agentId: string): string {
-  return `/agents/${encodeURIComponent(agentId)}`;
+/** Possible agent tab identifiers for URL construction (#1419). */
+export type AgentTab = "chat" | "sessions" | "schedules" | "settings";
+
+/** Build URL for an agent page, optionally targeting a specific tab. */
+export function agentUrl(agentId: string, tab?: AgentTab): string {
+  const base = `/agents/${encodeURIComponent(agentId)}`;
+  if (!tab || tab === "chat") return base;
+  return `${base}/${tab}`;
+}
+
+/** Routes that render their own nav bar and suppress the global AppNav. */
+export function hasOwnNav(pathname: string): boolean {
+  return /^\/agents\//.test(pathname);
 }
 
 /** URL for the top-level Schedules surface. */

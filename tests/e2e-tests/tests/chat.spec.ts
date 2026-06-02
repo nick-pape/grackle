@@ -35,15 +35,15 @@ test.describe("Chat Page (root task)", { tag: ["@session"] }, () => {
     await page.getByTestId("sidebar-tab-chat").click();
     await expect(page).toHaveURL(/\/chat/);
 
-    // Click Environments tab
+    // Click Environments in fleet rail (#1419: Environments moved to fleet)
     await page.getByTestId("sidebar-tab-environments").click();
 
     // Should navigate to /environments
     await expect(page).toHaveURL(/\/environments/);
 
-    // Environments tab should now be active
+    // Environments fleet item should be active (fleet items use aria-current, not aria-selected)
     const environmentsTab = page.getByTestId("sidebar-tab-environments");
-    await expect(environmentsTab).toHaveAttribute("aria-selected", "true");
+    await expect(environmentsTab).toHaveAttribute("aria-current", "page");
   });
 
   test("chat input is present with local env", async ({ appPage }) => {
