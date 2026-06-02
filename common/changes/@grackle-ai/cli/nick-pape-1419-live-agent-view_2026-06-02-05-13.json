@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Live agent view: tabbed agent page (Chat/Sessions/Schedules/Settings), nav restructuring (Personas + Environments to fleet rail), per-agent settings hub with heartbeat controls",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
