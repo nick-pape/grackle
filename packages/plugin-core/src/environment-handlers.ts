@@ -282,6 +282,12 @@ export async function stopEnvironment(req: grackle.EnvironmentId): Promise<grack
     throw new ConnectError(`Environment not found: ${req.id}`, Code.NotFound);
   }
 
+  // Kill active sessions BEFORE tearing down the adapter so the kill signal
+  // can still reach PowerLine via the live connection (#1485).
+  for (const session of sessionStore.getAllActiveForEnv(req.id)) {
+    killSessionAndCleanup(session);
+  }
+
   const adapter = adapterManager.getAdapter(env.adapterType);
   if (adapter) {
     await adapter.stop(req.id, parseAdapterConfig(env.adapterConfig));
@@ -298,6 +304,12 @@ export async function destroyEnvironment(req: grackle.EnvironmentId): Promise<gr
   const env = envRegistry.getEnvironment(req.id);
   if (!env) {
     throw new ConnectError(`Environment not found: ${req.id}`, Code.NotFound);
+  }
+
+  // Kill active sessions BEFORE tearing down the adapter so the kill signal
+  // can still reach PowerLine via the live connection (#1485).
+  for (const session of sessionStore.getAllActiveForEnv(req.id)) {
+    killSessionAndCleanup(session);
   }
 
   const adapter = adapterManager.getAdapter(env.adapterType);
