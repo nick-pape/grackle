@@ -13,7 +13,7 @@
  * so they pass through without a cast.
  */
 import { create } from "@bufbuild/protobuf";
-import * as grackle from "./grackle-barrel.js";
+import { ScheduleSchema, type Schedule } from "./gen/grackle/grackle_types_pb.js";
 
 /**
  * Structural shape required to convert a schedule row to its proto.
@@ -59,8 +59,8 @@ export interface ScheduleRowShape {
  *
  * Nullable fields collapse to empty strings (proto3 string semantics).
  */
-export function scheduleRowToProto(row: ScheduleRowShape): grackle.Schedule {
-  return create(grackle.ScheduleSchema, {
+export function scheduleRowToProto(row: ScheduleRowShape): Schedule {
+  return create(ScheduleSchema, {
     id: row.id,
     title: row.title,
     description: row.description,

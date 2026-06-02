@@ -2788,10 +2788,8 @@ export interface ScheduleRowShape {
     workspaceId: string;
 }
 
-// Warning: (ae-forgotten-export) The symbol "grackle_2" needs to be exported by the entry point index.d.ts
-//
 // @public
-export function scheduleRowToProto(row: ScheduleRowShape): grackle_2.Schedule;
+export function scheduleRowToProto(row: ScheduleRowShape): Schedule;
 
 // @public
 const ScheduleSchema: GenMessage<Schedule>;
