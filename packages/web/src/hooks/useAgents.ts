@@ -46,6 +46,8 @@ export function useAgents(): UseAgentsResult {
         case "agent.created":
         case "agent.updated":
         case "agent.deleted":
+        case "agent.heartbeat.updated":
+        case "agent.heartbeat.cleared":
           loadAgents().catch(() => {});
           return true;
         default:

@@ -126,6 +126,8 @@ export function protoToTask(p: grackle.Task): TaskData {
     workpad: p.workpad,
     tokenBudget: p.tokenBudget,
     costBudgetMillicents: p.costBudgetMillicents,
+    agentId: p.agentId || undefined,
+    kind: p.kind || undefined,
   };
 }
 
@@ -214,6 +216,7 @@ export function protoToAgent(p: grackle.Agent): AgentData {
     avatar: p.avatar,
     primaryPersonaId: p.primaryPersonaId,
     environmentId: p.environmentId,
+    heartbeat: p.heartbeat ? protoToSchedule(p.heartbeat) : undefined,
   };
 }
 

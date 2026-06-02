@@ -119,14 +119,18 @@ test.describe("Navigation Between Settings and Environments", { tag: ["@environm
   test("settings tab returns to Settings from environment view", async ({ appPage }) => {
     const page = appPage;
 
-    // Switch to Environments tab and select an environment
+    // Switch to Environments in fleet rail (#1419) and select an environment
     await page.locator('[data-testid="sidebar-tab-environments"]').click();
     await page.getByTestId("env-nav-item").first().click();
 
-    // Now click Settings tab
+    // Return to Code context (AppNav is hidden on fleet pages, so go back
+    // to Code first to make the Settings tab visible again)
+    await page.locator('[data-testid="context-code"]').click();
+
+    // Now click Settings tab (visible in the Code context's AppNav)
     await page.locator('[data-testid="sidebar-tab-settings"]').click();
 
-    // Settings should be visible with Credentials tab (Environments are in their own tab)
+    // Settings should be visible with Credentials tab
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("tab", { name: "Credentials" })).toBeVisible();
   });

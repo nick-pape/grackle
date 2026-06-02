@@ -12,6 +12,7 @@ import {
   CONTEXTS,
   DEFAULT_CONTEXT_ID,
   agentUrl,
+  hasOwnNav,
   getActiveView,
   isImageAvatar,
   BottomStatusBar,
@@ -73,7 +74,12 @@ import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.
 import { SettingsGitHubAccountsTab } from "./pages/settings/SettingsGitHubAccountsTab.js";
 import { PersonaLibraryPage } from "./pages/PersonaLibraryPage.js";
 import { PersonaDetailPage } from "./pages/PersonaDetailPage.js";
-import { AgentDetailPage } from "./pages/AgentDetailPage.js";
+import { AgentCreatePage } from "./pages/AgentCreatePage.js";
+import { AgentLayout } from "./pages/AgentLayout.js";
+import { AgentChatTab } from "./pages/agent-tabs/AgentChatTab.js";
+import { AgentSessionsTab } from "./pages/agent-tabs/AgentSessionsTab.js";
+import { AgentSchedulesTab } from "./pages/agent-tabs/AgentSchedulesTab.js";
+import { AgentSettingsTab } from "./pages/agent-tabs/AgentSettingsTab.js";
 import { SchedulesPage } from "./pages/SchedulesPage.js";
 import { ScheduleDetailPage } from "./pages/ScheduleDetailPage.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
@@ -218,7 +224,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   // row; fleet pages deselect all contexts; everything else falls back to `Code`.
   // `decodeURIComponent` throws on malformed percent-encoding (e.g. `/agents/%E0`),
   // which would otherwise crash the shell while deriving `activeContextId`.
-  const agentRouteMatch = location.pathname.match(/^\/agents\/([^/]+)$/);
+  const agentRouteMatch = location.pathname.match(/^\/agents\/([^/]+)/);
   let activeAgentId: string | undefined;
   if (agentRouteMatch && agentRouteMatch[1] !== "new") {
     try {
@@ -322,7 +328,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
           />
         )}
         <div className={styles.contextPane}>
-          {!activeFleetId && !location.pathname.startsWith("/agents/") && (
+          {!activeFleetId && !hasOwnNav(location.pathname) && (
             <AppNav tabs={tabs} groups={["workbench", "global"]} />
           )}
           <div className={styles.body}>
@@ -551,9 +557,15 @@ function AppRoutes(): JSX.Element {
             <Route path="personas" element={<PersonaLibraryPage />} />
             <Route path="personas/new" element={<PersonaDetailPage />} />
             <Route path="personas/:personaId" element={<PersonaDetailPage />} />
-            {/* Agents — context-axis entities (#1417). Create form + read-only view. */}
-            <Route path="agents/new" element={<AgentDetailPage />} />
-            <Route path="agents/:agentId" element={<AgentDetailPage />} />
+            {/* Agent create form (no tabs, standalone) */}
+            <Route path="agents/new" element={<AgentCreatePage />} />
+            {/* Agent detail — nested layout with tabs (#1419) */}
+            <Route path="agents/:agentId" element={<AgentLayout />}>
+              <Route index element={<AgentChatTab />} />
+              <Route path="sessions" element={<AgentSessionsTab />} />
+              <Route path="schedules" element={<AgentSchedulesTab />} />
+              <Route path="settings" element={<AgentSettingsTab />} />
+            </Route>
           </>
         )}
 
