@@ -38,6 +38,42 @@ import {
 export { toDialableHost, validatePipeInputs, resolveAncestorEnvironmentId, VALID_PIPE_MODES };
 
 /**
+ * Transition a session to SUSPENDED for later auto-recovery on env reconnect.
+ *
+ * Mirrors the suspend recipe used by the transport-loss path in event-processor:
+ * updates the DB row, publishes a SUSPENDED status event, and emits task.updated
+ * so the UI refreshes. Unlike {@link killSessionAndCleanup}, this does NOT touch
+ * lifecycle or subscription streams — `recoverSuspendedSessions` will reanimate
+ * the session when the environment is re-provisioned.
+ *
+ * No-op if the session is already terminal or already suspended.
+ */
+export function suspendSessionAndPublish(session: SessionRow): void {
+  if (
+    TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus) ||
+    session.status === SESSION_STATUS.SUSPENDED
+  ) {
+    return;
+  }
+  sessionStore.suspendSession(session.id);
+  streamHub.publish(
+    create(grackle.SessionEventSchema, {
+      sessionId: session.id,
+      type: grackle.EventType.STATUS,
+      timestamp: new Date().toISOString(),
+      content: SESSION_STATUS.SUSPENDED,
+      raw: "",
+    }),
+  );
+  if (session.taskId) {
+    const task = taskStore.getTask(session.taskId);
+    if (task) {
+      emit("task.updated", { taskId: task.id, workspaceId: task.workspaceId || "" });
+    }
+  }
+}
+
+/**
  * Terminate a session and clean up all associated streams and subscriptions.
  *
  * If the session is already in a terminal state the status update is skipped,

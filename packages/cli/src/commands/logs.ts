@@ -71,7 +71,12 @@ export function registerLogCommands(program: Command): void {
 
       const lines = readFileSync(jsonlPath, "utf-8").split("\n").filter(Boolean);
       for (const line of lines) {
-        const entry = JSON.parse(line) as { timestamp: string; type: string; content: string };
+        let entry: { timestamp: string; type: string; content: string };
+        try {
+          entry = JSON.parse(line) as { timestamp: string; type: string; content: string };
+        } catch {
+          continue;
+        }
         const time = new Date(entry.timestamp).toLocaleTimeString();
         console.log(`[${time}] ${entry.type}: ${entry.content}`);
       }

@@ -17,7 +17,7 @@ import { recoverSuspendedSessions } from "@grackle-ai/core";
 import { clearReconnectState } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { envRowToProto } from "./grpc-proto-converters.js";
-import { killSessionAndCleanup } from "./grpc-shared.js";
+import { killSessionAndCleanup, suspendSessionAndPublish } from "./grpc-shared.js";
 import { resolveBootstrapRuntime } from "@grackle-ai/core";
 
 /** List all registered environments. */
@@ -282,6 +282,14 @@ export async function stopEnvironment(req: grackle.EnvironmentId): Promise<grack
     throw new ConnectError(`Environment not found: ${req.id}`, Code.NotFound);
   }
 
+  // Suspend active sessions before tearing down the adapter. Stop is a
+  // recoverable transition — re-provision will reanimate them via
+  // recoverSuspendedSessions. Without this, sessions would zombie at
+  // running/idle status long after their environment goes away (#1485).
+  for (const session of sessionStore.getAllActiveForEnv(req.id)) {
+    suspendSessionAndPublish(session);
+  }
+
   const adapter = adapterManager.getAdapter(env.adapterType);
   if (adapter) {
     await adapter.stop(req.id, parseAdapterConfig(env.adapterConfig));
@@ -298,6 +306,12 @@ export async function destroyEnvironment(req: grackle.EnvironmentId): Promise<gr
   const env = envRegistry.getEnvironment(req.id);
   if (!env) {
     throw new ConnectError(`Environment not found: ${req.id}`, Code.NotFound);
+  }
+
+  // Kill active sessions BEFORE tearing down the adapter so the kill signal
+  // can still reach PowerLine via the live connection (#1485).
+  for (const session of sessionStore.getAllActiveForEnv(req.id)) {
+    killSessionAndCleanup(session);
   }
 
   const adapter = adapterManager.getAdapter(env.adapterType);
