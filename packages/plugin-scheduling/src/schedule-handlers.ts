@@ -13,8 +13,8 @@ import { grackle } from "@grackle-ai/common";
 import { personaStore, scheduleStore } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import type { PluginContext } from "@grackle-ai/plugin-sdk";
+import { scheduleRowToProto } from "@grackle-ai/common";
 import { validateExpression, computeNextRunAt } from "./schedule-expression.js";
-import { scheduleRowToProto } from "./schedule-proto.js";
 
 /**
  * Create the 5 schedule gRPC handler functions with `emit` injected.

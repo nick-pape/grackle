@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, scheduleRowToProto } from "@grackle-ai/common";
 import { workspaceStatusToEnum, taskStatusToEnum } from "@grackle-ai/common";
 import type { EnvironmentRow, SessionRow } from "@grackle-ai/database";
 import {
@@ -176,33 +176,6 @@ export function agentRowToProto(
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     heartbeat: heartbeat ? scheduleRowToProto(heartbeat) : undefined,
-  });
-}
-
-/**
- * Convert a schedule database row to its proto representation.
- *
- * Duplicated intentionally with `@grackle-ai/plugin-scheduling`'s
- * `schedule-proto.ts` — re-exporting through that package's barrel crashes
- * api-extractor on the `grackle.Schedule` return type (the common barrel
- * symbol "is not (yet?) supported by API Extractor"). Until the toolchain
- * supports this, the two copies must stay in sync.
- */
-export function scheduleRowToProto(row: scheduleStore.ScheduleRow): grackle.Schedule {
-  return create(grackle.ScheduleSchema, {
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    scheduleExpression: row.scheduleExpression,
-    personaId: row.personaId,
-    workspaceId: row.workspaceId,
-    parentTaskId: row.parentTaskId,
-    enabled: row.enabled,
-    lastRunAt: row.lastRunAt ?? "",
-    nextRunAt: row.nextRunAt ?? "",
-    runCount: row.runCount,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
   });
 }
 

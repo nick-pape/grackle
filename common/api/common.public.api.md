@@ -2770,6 +2770,30 @@ type ScheduleList = Message<"grackle.ScheduleList"> & {
 const ScheduleListSchema: GenMessage<ScheduleList>;
 
 // @public
+export interface ScheduleRowShape {
+    createdAt: string;
+    description: string;
+    enabled: boolean;
+    id: string;
+    // (undocumented)
+    lastRunAt: string | null;
+    // (undocumented)
+    nextRunAt: string | null;
+    parentTaskId: string;
+    personaId: string;
+    runCount: number;
+    scheduleExpression: string;
+    title: string;
+    updatedAt: string;
+    workspaceId: string;
+}
+
+// Warning: (ae-forgotten-export) The symbol "grackle_2" needs to be exported by the entry point index.d.ts
+//
+// @public
+export function scheduleRowToProto(row: ScheduleRowShape): grackle_2.Schedule;
+
+// @public
 const ScheduleSchema: GenMessage<Schedule>;
 
 // @public
