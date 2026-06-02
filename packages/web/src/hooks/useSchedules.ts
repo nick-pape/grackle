@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import type {
   ScheduleData,
   GrackleEvent,
@@ -118,13 +118,16 @@ export function useSchedules(): UseSchedulesResult {
     setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
   }, []);
 
-  const domainHook: DomainHook = {
-    onConnect: () => loadSchedules(),
-    onDisconnect: () => {
-      clearTimeout(firedDebounceRef.current);
-    },
-    handleEvent,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: () => loadSchedules(),
+      onDisconnect: () => {
+        clearTimeout(firedDebounceRef.current);
+      },
+      handleEvent,
+    }),
+    [loadSchedules, handleEvent],
+  );
 
   return {
     schedules,

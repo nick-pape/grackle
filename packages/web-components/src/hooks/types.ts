@@ -1049,6 +1049,8 @@ export interface UseResourcesResult {
   watchResource: (environmentId: string, uri: string, recursive?: boolean) => Promise<string>;
   /** Stop a watch by its id (idempotent). */
   unwatchResource: (watchId: string) => Promise<void>;
+  /** Monotonic counter incremented when cached content changes; used as a memo dep. */
+  contentVersion: number;
   /** Lifecycle hook for connect/disconnect/event routing. */
   domainHook: DomainHook;
 }

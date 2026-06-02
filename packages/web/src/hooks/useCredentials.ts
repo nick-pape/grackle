@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { isCredentialProviderConfig } from "@grackle-ai/web-components";
 import type {
   CredentialProviderConfig,
@@ -70,11 +70,14 @@ export function useCredentials(): UseCredentialsResult {
     );
   }, []);
 
-  const domainHook: DomainHook = {
-    onConnect: () => loadCredentials(),
-    onDisconnect: () => {},
-    handleEvent,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: () => loadCredentials(),
+      onDisconnect: () => {},
+      handleEvent,
+    }),
+    [loadCredentials, handleEvent],
+  );
 
   return {
     credentialProviders,

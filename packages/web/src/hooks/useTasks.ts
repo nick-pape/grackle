@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { ConnectError, Code } from "@connectrpc/connect";
 import type { TaskData, GrackleEvent, WsMessage, UseTasksResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
@@ -265,11 +265,14 @@ export function useTasks(): UseTasksResult {
     }
   }, []);
 
-  const domainHook: DomainHook = {
-    onConnect: () => loadAllTasks(),
-    onDisconnect,
-    handleEvent,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: () => loadAllTasks(),
+      onDisconnect,
+      handleEvent,
+    }),
+    [loadAllTasks, onDisconnect, handleEvent],
+  );
 
   return {
     tasks,

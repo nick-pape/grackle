@@ -6,7 +6,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import type { Codespace, UseCodespacesResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
@@ -53,11 +53,14 @@ export function useCodespaces(): UseCodespacesResult {
     [listCodespaces],
   );
 
-  const domainHook: DomainHook = {
-    onConnect: () => listCodespaces(),
-    onDisconnect: () => {},
-    handleEvent: () => false,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: () => listCodespaces(),
+      onDisconnect: () => {},
+      handleEvent: () => false,
+    }),
+    [listCodespaces],
+  );
 
   return {
     codespaces,
