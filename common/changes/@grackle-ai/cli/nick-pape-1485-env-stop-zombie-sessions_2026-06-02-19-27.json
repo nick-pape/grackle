@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix: env stop and env destroy now terminate active sessions instead of leaving zombie 'running'/'idle' rows in the DB and lingering streams in memory (#1485).",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
