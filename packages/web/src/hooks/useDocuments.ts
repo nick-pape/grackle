@@ -15,7 +15,7 @@
  * @module
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useMemo } from "react";
 import type {
   DocumentTab,
   GrackleEvent,
@@ -184,7 +184,10 @@ export function useDocuments(bridge: ResourceBridge): UseDocumentsResult {
     // No-op: keep tabs across a transient stream blip.
   }, []);
 
-  const domainHook: DomainHook = { onConnect, onDisconnect, handleEvent };
+  const domainHook: DomainHook = useMemo(
+    () => ({ onConnect, onDisconnect, handleEvent }),
+    [onConnect, onDisconnect, handleEvent],
+  );
 
   return {
     tabs,

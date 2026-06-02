@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { assetUrl } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 
@@ -37,7 +37,7 @@ export function useNotifications(): {
     permissionRef.current = Notification.permission;
   }, []);
 
-  function handleEvent(event: DomainEvent): boolean {
+  const handleEvent = useCallback((event: DomainEvent): boolean => {
     if (event.type !== "notification.escalated") {
       return false;
     }
@@ -77,13 +77,16 @@ export function useNotifications(): {
     };
 
     return true;
-  }
+  }, []);
 
-  const domainHook: DomainHook = {
-    onConnect: async () => {},
-    onDisconnect: () => {},
-    handleEvent,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: async () => {},
+      onDisconnect: () => {},
+      handleEvent,
+    }),
+    [handleEvent],
+  );
 
   return { handleEvent, domainHook };
 }

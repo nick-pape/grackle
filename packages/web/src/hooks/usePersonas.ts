@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { PersonaData, GrackleEvent, UsePersonasResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { orchestrationClient as grackleClient } from "./useGrackleClient.js";
@@ -140,11 +140,14 @@ export function usePersonas(): UsePersonasResult {
     setPersonas((prev) => prev.filter((persona) => persona.id !== personaId));
   }, []);
 
-  const domainHook: DomainHook = {
-    onConnect: () => loadPersonas(),
-    onDisconnect: () => {},
-    handleEvent,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: () => loadPersonas(),
+      onDisconnect: () => {},
+      handleEvent,
+    }),
+    [loadPersonas, handleEvent],
+  );
 
   return {
     personas,

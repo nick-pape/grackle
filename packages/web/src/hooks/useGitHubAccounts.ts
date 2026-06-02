@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type {
   GitHubAccountData,
   UseGitHubAccountsResult,
@@ -111,11 +111,14 @@ export function useGitHubAccounts(): UseGitHubAccountsResult {
     return { imported: resp.imported, usernames: resp.usernames };
   }, [loadGitHubAccounts]);
 
-  const domainHook: DomainHook = {
-    onConnect: () => loadGitHubAccounts(),
-    onDisconnect: () => {},
-    handleEvent,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: () => loadGitHubAccounts(),
+      onDisconnect: () => {},
+      handleEvent,
+    }),
+    [loadGitHubAccounts, handleEvent],
+  );
 
   return {
     githubAccounts,
