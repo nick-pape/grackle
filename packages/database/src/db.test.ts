@@ -446,7 +446,6 @@ describe("initDatabase", () => {
     // ALTER TABLE DROP COLUMN can proceed), drop the task_id column, set
     // user_version back to 21.
     mem.exec("DROP INDEX IF EXISTS uq_schedules_heartbeat_per_task");
-    mem.exec("DROP INDEX IF EXISTS idx_schedules_task_id");
     mem.exec("ALTER TABLE schedules DROP COLUMN task_id");
     mem.pragma("user_version = 21");
 
@@ -551,15 +550,17 @@ describe("initDatabase", () => {
     // Step 1: create the current schema so all tables + indexes exist.
     initDatabase(mem);
 
-    // Step 2: rewind to v22 and drop the new indexes.
+    // Step 2: rewind to v22 and drop/revert the new indexes.
     mem.pragma("user_version = 22");
     mem.exec("DROP INDEX IF EXISTS idx_tasks_parent_task_id");
     mem.exec("DROP INDEX IF EXISTS idx_sessions_env_id");
     mem.exec("DROP INDEX IF EXISTS idx_tasks_workspace_id");
     mem.exec("DROP INDEX IF EXISTS idx_sessions_parent_session_id");
-    mem.exec("DROP INDEX IF EXISTS idx_schedules_task_id");
+    // Revert idx_sessions_task_id to pre-v23 single-column form.
+    mem.exec("DROP INDEX IF EXISTS idx_sessions_task_id");
+    mem.exec("CREATE INDEX idx_sessions_task_id ON sessions(task_id)");
 
-    // Sanity: indexes gone.
+    // Sanity: new indexes gone.
     const preIndexes = mem
       .prepare(
         "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_tasks_parent_task_id'",
@@ -573,11 +574,11 @@ describe("initDatabase", () => {
     // Schema version advanced.
     expect(getUserVersion(mem)).toBe(CURRENT_VERSION);
 
-    // Assert: all five indexes exist.
+    // Assert: all four new indexes exist.
     const indexNames = (
       mem
         .prepare(
-          "SELECT name FROM sqlite_master WHERE type = 'index' AND name IN ('idx_tasks_parent_task_id', 'idx_sessions_env_id', 'idx_tasks_workspace_id', 'idx_sessions_parent_session_id', 'idx_schedules_task_id')",
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name IN ('idx_tasks_parent_task_id', 'idx_sessions_env_id', 'idx_tasks_workspace_id', 'idx_sessions_parent_session_id')",
         )
         .all() as Array<{ name: string }>
     )
@@ -585,20 +586,19 @@ describe("initDatabase", () => {
       .sort();
 
     expect(indexNames).toEqual([
-      "idx_schedules_task_id",
       "idx_sessions_env_id",
       "idx_sessions_parent_session_id",
       "idx_tasks_parent_task_id",
       "idx_tasks_workspace_id",
     ]);
 
-    // Assert: the schedules index is partial (WHERE task_id IS NOT NULL).
-    const schedIdx = mem
+    // Assert: idx_sessions_task_id was upgraded to composite (task_id, started_at).
+    const taskIdIdx = mem
       .prepare(
-        "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_schedules_task_id'",
+        "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_sessions_task_id'",
       )
       .get() as { sql: string } | undefined;
-    expect(schedIdx?.sql).toContain("WHERE task_id IS NOT NULL");
+    expect(taskIdIdx?.sql).toContain("task_id, started_at");
   });
 
   it("creates query-performance indexes on fresh database (#1489)", () => {
@@ -616,7 +616,14 @@ describe("initDatabase", () => {
     expect(allIndexes).toContain("idx_sessions_env_id");
     expect(allIndexes).toContain("idx_tasks_workspace_id");
     expect(allIndexes).toContain("idx_sessions_parent_session_id");
-    expect(allIndexes).toContain("idx_schedules_task_id");
+
+    // idx_sessions_task_id should be composite (task_id, started_at).
+    const taskIdIdx = mem
+      .prepare(
+        "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_sessions_task_id'",
+      )
+      .get() as { sql: string } | undefined;
+    expect(taskIdIdx?.sql).toContain("task_id, started_at");
   });
 });
 

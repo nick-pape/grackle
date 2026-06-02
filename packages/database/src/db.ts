@@ -483,9 +483,12 @@ const MIGRATIONS: Migration[] = [
           ON tasks(workspace_id);
         CREATE INDEX IF NOT EXISTS idx_sessions_parent_session_id
           ON sessions(parent_session_id);
-        CREATE INDEX IF NOT EXISTS idx_schedules_task_id
-          ON schedules(task_id) WHERE task_id IS NOT NULL;
       `);
+      // Upgrade idx_sessions_task_id from single-column to composite so
+      // getLatestSessionForTask() and listSessionsForTask() benefit from
+      // the started_at ordering without a separate sort step.
+      conn.exec("DROP INDEX IF EXISTS idx_sessions_task_id");
+      conn.exec("CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id, started_at)");
     },
   },
 ];
@@ -876,7 +879,7 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
     CREATE INDEX IF NOT EXISTS idx_domain_events_timestamp ON domain_events(timestamp);
     CREATE INDEX IF NOT EXISTS idx_stream_messages_stream ON stream_messages(stream_id, seq);
     CREATE INDEX IF NOT EXISTS idx_session_actions_session ON session_actions(session_id, seq);
-    CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id);
+    CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id, started_at);
     CREATE TABLE IF NOT EXISTS plugins (
       name       TEXT PRIMARY KEY,
       enabled    INTEGER NOT NULL DEFAULT 1,
