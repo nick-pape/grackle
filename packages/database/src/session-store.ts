@@ -140,6 +140,25 @@ export function getActiveForEnv(environmentId: string): SessionRow | undefined {
     .get();
 }
 
+/** Get all currently active (pending/running/idle) sessions for an environment. */
+export function getAllActiveForEnv(environmentId: string): SessionRow[] {
+  return db
+    .select()
+    .from(sessions)
+    .where(
+      and(
+        eq(sessions.environmentId, environmentId),
+        ne(sessions.runtime, SUBAGENT_RUNTIME),
+        inArray(sessions.status, [
+          SESSION_STATUS.PENDING,
+          SESSION_STATUS.RUNNING,
+          SESSION_STATUS.IDLE,
+        ]),
+      ),
+    )
+    .all();
+}
+
 /** Increment the turn counter for a session. */
 export function incrementTurns(id: string): void {
   db.update(sessions)
