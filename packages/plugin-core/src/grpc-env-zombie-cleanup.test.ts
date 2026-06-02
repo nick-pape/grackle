@@ -125,7 +125,7 @@ describe("gRPC stopEnvironment session cleanup (#1485)", () => {
     handlers = getHandlers();
   });
 
-  it("kills the active session before calling adapter.stop", async () => {
+  it("suspends the active session before calling adapter.stop", async () => {
     vi.mocked(envRegistry.getEnvironment).mockReturnValue(FAKE_ENV);
     vi.mocked(sessionStore.getAllActiveForEnv).mockReturnValue([FAKE_SESSION_A] as never);
     vi.mocked(taskStore.getTask).mockReturnValue({
@@ -141,22 +141,17 @@ describe("gRPC stopEnvironment session cleanup (#1485)", () => {
 
     await handlers.stopEnvironment({ id: "test-env" });
 
-    expect(sessionStore.updateSession).toHaveBeenCalledWith(
-      "session-a",
-      "stopped",
-      undefined,
-      undefined,
-      "killed",
-    );
+    expect(sessionStore.suspendSession).toHaveBeenCalledWith("session-a");
+    expect(sessionStore.updateSession).not.toHaveBeenCalled();
     expect(fakeAdapter.stop).toHaveBeenCalledWith("test-env", expect.anything());
 
-    // Order: updateSession (kill) before adapter.stop.
-    const killOrder = vi.mocked(sessionStore.updateSession).mock.invocationCallOrder[0];
+    // Order: suspendSession before adapter.stop.
+    const suspendOrder = vi.mocked(sessionStore.suspendSession).mock.invocationCallOrder[0];
     const stopOrder = fakeAdapter.stop.mock.invocationCallOrder[0];
-    expect(killOrder).toBeLessThan(stopOrder);
+    expect(suspendOrder).toBeLessThan(stopOrder);
   });
 
-  it("kills every active session when more than one exists", async () => {
+  it("suspends every active session when more than one exists", async () => {
     vi.mocked(envRegistry.getEnvironment).mockReturnValue(FAKE_ENV);
     vi.mocked(sessionStore.getAllActiveForEnv).mockReturnValue([
       FAKE_SESSION_A,
@@ -171,22 +166,24 @@ describe("gRPC stopEnvironment session cleanup (#1485)", () => {
 
     await handlers.stopEnvironment({ id: "test-env" });
 
-    expect(sessionStore.updateSession).toHaveBeenCalledWith(
-      "session-a",
-      "stopped",
-      undefined,
-      undefined,
-      "killed",
-    );
-    expect(sessionStore.updateSession).toHaveBeenCalledWith(
-      "session-b",
-      "stopped",
-      undefined,
-      undefined,
-      "killed",
-    );
-    expect(cleanupLifecycleStream).toHaveBeenCalledWith("session-a");
-    expect(cleanupLifecycleStream).toHaveBeenCalledWith("session-b");
+    expect(sessionStore.suspendSession).toHaveBeenCalledWith("session-a");
+    expect(sessionStore.suspendSession).toHaveBeenCalledWith("session-b");
+  });
+
+  it("does NOT clean up lifecycle streams (session is recoverable on re-provision)", async () => {
+    vi.mocked(envRegistry.getEnvironment).mockReturnValue(FAKE_ENV);
+    vi.mocked(sessionStore.getAllActiveForEnv).mockReturnValue([FAKE_SESSION_A] as never);
+    const fakeAdapter = {
+      stop: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn(),
+      destroy: vi.fn(),
+    };
+    vi.mocked(adapterManager.getAdapter).mockReturnValue(fakeAdapter as never);
+
+    await handlers.stopEnvironment({ id: "test-env" });
+
+    expect(cleanupLifecycleStream).not.toHaveBeenCalled();
+    expect(streamRegistry.unsubscribe).not.toHaveBeenCalled();
   });
 
   it("is a no-op for sessions when no active session exists", async () => {
@@ -201,26 +198,10 @@ describe("gRPC stopEnvironment session cleanup (#1485)", () => {
 
     await handlers.stopEnvironment({ id: "test-env" });
 
+    expect(sessionStore.suspendSession).not.toHaveBeenCalled();
     expect(sessionStore.updateSession).not.toHaveBeenCalled();
-    expect(cleanupLifecycleStream).not.toHaveBeenCalled();
     expect(fakeAdapter.stop).toHaveBeenCalledWith("test-env", expect.anything());
     expect(envRegistry.updateEnvironmentStatus).toHaveBeenCalledWith("test-env", "disconnected");
-  });
-
-  it("cleans up lifecycle stream and stream subscriptions for each killed session", async () => {
-    vi.mocked(envRegistry.getEnvironment).mockReturnValue(FAKE_ENV);
-    vi.mocked(sessionStore.getAllActiveForEnv).mockReturnValue([FAKE_SESSION_A] as never);
-    const fakeAdapter = {
-      stop: vi.fn().mockResolvedValue(undefined),
-      disconnect: vi.fn(),
-      destroy: vi.fn(),
-    };
-    vi.mocked(adapterManager.getAdapter).mockReturnValue(fakeAdapter as never);
-
-    await handlers.stopEnvironment({ id: "test-env" });
-
-    expect(cleanupLifecycleStream).toHaveBeenCalledWith("session-a");
-    expect(streamRegistry.getSubscriptionsForSession).toHaveBeenCalledWith("session-a");
   });
 
   it("throws NotFound when the environment does not exist and does not touch sessions", async () => {
@@ -228,6 +209,7 @@ describe("gRPC stopEnvironment session cleanup (#1485)", () => {
 
     await expect(handlers.stopEnvironment({ id: "missing" })).rejects.toThrow(/not found/i);
     expect(sessionStore.getAllActiveForEnv).not.toHaveBeenCalled();
+    expect(sessionStore.suspendSession).not.toHaveBeenCalled();
     expect(sessionStore.updateSession).not.toHaveBeenCalled();
   });
 });
