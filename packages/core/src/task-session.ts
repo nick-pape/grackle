@@ -38,6 +38,13 @@ import { emit } from "./event-bus.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
 import { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";
 import { hasSpawnContextProviders, runSpawnContextProviders } from "./spawn-context-registry.js";
+import {
+  resolveSpawnSpec,
+  personaToLayer,
+  workspaceToLayer,
+  taskToLayer,
+  hostDefaults,
+} from "./resolve-spawn-spec.js";
 
 /**
  * Start a new agent session for a task.
@@ -97,7 +104,16 @@ export async function startTaskSession(
   }
 
   const sessionId = uuid();
-  const { runtime, model, maxTurns, systemPrompt } = resolved;
+
+  // Unified spawn-config cascade (#1427): host → persona → workspace → task.
+  const spec = resolveSpawnSpec({
+    host: hostDefaults(),
+    persona: personaToLayer(resolved),
+    workspace: workspace ? workspaceToLayer(workspace) : undefined,
+    task: taskToLayer({}),
+  });
+  const { runtime, model, maxTurns } = spec;
+  const { systemPrompt } = resolved;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const freshTask = taskStore.getTask(task.id) || task;
@@ -212,7 +228,8 @@ export async function startTaskSession(
     loadOrCreateApiKey(grackleHome),
   );
 
-  const useWorktrees = workspace?.useWorktrees ?? false;
+  // Preserve historical default of `false` when no workspace expresses an opinion.
+  const useWorktrees = spec.useWorktrees ?? false;
 
   const { stream } = conn.transport.createSession({
     sessionId,
@@ -221,12 +238,8 @@ export async function startTaskSession(
     model,
     maxTurns,
     branch: freshTask.branch,
-    workingDirectory: freshTask.branch
-      ? workspace?.workingDirectory ||
-        process.env.GRACKLE_WORKING_DIRECTORY ||
-        process.env.GRACKLE_WORKTREE_BASE ||
-        "/workspace"
-      : "",
+    // "no branch → no working dir" stays a workflow rule at the call site.
+    workingDirectory: freshTask.branch ? spec.workingDirectory : "",
     useWorktrees,
     systemContext,
     workspaceId: freshTask.workspaceId ?? undefined,

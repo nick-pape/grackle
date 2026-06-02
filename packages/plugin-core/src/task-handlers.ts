@@ -59,6 +59,13 @@ import { validatePipeInputs, toDialableHost, resolveAncestorEnvironmentId } from
 import { personaMcpServersToJson } from "@grackle-ai/core";
 import { hasCapacity, type ConcurrencyDeps, checkBudget } from "@grackle-ai/core";
 import { hasSpawnContextProviders, runSpawnContextProviders } from "@grackle-ai/core";
+import {
+  resolveSpawnSpec,
+  personaToLayer,
+  workspaceToLayer,
+  taskToLayer,
+  hostDefaults,
+} from "@grackle-ai/core";
 
 /** Weighted fields for fuzzy task search: title is twice as important as description. */
 const TASK_SEARCH_KEYS: FuzzyKey[] = [
@@ -409,7 +416,19 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
 
   const env = envRegistry.getEnvironment(environmentId);
   const sessionId = uuid();
-  const { runtime, model, maxTurns, systemPrompt } = resolved;
+
+  // Unified spawn-config cascade (#1427): host → persona → workspace → task.
+  // startTask has no scalar spawnOverride layer (no provider/model/maxTurns
+  // overrides on the request); per-task overrides land here once #1418's
+  // follow-up makes Agents/Tasks config-bearing.
+  const spec = resolveSpawnSpec({
+    host: hostDefaults(),
+    persona: personaToLayer(resolved),
+    workspace: workspace ? workspaceToLayer(workspace) : undefined,
+    task: taskToLayer({}),
+  });
+  const { runtime, model, maxTurns } = spec;
+  const { systemPrompt } = resolved;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
@@ -499,7 +518,10 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
 
   const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
 
-  const useWorktrees = workspace?.useWorktrees ?? false;
+  // Preserve the task-path's historical default of `false` when no workspace
+  // expresses an opinion (e.g. root/schedule/channel tasks without a
+  // workspaceId). The cascade itself is handled by resolveSpawnSpec above.
+  const useWorktrees = spec.useWorktrees ?? false;
   if (!useWorktrees) {
     logger.warn(
       { taskId: task.id, workspaceId: task.workspaceId, branch: task.branch },
@@ -530,9 +552,9 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     model,
     maxTurns,
     branch: task.branch,
-    workingDirectory: task.branch
-      ? workspace?.workingDirectory || process.env.GRACKLE_WORKTREE_BASE || "/workspace"
-      : "",
+    // "no branch → no working dir" stays a workflow rule at the call site;
+    // the cascade for the populated case is handled by resolveSpawnSpec.
+    workingDirectory: task.branch ? spec.workingDirectory : "",
     useWorktrees,
     systemContext,
     workspaceId: task.workspaceId ?? undefined,
