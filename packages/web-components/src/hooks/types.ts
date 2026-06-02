@@ -156,6 +156,10 @@ export interface TaskData {
   tokenBudget: number;
   /** Cost cap in millicents ($0.00001 units); 0 = unlimited. */
   costBudgetMillicents: number;
+  /** Owning Agent id (#1418). Empty = user-driven task. */
+  agentId?: string;
+  /** Task kind discriminator (#1418): task | root | schedule_rule | schedule_fire | channel_config | channel_thread. */
+  kind?: string;
 }
 
 /** Metadata about a stored token. */
@@ -224,6 +228,8 @@ export interface AgentData {
   primaryPersonaId: string;
   /** The Agent's home environment id (#1418). Required at creation time. */
   environmentId: string;
+  /** Derived heartbeat schedule, server-populated on read (#1438). */
+  heartbeat?: ScheduleData;
 }
 
 /** Fields accepted when updating an agent. Omitted fields are left unchanged. */
