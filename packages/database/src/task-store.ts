@@ -1,5 +1,5 @@
 import db from "./db.js";
-import { tasks, type TaskRow } from "./schema.js";
+import { tasks, schedules, type TaskRow } from "./schema.js";
 import { eq, and, or, sql, asc, type SQL } from "drizzle-orm";
 import { TASK_STATUS, taskStatusToEnum, taskStatusToString } from "@grackle-ai/common";
 import type { TaskStatus } from "@grackle-ai/common";
@@ -312,8 +312,17 @@ export function markTaskComplete(id: string, status: "complete" | "failed" = "co
     .run();
 }
 
-/** Delete a task by ID. Returns the number of rows affected. */
+/**
+ * Delete a task by ID. Returns the number of rows affected (0 or 1).
+ *
+ * Cascades through `schedules.task_id` (#1438): any heartbeat schedule
+ * targeting this task is deleted first to satisfy the nullable FK. Per
+ * project convention FKs are declared without `ON DELETE CASCADE` and the
+ * app layer is responsible for cleanup; this mirrors what `deleteAgent`
+ * does for `tasks.agent_id` (see migration v22 comments).
+ */
 export function deleteTask(id: string): number {
+  db.delete(schedules).where(eq(schedules.taskId, id)).run();
   const result = db.delete(tasks).where(eq(tasks.id, id)).run();
   return result.changes;
 }
