@@ -66,6 +66,11 @@ async function waitForRunCount(
   );
 }
 
+/** Generate a unique agent name per test run to avoid cross-test name collisions. */
+function uniqueAgentName(prefix: string): string {
+  return `${prefix}-${Math.floor(Date.now() / 1000)}-${Math.floor(Math.random() * 10000)}`;
+}
+
 test("agent heartbeat fires twice and reanimates the same session on the second tick", async ({
   grackle: { client },
 }) => {
@@ -73,7 +78,7 @@ test("agent heartbeat fires twice and reanimates the same session on the second 
 
   // Pick a unique agent name per test run to avoid duplicates across reruns
   // sharing the same worker DB (rarely needed but cheap).
-  const agentName = `HB-${Math.floor(Date.now() / 1000)}-${Math.floor(Math.random() * 10000)}`;
+  const agentName = uniqueAgentName("HB");
 
   // Create the agent. The Agent root task is auto-created by the
   // createAgentRootTaskSubscriber (#1418).
@@ -113,4 +118,110 @@ test("agent heartbeat fires twice and reanimates the same session on the second 
   const after = await client.core.getTaskSessions({ id: rootTaskId });
   expect(after.sessions).toHaveLength(1);
   expect(after.sessions[0]!.id).toBe(firstSession.id);
+});
+
+// ── Phase 4 scenarios (#1438 hardening) ─────────────────────────────
+
+test("agent heartbeat pause/resume: paused schedule doesn't fire; resume picks back up", async ({
+  grackle: { client },
+}) => {
+  test.setTimeout(TEST_TIMEOUT_MS);
+
+  const agentName = uniqueAgentName("HB-Pause");
+  const agent = await client.orchestration.createAgent({
+    name: agentName,
+    environmentId: "test-local",
+    primaryPersonaId: "stub",
+  });
+  await client.orchestration.setAgentHeartbeat({
+    agentId: agent.id,
+    cadence: "10s",
+    rules: "PING",
+  });
+
+  // Wait for the first fire.
+  await waitForRunCount(client, agent.id, 1, 14_000);
+  const paused = await client.orchestration.setAgentHeartbeat({
+    agentId: agent.id,
+    enabled: false,
+  });
+  expect(paused.enabled).toBe(false);
+  // Pausing clears nextRunAt (matches setScheduleEnabled semantics).
+  expect(paused.nextRunAt).toBe("");
+
+  // Wait one cadence cycle while paused — runCount must stay at 1.
+  await new Promise((r) => setTimeout(r, 12_000));
+  const stillPaused = await client.orchestration.getAgent({ id: agent.id });
+  expect(stillPaused.heartbeat?.runCount).toBe(1);
+
+  // Resume — runCount eventually reaches 2.
+  const resumed = await client.orchestration.setAgentHeartbeat({
+    agentId: agent.id,
+    enabled: true,
+  });
+  expect(resumed.enabled).toBe(true);
+  expect(resumed.nextRunAt).toBeTruthy();
+
+  await waitForRunCount(client, agent.id, 2, 14_000);
+});
+
+test("agent heartbeat rejects an invalid cadence and creates no schedule row", async ({
+  grackle: { client },
+}) => {
+  test.setTimeout(15_000);
+
+  const agentName = uniqueAgentName("HB-Bad");
+  const agent = await client.orchestration.createAgent({
+    name: agentName,
+    environmentId: "test-local",
+    primaryPersonaId: "stub",
+  });
+
+  await expect(
+    client.orchestration.setAgentHeartbeat({
+      agentId: agent.id,
+      cadence: "garbage-not-a-cadence",
+    }),
+  ).rejects.toThrow(/Invalid|expression/i);
+
+  const after = await client.orchestration.getAgent({ id: agent.id });
+  // No heartbeat row was created.
+  expect(after.heartbeat?.id || "").toBe("");
+});
+
+test("agent heartbeat clear deletes the schedule and stops new fires", async ({
+  grackle: { client },
+}) => {
+  test.setTimeout(TEST_TIMEOUT_MS);
+
+  const agentName = uniqueAgentName("HB-Clear");
+  const agent = await client.orchestration.createAgent({
+    name: agentName,
+    environmentId: "test-local",
+    primaryPersonaId: "stub",
+  });
+  await client.orchestration.setAgentHeartbeat({
+    agentId: agent.id,
+    cadence: "10s",
+    rules: "PING",
+  });
+
+  // Wait for the first fire so we have something to compare against.
+  await waitForRunCount(client, agent.id, 1, 14_000);
+  const before = await client.orchestration.getAgent({ id: agent.id });
+  const rootTaskId = before.heartbeat!.parentTaskId;
+  const sessionsBefore = await client.core.getTaskSessions({ id: rootTaskId });
+
+  // Clear: empty cadence deletes the schedule row.
+  await client.orchestration.setAgentHeartbeat({
+    agentId: agent.id,
+    cadence: "",
+  });
+  const cleared = await client.orchestration.getAgent({ id: agent.id });
+  expect(cleared.heartbeat?.id || "").toBe("");
+
+  // Wait one full cadence cycle — no new sessions should land on the root task.
+  await new Promise((r) => setTimeout(r, 12_000));
+  const sessionsAfter = await client.core.getTaskSessions({ id: rootTaskId });
+  expect(sessionsAfter.sessions).toHaveLength(sessionsBefore.sessions.length);
 });
