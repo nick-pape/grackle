@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/plugin-knowledge",
-  "version": "0.148.0",
+  "version": "0.149.0",
   "description": "Knowledge graph plugin for Grackle — Neo4j, embeddings, and knowledge MCP tools",
   "license": "MIT",
   "repository": {
