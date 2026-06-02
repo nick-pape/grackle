@@ -43,7 +43,10 @@ export function listEscalations(
   status?: string,
   limit?: number,
 ): EscalationRow[] {
-  const maxResults = Math.min(limit || 50, 100);
+  const maxResults = Math.min(limit ?? 50, 100);
+  if (maxResults === 0) {
+    return [];
+  }
 
   const hasWorkspaceFilter = workspaceId !== undefined && workspaceId.length > 0;
   const hasStatusFilter = status !== undefined && status.length > 0;
