@@ -129,6 +129,9 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
         STORYBOOK_DISABLE_TELEMETRY: "1",
         CI: "true",
         NODE_NO_WARNINGS: "1",
+        // Pin jest roots to the package directory so jest-haste-map doesn't
+        // crawl the entire repo root (which includes .claude/worktrees/).
+        TEST_ROOT: buildFolder,
       };
 
       const port: number = await findFreePort();
