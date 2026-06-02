@@ -434,6 +434,114 @@ describe("initDatabase", () => {
       | undefined;
     expect(sys?.kind).toBe("root");
   });
+
+  it("migration v22 — adds schedules.task_id + partial unique index, preserves v21 rows (#1438)", () => {
+    const mem = new Database(":memory:");
+    mem.pragma("foreign_keys = ON");
+
+    // Step 1: create current schema.
+    initDatabase(mem);
+
+    // Step 2: rewind to a v21 shape — drop the partial unique index FIRST (so
+    // ALTER TABLE DROP COLUMN can proceed), drop the task_id column, set
+    // user_version back to 21.
+    mem.exec("DROP INDEX IF EXISTS uq_schedules_heartbeat_per_task");
+    mem.exec("ALTER TABLE schedules DROP COLUMN task_id");
+    mem.pragma("user_version = 21");
+
+    // Sanity: schedules has the v21 shape.
+    const preCols = mem.prepare("PRAGMA table_info(schedules)").all() as Array<{ name: string }>;
+    expect(preCols.map((c) => c.name)).not.toContain("task_id");
+
+    // Step 3: insert two pre-existing fresh-task schedules (the rows production
+    // installs will be carrying when v22 runs).
+    mem
+      .prepare(
+        "INSERT INTO schedules (id, title, description, schedule_expression, persona_id, next_run_at) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+      .run("legacy-1", "Nightly", "review", "0 21 * * *", "claude-code", "2099-01-01T00:00:00Z");
+    mem
+      .prepare(
+        "INSERT INTO schedules (id, title, description, schedule_expression, persona_id, next_run_at) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+      .run("legacy-2", "Hourly", "ping", "1h", "claude-code", "2099-01-01T00:00:00Z");
+
+    // Step 4: re-run initDatabase → v22 fires.
+    initDatabase(mem);
+
+    // Schema version advanced.
+    expect(getUserVersion(mem)).toBe(CURRENT_VERSION);
+
+    // Assert: task_id column now present, nullable.
+    const postCols = mem.prepare("PRAGMA table_info(schedules)").all() as Array<{
+      name: string;
+      notnull: number;
+    }>;
+    const taskIdCol = postCols.find((c) => c.name === "task_id");
+    expect(taskIdCol).toBeDefined();
+    expect(taskIdCol!.notnull).toBe(0); // nullable
+
+    // Assert: pre-existing rows survived with task_id = NULL.
+    const legacy = mem
+      .prepare("SELECT id, task_id FROM schedules WHERE id LIKE 'legacy-%' ORDER BY id")
+      .all() as Array<{ id: string; task_id: string | null }>;
+    expect(legacy).toHaveLength(2);
+    expect(legacy[0]!.task_id).toBeNull();
+    expect(legacy[1]!.task_id).toBeNull();
+
+    // Assert: partial unique index exists and references task_id.
+    const indices = mem
+      .prepare(
+        "SELECT name, sql FROM sqlite_master WHERE type = 'index' AND name = 'uq_schedules_heartbeat_per_task'",
+      )
+      .all() as Array<{ name: string; sql: string }>;
+    expect(indices).toHaveLength(1);
+    expect(indices[0]!.sql).toContain("WHERE task_id IS NOT NULL");
+
+    // Assert: the existing `idx_schedules_due` index is still in place — v22
+    // doesn't disturb it.
+    const dueIdx = mem
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_schedules_due'")
+      .all();
+    expect(dueIdx).toHaveLength(1);
+
+    // Assert: a task must exist to use as a heartbeat target (FK).
+    mem
+      .prepare("INSERT INTO tasks (id, title, kind, parent_task_id) VALUES (?, ?, ?, ?)")
+      .run("agent-root-1", "Agent Root", "root", "");
+
+    // Assert: two heartbeats targeting the SAME task fail (partial unique).
+    mem
+      .prepare(
+        "INSERT INTO schedules (id, title, schedule_expression, persona_id, task_id) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run("hb-1", "HB", "30s", "claude-code", "agent-root-1");
+    expect(() => {
+      mem
+        .prepare(
+          "INSERT INTO schedules (id, title, schedule_expression, persona_id, task_id) VALUES (?, ?, ?, ?, ?)",
+        )
+        .run("hb-2", "HB2", "1m", "claude-code", "agent-root-1");
+    }).toThrow(/UNIQUE constraint/);
+
+    // Assert: multiple NULL task_id rows are allowed (the legacy fresh-task path).
+    mem
+      .prepare(
+        "INSERT INTO schedules (id, title, schedule_expression, persona_id) VALUES (?, ?, ?, ?)",
+      )
+      .run("legacy-3", "AnotherLegacy", "30s", "claude-code");
+    const nullCount = mem
+      .prepare("SELECT COUNT(*) as c FROM schedules WHERE task_id IS NULL")
+      .get() as { c: number };
+    expect(nullCount.c).toBe(3); // legacy-1, legacy-2, legacy-3
+
+    // Assert: foreign_keys remain consistent (deleting the task with a
+    // heartbeat row referencing it would violate FK; we don't trigger that
+    // here because `taskStore.deleteTask` is in app-layer cleanup. The
+    // migration itself doesn't disturb FK integrity).
+    const fkViolations = mem.prepare("PRAGMA foreign_key_check").all();
+    expect(fkViolations).toHaveLength(0);
+  });
 });
 
 describe("checkDatabaseIntegrity", () => {

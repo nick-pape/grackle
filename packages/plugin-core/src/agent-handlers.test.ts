@@ -10,12 +10,18 @@ const mockDb: {
   taskSessions: Map<string, Array<Record<string, unknown>>>;
   /** Tasks that have been deleted via deleteTask, for assertions. */
   deletedTaskIds: string[];
+  /** Root tasks owned by agents, keyed by agentId. */
+  agentRootTasks: Map<string, Record<string, unknown>>;
+  /** Schedules keyed by schedule id. */
+  schedules: Map<string, Record<string, unknown>>;
 } = {
   agents: new Map(),
   environments: new Map([["local", { id: "local", displayName: "Local" }]]),
   agentTasks: new Map(),
   taskSessions: new Map(),
   deletedTaskIds: [],
+  agentRootTasks: new Map(),
+  schedules: new Map(),
 };
 
 vi.mock("@grackle-ai/database", () => ({
@@ -77,6 +83,79 @@ vi.mock("@grackle-ai/database", () => ({
     deleteTask: (id: string): void => {
       mockDb.deletedTaskIds.push(id);
     },
+    getRootTaskForAgent: (agentId: string): Record<string, unknown> | undefined =>
+      mockDb.agentRootTasks.get(agentId),
+  },
+  scheduleStore: {
+    getSchedule: (id: string): Record<string, unknown> | undefined => mockDb.schedules.get(id),
+    getHeartbeatForTask: (taskId: string): Record<string, unknown> | undefined => {
+      for (const s of mockDb.schedules.values()) {
+        if ((s as { taskId: string | null }).taskId === taskId) {
+          return s;
+        }
+      }
+      return undefined;
+    },
+    createSchedule: (
+      id: string,
+      title: string,
+      description: string,
+      scheduleExpression: string,
+      personaId: string,
+      workspaceId: string,
+      parentTaskId: string,
+      nextRunAt: string | null,
+      taskId: string | null = null,
+    ): void => {
+      // Mirror partial-unique behavior of the real DB.
+      if (taskId !== null) {
+        for (const s of mockDb.schedules.values()) {
+          if ((s as { taskId: string | null }).taskId === taskId) {
+            throw new Error("UNIQUE constraint failed: schedules.task_id");
+          }
+        }
+      }
+      mockDb.schedules.set(id, {
+        id,
+        title,
+        description,
+        scheduleExpression,
+        personaId,
+        workspaceId,
+        parentTaskId,
+        enabled: true,
+        lastRunAt: null,
+        nextRunAt,
+        runCount: 0,
+        taskId,
+        createdAt: "2024-01-01",
+        updatedAt: "2024-01-01",
+      });
+    },
+    updateSchedule: (
+      id: string,
+      fields: {
+        scheduleExpression?: string;
+        description?: string;
+        enabled?: boolean;
+        nextRunAt?: string | null;
+      },
+    ): void => {
+      const existing = mockDb.schedules.get(id);
+      if (!existing) return;
+      mockDb.schedules.set(id, {
+        ...existing,
+        ...(fields.scheduleExpression !== undefined
+          ? { scheduleExpression: fields.scheduleExpression }
+          : {}),
+        ...(fields.description !== undefined ? { description: fields.description } : {}),
+        ...(fields.enabled !== undefined ? { enabled: fields.enabled } : {}),
+        ...(fields.nextRunAt !== undefined ? { nextRunAt: fields.nextRunAt } : {}),
+      });
+    },
+    deleteSchedule: (id: string): void => {
+      mockDb.schedules.delete(id);
+    },
   },
   slugify: (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
 }));
@@ -103,6 +182,8 @@ describe("agent-handlers", () => {
     mockDb.agentTasks.clear();
     mockDb.taskSessions.clear();
     mockDb.deletedTaskIds = [];
+    mockDb.agentRootTasks.clear();
+    mockDb.schedules.clear();
     emitMock.mockClear();
     killSessionMock.mockClear();
   });
@@ -373,5 +454,188 @@ describe("agent-handlers", () => {
     expect(killSessionMock).not.toHaveBeenCalled();
     expect(mockDb.deletedTaskIds).toEqual([]);
     expect(mockDb.agents.has(created.id)).toBe(false);
+  });
+
+  // ── #1438 — Agent heartbeat ─────────────────────────────────────
+
+  /** Seed an agent + its root task in the mock store. */
+  async function createAgentWithRoot(name: string): Promise<{ id: string; rootTaskId: string }> {
+    const created = await agentHandlers.createAgent(
+      create(grackle.CreateAgentRequestSchema, {
+        environmentId: "local",
+        name,
+        primaryPersonaId: "p1",
+      }),
+    );
+    const rootTaskId = `${created.id}-root`;
+    mockDb.agentRootTasks.set(created.id, { id: rootTaskId, kind: "root", agentId: created.id });
+    return { id: created.id, rootTaskId };
+  }
+
+  it("setAgentHeartbeat creates a schedule when none exists", async () => {
+    const { id, rootTaskId } = await createAgentWithRoot("HB Create");
+    const sched = await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, {
+        agentId: id,
+        cadence: "30s",
+        rules: "wake up and check the queue",
+        enabled: true,
+      }),
+    );
+    expect(sched.scheduleExpression).toBe("30s");
+    expect(sched.description).toBe("wake up and check the queue");
+    expect(sched.enabled).toBe(true);
+    // The created schedule targets the agent's root task.
+    const stored = [...mockDb.schedules.values()][0] as { taskId: string };
+    expect(stored.taskId).toBe(rootTaskId);
+    expect(emitMock).toHaveBeenCalledWith(
+      "agent.heartbeat.updated",
+      expect.objectContaining({ agentId: id }),
+    );
+  });
+
+  it("setAgentHeartbeat updates cadence on an existing schedule and preserves other fields", async () => {
+    const { id } = await createAgentWithRoot("HB Update");
+    await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, {
+        agentId: id,
+        cadence: "30s",
+        rules: "original rules",
+      }),
+    );
+    const updated = await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, cadence: "1m" }),
+    );
+    expect(updated.scheduleExpression).toBe("1m");
+    // Rules preserved (presence semantics: undefined = keep).
+    expect(updated.description).toBe("original rules");
+  });
+
+  it("setAgentHeartbeat with empty cadence clears the schedule and emits agent.heartbeat.cleared", async () => {
+    const { id } = await createAgentWithRoot("HB Clear");
+    await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, cadence: "30s", rules: "x" }),
+    );
+    expect(mockDb.schedules.size).toBe(1);
+    const cleared = await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, cadence: "" }),
+    );
+    expect(mockDb.schedules.size).toBe(0);
+    // The returned proto is the empty Schedule (id stays unset).
+    expect(cleared.id).toBe("");
+    expect(emitMock).toHaveBeenCalledWith(
+      "agent.heartbeat.cleared",
+      expect.objectContaining({ agentId: id }),
+    );
+  });
+
+  it("setAgentHeartbeat rejects an invalid cadence expression with InvalidArgument", async () => {
+    const { id } = await createAgentWithRoot("HB Invalid");
+    await expect(
+      agentHandlers.setAgentHeartbeat(
+        create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, cadence: "garbage" }),
+      ),
+    ).rejects.toThrow(/invalid|expression/i);
+  });
+
+  it("setAgentHeartbeat on an unknown agent throws NotFound", async () => {
+    await expect(
+      agentHandlers.setAgentHeartbeat(
+        create(grackle.SetAgentHeartbeatRequestSchema, { agentId: "nope", cadence: "30s" }),
+      ),
+    ).rejects.toThrow(/not found/i);
+  });
+
+  it("setAgentHeartbeat without cadence and no existing schedule throws InvalidArgument", async () => {
+    const { id } = await createAgentWithRoot("HB Bare");
+    // No cadence + no existing → there is nothing to pause/edit.
+    await expect(
+      agentHandlers.setAgentHeartbeat(
+        create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, enabled: false }),
+      ),
+    ).rejects.toThrow(/cadence/i);
+  });
+
+  it("setAgentHeartbeat can pause an existing heartbeat (enabled=false) without re-sending cadence", async () => {
+    const { id } = await createAgentWithRoot("HB Pause");
+    await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, cadence: "30s", rules: "r" }),
+    );
+    const paused = await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, enabled: false }),
+    );
+    expect(paused.enabled).toBe(false);
+    expect(paused.scheduleExpression).toBe("30s");
+    // Pausing clears nextRunAt — matches setScheduleEnabled semantics so the
+    // cron-phase doesn't fire a paused schedule.
+    expect(paused.nextRunAt).toBe("");
+  });
+
+  it("setAgentHeartbeat resumes a paused heartbeat and recomputes nextRunAt", async () => {
+    const { id } = await createAgentWithRoot("HB Resume");
+    await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, cadence: "30s", rules: "r" }),
+    );
+    await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, enabled: false }),
+    );
+    const resumed = await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, { agentId: id, enabled: true }),
+    );
+    expect(resumed.enabled).toBe(true);
+    expect(resumed.nextRunAt).toBeTruthy();
+  });
+
+  it("setAgentHeartbeat creating with enabled=false leaves nextRunAt unset", async () => {
+    const { id } = await createAgentWithRoot("HB CreatePaused");
+    const created = await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, {
+        agentId: id,
+        cadence: "30s",
+        rules: "r",
+        enabled: false,
+      }),
+    );
+    expect(created.enabled).toBe(false);
+    // No pending wake on a freshly-created paused row.
+    expect(created.nextRunAt).toBe("");
+  });
+
+  it("getAgent embeds the heartbeat when a schedule exists for the agent's root task", async () => {
+    const { id } = await createAgentWithRoot("HB Embedded");
+    await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, {
+        agentId: id,
+        cadence: "30s",
+        rules: "tick",
+      }),
+    );
+    const agent = await agentHandlers.getAgent(create(grackle.AgentIdSchema, { id }));
+    expect(agent.heartbeat).toBeDefined();
+    expect(agent.heartbeat?.scheduleExpression).toBe("30s");
+    expect(agent.heartbeat?.description).toBe("tick");
+  });
+
+  it("getAgent leaves heartbeat unset when no schedule exists", async () => {
+    const { id } = await createAgentWithRoot("HB Absent");
+    const agent = await agentHandlers.getAgent(create(grackle.AgentIdSchema, { id }));
+    expect(agent.heartbeat).toBeUndefined();
+  });
+
+  it("listAgents populates heartbeat for each agent that has one", async () => {
+    const a = await createAgentWithRoot("HB ListedA");
+    const b = await createAgentWithRoot("HB ListedB");
+    await agentHandlers.setAgentHeartbeat(
+      create(grackle.SetAgentHeartbeatRequestSchema, {
+        agentId: a.id,
+        cadence: "30s",
+        rules: "A rules",
+      }),
+    );
+    // B has no heartbeat.
+    const list = await agentHandlers.listAgents();
+    const byName = Object.fromEntries(list.agents.map((x) => [x.name, x]));
+    expect(byName["HB ListedA"].heartbeat?.scheduleExpression).toBe("30s");
+    expect(byName["HB ListedB"].heartbeat).toBeUndefined();
   });
 });

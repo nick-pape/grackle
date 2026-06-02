@@ -23,10 +23,13 @@ function applySchema(): void {
       last_run_at         TEXT,
       next_run_at         TEXT,
       run_count           INTEGER NOT NULL DEFAULT 0,
+      task_id             TEXT,
       created_at          TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_schedules_due ON schedules(enabled, next_run_at);
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_schedules_heartbeat_per_task
+      ON schedules(task_id) WHERE task_id IS NOT NULL;
   `);
 }
 
@@ -165,5 +168,52 @@ describe("schedule-store", () => {
     const s = scheduleStore.getSchedule("s1");
     expect(s!.enabled).toBe(false);
     expect(s!.nextRunAt).toBeNull();
+  });
+
+  // ── Heartbeat (#1438) ─────────────────────────────────────────
+
+  it("createSchedule accepts an optional taskId (heartbeat discriminator)", () => {
+    scheduleStore.createSchedule("hb-1", "HB", "", "30s", "p1", "", "", null, "task-A");
+    const s = scheduleStore.getSchedule("hb-1");
+    expect(s!.taskId).toBe("task-A");
+  });
+
+  it("createSchedule defaults taskId to null when omitted", () => {
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", null);
+    const s = scheduleStore.getSchedule("s1");
+    expect(s!.taskId).toBeNull();
+  });
+
+  it("getHeartbeatForTask returns the schedule whose task_id matches", () => {
+    scheduleStore.createSchedule("hb-1", "HB", "", "30s", "p1", "", "", null, "task-A");
+    scheduleStore.createSchedule("hb-2", "HB2", "", "1m", "p2", "", "", null, "task-B");
+    const found = scheduleStore.getHeartbeatForTask("task-A");
+    expect(found).toBeDefined();
+    expect(found!.id).toBe("hb-1");
+    expect(found!.scheduleExpression).toBe("30s");
+  });
+
+  it("getHeartbeatForTask returns undefined when no heartbeat targets the task", () => {
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", null);
+    expect(scheduleStore.getHeartbeatForTask("task-A")).toBeUndefined();
+  });
+
+  it("partial unique index rejects a second heartbeat targeting the same task", () => {
+    scheduleStore.createSchedule("hb-1", "HB", "", "30s", "p1", "", "", null, "task-A");
+    expect(() => {
+      scheduleStore.createSchedule("hb-2", "HB2", "", "1m", "p2", "", "", null, "task-A");
+    }).toThrow();
+  });
+
+  it("multiple schedules with null task_id are allowed (today's fresh-spawn schedules)", () => {
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", null);
+    scheduleStore.createSchedule("s2", "B", "", "1m", "p2", "", "", null);
+    expect(scheduleStore.listSchedules()).toHaveLength(2);
+  });
+
+  it("updateSchedule can set taskId (e.g. attaching a heartbeat target)", () => {
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", null);
+    scheduleStore.updateSchedule("s1", { taskId: "task-A" });
+    expect(scheduleStore.getSchedule("s1")!.taskId).toBe("task-A");
   });
 });

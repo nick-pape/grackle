@@ -12,18 +12,38 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import { agentStore, envRegistry, sessionStore, taskStore } from "@grackle-ai/database";
+import {
+  agentStore,
+  envRegistry,
+  scheduleStore,
+  sessionStore,
+  taskStore,
+} from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { slugify } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
+import { validateExpression, computeNextRunAt } from "@grackle-ai/plugin-scheduling";
+import { scheduleRowToProto } from "@grackle-ai/common";
 import { agentRowToProto } from "./grpc-proto-converters.js";
 import { killSessionAndCleanup } from "./grpc-shared.js";
 
-/** List all agents. */
+/**
+ * Resolve the heartbeat schedule for an agent (#1438). Returns undefined when
+ * the agent has no root task or no schedule attached to it.
+ */
+function getHeartbeatForAgent(agentId: string): scheduleStore.ScheduleRow | undefined {
+  const root = taskStore.getRootTaskForAgent(agentId);
+  if (!root) {
+    return undefined;
+  }
+  return scheduleStore.getHeartbeatForTask(root.id);
+}
+
+/** List all agents. Each agent's `heartbeat` field is populated when set (#1438). */
 export async function listAgents(): Promise<grackle.AgentList> {
   const rows = agentStore.listAgents();
   return create(grackle.AgentListSchema, {
-    agents: rows.map(agentRowToProto),
+    agents: rows.map((row) => agentRowToProto(row, getHeartbeatForAgent(row.id))),
   });
 }
 
@@ -65,13 +85,13 @@ export async function createAgent(req: grackle.CreateAgentRequest): Promise<grac
   return agentRowToProto(row!);
 }
 
-/** Get an agent by ID. */
+/** Get an agent by ID. Populates the derived `heartbeat` field when set (#1438). */
 export async function getAgent(req: grackle.AgentId): Promise<grackle.Agent> {
   const row = agentStore.getAgent(req.id);
   if (!row) {
     throw new ConnectError(`Agent not found: ${req.id}`, Code.NotFound);
   }
-  return agentRowToProto(row);
+  return agentRowToProto(row, getHeartbeatForAgent(req.id));
 }
 
 /** Update an existing agent. Optional fields left unset preserve the stored value. */
@@ -138,4 +158,116 @@ export async function deleteAgent(req: grackle.AgentId): Promise<grackle.Empty> 
   agentStore.deleteAgent(req.id);
   emit("agent.deleted", { agentId: req.id });
   return create(grackle.EmptySchema, {});
+}
+
+/**
+ * Upsert (or clear) the heartbeat schedule for an Agent (#1438).
+ *
+ * The schedule lives in the `schedules` table with `task_id = <agent's root>`.
+ * Fields are presence-tracked (matching {@link updateAgent}): `undefined` = keep,
+ * value = set. `cadence = ""` deletes the row (clear semantics).
+ *
+ * - Throws `Code.NotFound` if the agent does not exist.
+ * - Throws `Code.FailedPrecondition` if the agent has no root task (shouldn't
+ *   happen per #1418, but defended).
+ * - Throws `Code.InvalidArgument` if the cadence is unparseable, or if there
+ *   is no existing schedule and the request omits `cadence` (no row to edit).
+ */
+export async function setAgentHeartbeat(
+  req: grackle.SetAgentHeartbeatRequest,
+): Promise<grackle.Schedule> {
+  const agent = agentStore.getAgent(req.agentId);
+  if (!agent) {
+    throw new ConnectError(`Agent not found: ${req.agentId}`, Code.NotFound);
+  }
+  const rootTask = taskStore.getRootTaskForAgent(req.agentId);
+  if (!rootTask) {
+    throw new ConnectError(`Agent has no root task: ${req.agentId}`, Code.FailedPrecondition);
+  }
+
+  const existing = scheduleStore.getHeartbeatForTask(rootTask.id);
+
+  // Clear branch: explicit empty cadence deletes the schedule row entirely.
+  // Live sessions are left alone — only the auto-wake config goes away.
+  if (req.cadence === "") {
+    if (existing) {
+      scheduleStore.deleteSchedule(existing.id);
+    }
+    emit("agent.heartbeat.cleared", { agentId: req.agentId });
+    return create(grackle.ScheduleSchema, {});
+  }
+
+  // Resolve effective fields with presence semantics.
+  const effectiveCadence = req.cadence ?? existing?.scheduleExpression;
+  if (!effectiveCadence) {
+    throw new ConnectError(
+      "cadence is required when no heartbeat schedule exists",
+      Code.InvalidArgument,
+    );
+  }
+
+  // Validate the (possibly new) cadence string.
+  if (req.cadence !== undefined) {
+    try {
+      validateExpression(req.cadence);
+    } catch (err) {
+      throw new ConnectError(
+        err instanceof Error ? err.message : "Invalid cadence expression",
+        Code.InvalidArgument,
+      );
+    }
+  }
+
+  // Manage `nextRunAt` consistently with `setScheduleEnabled` semantics:
+  //   - pause (enabled=false) clears nextRunAt so the cron-phase ignores it
+  //   - resume (enabled=true on a previously-disabled row) recomputes nextRunAt
+  //   - cadence change on an enabled row recomputes nextRunAt
+  // Otherwise leave nextRunAt alone (advanceSchedule keeps it current).
+  if (existing) {
+    const updates: scheduleStore.ScheduleUpdate = {};
+    if (req.cadence !== undefined) {
+      updates.scheduleExpression = req.cadence;
+    }
+    if (req.rules !== undefined) {
+      updates.description = req.rules;
+    }
+    if (req.enabled !== undefined) {
+      updates.enabled = req.enabled;
+    }
+    if (req.enabled === false) {
+      updates.nextRunAt = null;
+    } else {
+      const resumingFromDisabled = req.enabled === true && !existing.enabled;
+      const cadenceChangedOnEnabledRow =
+        req.cadence !== undefined && (existing.enabled || req.enabled === true);
+      if (resumingFromDisabled || cadenceChangedOnEnabledRow) {
+        updates.nextRunAt = computeNextRunAt(effectiveCadence);
+      }
+    }
+    scheduleStore.updateSchedule(existing.id, updates);
+  } else {
+    // Brand-new heartbeat: create the row, persona inherits from the Agent.
+    // When the caller creates it already-paused (enabled=false), don't pre-arm
+    // nextRunAt — disabled schedules carry `nextRunAt = null` by convention.
+    const id = uuid();
+    const createWithEnabled = req.enabled !== false;
+    const initialNextRunAt = createWithEnabled ? computeNextRunAt(effectiveCadence) : null;
+    scheduleStore.createSchedule(
+      id,
+      agent.name, // Title — surfaces in the schedule table; mirrors the agent.
+      req.rules ?? "",
+      effectiveCadence,
+      agent.primaryPersonaId,
+      "", // workspaceId — heartbeat is system-level.
+      rootTask.id, // parentTaskId — the root task is the natural parent.
+      initialNextRunAt,
+      rootTask.id, // taskId — the heartbeat discriminator.
+    );
+    if (!createWithEnabled) {
+      scheduleStore.updateSchedule(id, { enabled: false });
+    }
+  }
+  emit("agent.heartbeat.updated", { agentId: req.agentId });
+  const final = scheduleStore.getHeartbeatForTask(rootTask.id);
+  return scheduleRowToProto(final!);
 }

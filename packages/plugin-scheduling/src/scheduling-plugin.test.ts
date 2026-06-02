@@ -12,20 +12,41 @@ vi.mock("@grackle-ai/database", () => ({
   taskStore: {
     createTask: vi.fn(),
     setTaskScheduleId: vi.fn(),
+    getTask: vi.fn(),
   },
   personaStore: {
     getPersona: vi.fn(),
+  },
+  agentStore: {
+    getAgent: vi.fn(),
+  },
+  sessionStore: {
+    getLatestSessionForTask: vi.fn(),
   },
   dispatchQueueStore: {
     enqueue: vi.fn(),
   },
 }));
 
-vi.mock("@grackle-ai/common", () => ({
-  grackle: { GrackleScheduling: { typeName: "grackle.GrackleScheduling" } },
+// The heartbeat branch (#1438) reads core helpers (reanimate, stdin, spawn,
+// env resolver). Mock the surface to avoid pulling in the real event-bus,
+// which expects more of @grackle-ai/common than we mock here.
+vi.mock("@grackle-ai/core", () => ({
+  findFirstConnectedEnvironment: vi.fn(),
+  reanimateAgent: vi.fn(),
+  publishToStdin: vi.fn(),
+  startTaskSession: vi.fn(),
 }));
 
-import { createSchedulingPlugin } from "./scheduling-plugin.js";
+vi.mock("@grackle-ai/common", () => ({
+  grackle: { GrackleScheduling: { typeName: "grackle.GrackleScheduling" } },
+  SESSION_STATUS: { PENDING: "pending", RUNNING: "running", IDLE: "idle", STOPPED: "stopped" },
+}));
+
+import { agentStore } from "@grackle-ai/database";
+import { findFirstConnectedEnvironment } from "@grackle-ai/core";
+import { createSchedulingPlugin, resolveEnvironmentForHeartbeat } from "./scheduling-plugin.js";
+import type { TaskRow } from "@grackle-ai/database";
 
 /** Create a minimal mock PluginContext for testing. */
 function createMockContext(): PluginContext {
@@ -106,5 +127,42 @@ describe("createSchedulingPlugin", () => {
   it("has no mcpTools", () => {
     const plugin = createSchedulingPlugin();
     expect(plugin.mcpTools).toBeUndefined();
+  });
+});
+
+describe("resolveEnvironmentForHeartbeat (#1438)", () => {
+  const taskWithAgent = { id: "task-A", agentId: "agent-1" } as TaskRow;
+  const taskNoAgent = { id: "task-B", agentId: "" } as TaskRow;
+
+  it("returns the agent's home environment when task.agentId is set and the agent has one", () => {
+    vi.mocked(agentStore.getAgent).mockReturnValue({
+      id: "agent-1",
+      environmentId: "env-agent",
+    } as ReturnType<typeof agentStore.getAgent>);
+    expect(resolveEnvironmentForHeartbeat(taskWithAgent)).toBe("env-agent");
+    expect(findFirstConnectedEnvironment).not.toHaveBeenCalled();
+  });
+
+  it("falls back to first-connected when the task has no agentId", () => {
+    vi.mocked(findFirstConnectedEnvironment).mockReturnValue({
+      id: "env-first",
+    } as ReturnType<typeof findFirstConnectedEnvironment>);
+    expect(resolveEnvironmentForHeartbeat(taskNoAgent)).toBe("env-first");
+  });
+
+  it("falls back to first-connected when the agent has no home environment", () => {
+    vi.mocked(agentStore.getAgent).mockReturnValue({
+      id: "agent-1",
+      environmentId: "",
+    } as ReturnType<typeof agentStore.getAgent>);
+    vi.mocked(findFirstConnectedEnvironment).mockReturnValue({
+      id: "env-fallback",
+    } as ReturnType<typeof findFirstConnectedEnvironment>);
+    expect(resolveEnvironmentForHeartbeat(taskWithAgent)).toBe("env-fallback");
+  });
+
+  it("returns undefined when no environment is connected and no agent is set", () => {
+    vi.mocked(findFirstConnectedEnvironment).mockReturnValue(undefined);
+    expect(resolveEnvironmentForHeartbeat(taskNoAgent)).toBeUndefined();
   });
 });

@@ -31,6 +31,8 @@ service GrackleOrchestration {
   rpc GetAgent(AgentId) returns (Agent);
   rpc UpdateAgent(UpdateAgentRequest) returns (Agent);
   rpc DeleteAgent(AgentId) returns (Empty);
+  // Upsert the Agent's heartbeat schedule (#1438). Empty cadence clears it.
+  rpc SetAgentHeartbeat(SetAgentHeartbeatRequest) returns (Schedule);
 
   // Components (agent-authored UI registry)
   rpc RegisterComponent(RegisterComponentRequest) returns (Component);

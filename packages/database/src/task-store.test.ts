@@ -56,6 +56,23 @@ function applySchema(): void {
       agent_id      TEXT,
       kind          TEXT NOT NULL DEFAULT 'task'
     );
+
+    CREATE TABLE IF NOT EXISTS schedules (
+      id                  TEXT PRIMARY KEY,
+      title               TEXT NOT NULL,
+      description         TEXT NOT NULL DEFAULT '',
+      schedule_expression TEXT NOT NULL,
+      persona_id          TEXT NOT NULL,
+      workspace_id        TEXT NOT NULL DEFAULT '',
+      parent_task_id      TEXT NOT NULL DEFAULT '',
+      enabled             INTEGER NOT NULL DEFAULT 1,
+      last_run_at         TEXT,
+      next_run_at         TEXT,
+      run_count           INTEGER NOT NULL DEFAULT 0,
+      task_id             TEXT REFERENCES tasks(id),
+      created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 }
 
@@ -63,6 +80,7 @@ function applySchema(): void {
 
 describe("task-store tree operations", () => {
   beforeEach(() => {
+    sqlite.exec("DROP TABLE IF EXISTS schedules");
     sqlite.exec("DROP TABLE IF EXISTS tasks");
     sqlite.exec("DROP TABLE IF EXISTS workspaces");
     applySchema();
@@ -349,6 +367,37 @@ describe("task-store tree operations", () => {
       taskStore.createTask("t1", "test-proj", "Leaf", "desc", [], "proj");
       taskStore.deleteTask("t1");
       expect(taskStore.getTask("t1")).toBeUndefined();
+    });
+
+    it("cascades through heartbeat schedules — deletes schedules where task_id matches (#1438)", () => {
+      // Enforce FK constraints to mirror production (better-sqlite3's default).
+      // Without the schedules.task_id cleanup, this DELETE would throw with a
+      // FK violation when a heartbeat targets the task being removed.
+      sqlite.pragma("foreign_keys = ON");
+      try {
+        taskStore.createTask("agent-root", "test-proj", "Agent Root", "desc", [], "proj");
+        // Insert a heartbeat schedule referencing the task.
+        sqlite
+          .prepare(
+            `INSERT INTO schedules (id, title, schedule_expression, persona_id, task_id) VALUES (?, ?, ?, ?, ?)`,
+          )
+          .run("hb-1", "HB", "30s", "p1", "agent-root");
+        const before = sqlite
+          .prepare("SELECT COUNT(*) as c FROM schedules WHERE task_id = ?")
+          .get("agent-root") as { c: number };
+        expect(before.c).toBe(1);
+
+        // Cascade: deleteTask removes the referencing schedule first, then the task.
+        const changes = taskStore.deleteTask("agent-root");
+        expect(changes).toBe(1);
+        expect(taskStore.getTask("agent-root")).toBeUndefined();
+        const after = sqlite
+          .prepare("SELECT COUNT(*) as c FROM schedules WHERE task_id = ?")
+          .get("agent-root") as { c: number };
+        expect(after.c).toBe(0);
+      } finally {
+        sqlite.pragma("foreign_keys = OFF");
+      }
     });
   });
 

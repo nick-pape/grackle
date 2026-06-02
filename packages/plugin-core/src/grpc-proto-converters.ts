@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, scheduleRowToProto } from "@grackle-ai/common";
 import { workspaceStatusToEnum, taskStatusToEnum } from "@grackle-ai/common";
 import type { EnvironmentRow, SessionRow } from "@grackle-ai/database";
 import {
@@ -9,6 +9,7 @@ import {
   agentStore,
   componentStore,
   escalationStore,
+  scheduleStore,
   workspaceEnvironmentLinkStore,
   safeParseJsonArray,
 } from "@grackle-ai/database";
@@ -155,8 +156,17 @@ export function safeParseJson<T>(value: string | undefined, fallback: T): T {
   }
 }
 
-/** Convert an agent database row to an Agent proto message (#1417, #1418). */
-export function agentRowToProto(row: agentStore.AgentRow): grackle.Agent {
+/**
+ * Convert an agent database row to an Agent proto message (#1417, #1418).
+ *
+ * The `heartbeat` field (#1438) is server-derived; the caller is responsible
+ * for resolving the agent's root task and looking up the schedule. Pass it
+ * via the second arg to embed it on the returned proto.
+ */
+export function agentRowToProto(
+  row: agentStore.AgentRow,
+  heartbeat?: scheduleStore.ScheduleRow,
+): grackle.Agent {
   return create(grackle.AgentSchema, {
     id: row.id,
     name: row.name,
@@ -165,6 +175,7 @@ export function agentRowToProto(row: agentStore.AgentRow): grackle.Agent {
     environmentId: row.environmentId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    heartbeat: heartbeat ? scheduleRowToProto(heartbeat) : undefined,
   });
 }
 

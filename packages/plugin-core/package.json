@@ -43,6 +43,7 @@
     "@grackle-ai/core": "workspace:*",
     "@grackle-ai/database": "workspace:*",
     "@grackle-ai/plugin-sdk": "workspace:*",
+    "@grackle-ai/plugin-scheduling": "workspace:*",
     "@grackle-ai/knowledge": "workspace:*",
     "@grackle-ai/prompt": "workspace:*",
     "pino": "^10.3.1",

@@ -58,6 +58,7 @@ type Agent = Message<"grackle.Agent"> & {
     createdAt: string;
     updatedAt: string;
     environmentId: string;
+    heartbeat?: Schedule;
 };
 
 // @public
@@ -1238,6 +1239,8 @@ declare namespace grackle {
         CreateAgentRequestSchema,
         UpdateAgentRequest,
         UpdateAgentRequestSchema,
+        SetAgentHeartbeatRequest,
+        SetAgentHeartbeatRequestSchema,
         Schedule,
         ScheduleSchema,
         ScheduleId,
@@ -1842,6 +1845,11 @@ const GrackleOrchestration: GenService<{
         methodKind: "unary";
         input: typeof AgentIdSchema;
         output: typeof EmptySchema;
+    };
+    setAgentHeartbeat: {
+        methodKind: "unary";
+        input: typeof SetAgentHeartbeatRequestSchema;
+        output: typeof ScheduleSchema;
     };
     registerComponent: {
         methodKind: "unary";
@@ -2762,6 +2770,28 @@ type ScheduleList = Message<"grackle.ScheduleList"> & {
 const ScheduleListSchema: GenMessage<ScheduleList>;
 
 // @public
+export interface ScheduleRowShape {
+    createdAt: string;
+    description: string;
+    enabled: boolean;
+    id: string;
+    // (undocumented)
+    lastRunAt: string | null;
+    // (undocumented)
+    nextRunAt: string | null;
+    parentTaskId: string;
+    personaId: string;
+    runCount: number;
+    scheduleExpression: string;
+    title: string;
+    updatedAt: string;
+    workspaceId: string;
+}
+
+// @public
+export function scheduleRowToProto(row: ScheduleRowShape): Schedule;
+
+// @public
 const ScheduleSchema: GenMessage<Schedule>;
 
 // @public
@@ -3058,6 +3088,17 @@ const SessionSchema: GenMessage<Session>;
 
 // @public
 export type SessionStatus = (typeof SESSION_STATUS)[keyof typeof SESSION_STATUS];
+
+// @public
+type SetAgentHeartbeatRequest = Message<"grackle.SetAgentHeartbeatRequest"> & {
+    agentId: string;
+    cadence?: string;
+    rules?: string;
+    enabled?: boolean;
+};
+
+// @public
+const SetAgentHeartbeatRequestSchema: GenMessage<SetAgentHeartbeatRequest>;
 
 // @public
 type SetComponentPromotionRequest = Message<"grackle.SetComponentPromotionRequest"> & {

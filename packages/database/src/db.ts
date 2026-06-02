@@ -445,6 +445,31 @@ const MIGRATIONS: Migration[] = [
       conn.exec("CREATE INDEX IF NOT EXISTS idx_agents_environment_id ON agents(environment_id)");
     },
   },
+  {
+    version: 22,
+    name: "schedule-task-heartbeat",
+    up: (conn) => {
+      // Agent heartbeat (#1438, epic #1412): adds `schedules.task_id` as a
+      // nullable FK to tasks. A schedule with task_id set is a heartbeat —
+      // each tick reanimates that task's latest session and pipes
+      // schedule.description in as stdin. A schedule with task_id NULL is
+      // today's fresh-task-spawn schedule (behavior unchanged). The
+      // discriminator is the target, not a `kind` column — this generalizes
+      // heartbeat semantics to any task.
+      const scheduleCols = conn.prepare("PRAGMA table_info(schedules)").all() as Array<{
+        name: string;
+      }>;
+      if (!scheduleCols.some((c) => c.name === "task_id")) {
+        // Nullable FK, no ON DELETE CASCADE — app-layer cleanup in deleteTask.
+        conn.exec("ALTER TABLE schedules ADD COLUMN task_id TEXT REFERENCES tasks(id)");
+      }
+      // Partial unique: one heartbeat per task. Multiple NULL task_ids are
+      // allowed (today's fresh-spawn schedules are unconstrained).
+      conn.exec(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_schedules_heartbeat_per_task ON schedules(task_id) WHERE task_id IS NOT NULL",
+      );
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
@@ -798,6 +823,11 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       created_at          TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    -- Note: schedules.task_id and uq_schedules_heartbeat_per_task are added
+    -- by migration v22 (#1438), not the baseline. Fresh installs run the
+    -- migration loop after the baseline so the column lands either way; the
+    -- "v21-shape DB" migration realism test relies on the baseline NOT
+    -- pre-creating them.
 
     CREATE TABLE IF NOT EXISTS workspace_environment_links (
       workspace_id    TEXT NOT NULL REFERENCES workspaces(id),

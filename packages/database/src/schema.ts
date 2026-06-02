@@ -336,6 +336,9 @@ export const schedules = sqliteTable("schedules", {
   lastRunAt: text("last_run_at"),
   nextRunAt: text("next_run_at"),
   runCount: integer("run_count").notNull().default(0),
+  // Heartbeat target (#1438). NULL = today's fresh-task-spawn schedule;
+  // non-NULL = heartbeat that reanimates `task_id`'s latest session each tick.
+  taskId: text("task_id").references(() => tasks.id),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

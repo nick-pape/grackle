@@ -1,0 +1,36 @@
+{
+  "changes": [
+    {
+      "packageName": "@grackle-ai/cli",
+      "comment": "Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).",
+      "type": "minor"
+    },
+    {
+      "packageName": "@grackle-ai/common",
+      "comment": "Add `Schedule heartbeat = 8` derived field to the `Agent` message, `SetAgentHeartbeatRequest`, and `SetAgentHeartbeat` RPC on `GrackleOrchestration` (#1438).",
+      "type": "minor"
+    },
+    {
+      "packageName": "@grackle-ai/core",
+      "comment": "Add `agent.heartbeat.updated` and `agent.heartbeat.cleared` event types to the domain event bus (#1438).",
+      "type": "minor"
+    },
+    {
+      "packageName": "@grackle-ai/plugin-sdk",
+      "comment": "Add `agent.heartbeat.updated` and `agent.heartbeat.cleared` event types to the public `GrackleEventType` union (#1438).",
+      "type": "minor"
+    },
+    {
+      "packageName": "@grackle-ai/plugin-scheduling",
+      "comment": "Cron-phase branches on `schedule.task_id`: presence triggers the new heartbeat path (reanimate the target task's latest terminal session and pipe `description` as stdin, with fresh-spawn fallback via `rawPrompt`); absence preserves today's fresh-task-spawn behavior (#1438).",
+      "type": "minor"
+    },
+    {
+      "packageName": "@grackle-ai/plugin-core",
+      "comment": "Add `setAgentHeartbeat` RPC handler; `getAgent` / `listAgents` populate the derived `Agent.heartbeat` field by joining `schedules` on the agent's root task (#1438).",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

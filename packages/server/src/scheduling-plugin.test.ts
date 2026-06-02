@@ -11,13 +11,25 @@ vi.mock("@grackle-ai/database", () => ({
     advanceSchedule: vi.fn(),
     setScheduleEnabled: vi.fn(),
   },
-  taskStore: { createTask: vi.fn(), setTaskScheduleId: vi.fn() },
+  taskStore: { createTask: vi.fn(), setTaskScheduleId: vi.fn(), getTask: vi.fn() },
   personaStore: { getPersona: vi.fn() },
+  agentStore: { getAgent: vi.fn() },
+  sessionStore: { getLatestSessionForTask: vi.fn() },
   dispatchQueueStore: { enqueue: vi.fn() },
+}));
+
+// Heartbeat branch (#1438) pulls in core helpers. Mock the surface to avoid
+// loading the real event-bus, which imports SequencedLog from common.
+vi.mock("@grackle-ai/core", () => ({
+  findFirstConnectedEnvironment: vi.fn(),
+  reanimateAgent: vi.fn(),
+  publishToStdin: vi.fn(),
+  startTaskSession: vi.fn(),
 }));
 
 vi.mock("@grackle-ai/common", () => ({
   grackle: { GrackleScheduling: { typeName: "grackle.GrackleScheduling" } },
+  SESSION_STATUS: { PENDING: "pending", RUNNING: "running", IDLE: "idle", STOPPED: "stopped" },
 }));
 
 import { createSchedulingPlugin } from "@grackle-ai/plugin-scheduling";
