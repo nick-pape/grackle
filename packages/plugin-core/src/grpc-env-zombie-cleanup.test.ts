@@ -314,4 +314,12 @@ describe("gRPC destroyEnvironment session cleanup (#1485)", () => {
     expect(fakeAdapter.destroy).toHaveBeenCalledWith("test-env", expect.anything());
     expect(envRegistry.updateEnvironmentStatus).toHaveBeenCalledWith("test-env", "disconnected");
   });
+
+  it("throws NotFound when the environment does not exist and does not touch sessions", async () => {
+    vi.mocked(envRegistry.getEnvironment).mockReturnValue(undefined);
+
+    await expect(handlers.destroyEnvironment({ id: "missing" })).rejects.toThrow(/not found/i);
+    expect(sessionStore.getAllActiveForEnv).not.toHaveBeenCalled();
+    expect(sessionStore.updateSession).not.toHaveBeenCalled();
+  });
 });
