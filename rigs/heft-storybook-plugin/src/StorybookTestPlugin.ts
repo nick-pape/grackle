@@ -1,7 +1,7 @@
 import { execFileSync, spawn, type ChildProcess } from "child_process";
 import * as path from "path";
 import * as net from "net";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
 import MCR = require("monocart-coverage-reports");
 import type {
   HeftConfiguration,
@@ -124,14 +124,43 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
         isWindows ? "test-storybook.cmd" : "test-storybook",
       );
 
+      // test-storybook internally calls getProjectRoot() (from storybook/internal/common)
+      // which walks up from cwd to find the git root. In a worktree this resolves to the
+      // MAIN repo root (not the worktree), causing two problems:
+      //   1. jest-haste-map scans the entire main repo including .claude/worktrees/*
+      //   2. STORYBOOK_STORIES_PATTERN paths resolve to the main repo, missing worktree files
+      // Fix both by: pinning TEST_ROOT, overriding rootDir/roots in a jest config, and
+      // pre-setting STORYBOOK_STORIES_PATTERN with correct paths. All paths use forward
+      // slashes — jest normalizes file paths to `/` but micromatch treats `\` as escape.
+      const fwd: (p: string) => string = (p) => p.replace(/\\/g, "/");
+      const storiesPattern: string = fwd(
+        path.join(buildFolder, "src", "**", "*.stories.@(ts|tsx)"),
+      );
       const suppressWarningsEnv: NodeJS.ProcessEnv = {
         ...process.env,
         STORYBOOK_DISABLE_TELEMETRY: "1",
         CI: "true",
         NODE_NO_WARNINGS: "1",
+        TEST_ROOT: fwd(buildFolder),
+        STORYBOOK_STORIES_PATTERN: storiesPattern,
       };
 
       const port: number = await findFreePort();
+
+      const jestConfigPath: string = path.join(buildFolder, "test-runner-jest.config.js");
+      const fwdBuildFolder: string = fwd(buildFolder);
+      const fwdSrcFolder: string = fwd(path.join(buildFolder, "src"));
+      const jestConfigContent: string = [
+        `const { getJestConfig } = require('@storybook/test-runner');`,
+        `const cfg = getJestConfig();`,
+        `cfg.testMatch = (cfg.testMatch || []).map(p => p.replace(/\\\\/g, '/'));`,
+        `module.exports = {`,
+        `  ...cfg,`,
+        `  rootDir: ${JSON.stringify(fwdBuildFolder)},`,
+        `  roots: [${JSON.stringify(fwdSrcFolder)}],`,
+        `};`,
+      ].join("\n");
+      writeFileSync(jestConfigPath, jestConfigContent);
       session.logger.terminal.writeLine(`Starting Storybook static server on port ${port}...`);
 
       const server: ChildProcess = spawn(
@@ -190,6 +219,11 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
         }
       } finally {
         server.kill();
+        try {
+          unlinkSync(jestConfigPath);
+        } catch {
+          // Best-effort cleanup
+        }
       }
     });
   }
