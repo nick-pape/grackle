@@ -42,7 +42,7 @@ export function registerNotifyCommands(program: Command): void {
       const res = await orchestration.listEscalations({
         workspaceId: opts.workspace || "",
         status: opts.status || "",
-        limit: opts.limit || 20,
+        limit: opts.limit ?? 20,
       });
       if (res.escalations.length === 0) {
         console.log("No escalations.");

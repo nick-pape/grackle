@@ -184,6 +184,12 @@ describe("escalation-store", () => {
     expect(row!.urgency).toBe("normal");
   });
 
+  it("listEscalations with limit=0 returns no rows", () => {
+    escalationStore.createEscalation("esc1", "ws1", "t1", "X", "", "auto", "normal", "");
+    const results = escalationStore.listEscalations("ws1", undefined, 0);
+    expect(results).toHaveLength(0);
+  });
+
   it("listEscalations respects limit", () => {
     for (let i = 0; i < 5; i++) {
       escalationStore.createEscalation(

@@ -68,7 +68,7 @@ export async function searchKnowledge(
 
   try {
     const results = await knowledgeSearch(req.query, embedder, {
-      limit: req.limit || 10,
+      limit: req.limit ?? 10,
       workspaceId: req.workspaceId || undefined,
     });
 
@@ -115,7 +115,7 @@ export async function expandKnowledgeNode(
 
   try {
     const result = await expandNode(req.id, {
-      depth: req.depth || 1,
+      depth: req.depth ?? 1,
       edgeTypes: req.edgeTypes.length > 0 ? (req.edgeTypes as EdgeType[]) : undefined,
     });
 
@@ -135,7 +135,7 @@ export async function listRecentKnowledgeNodes(
   requireKnowledgeReady();
 
   try {
-    const result = await listRecentNodes(req.limit || 20, req.workspaceId || undefined);
+    const result = await listRecentNodes(req.limit ?? 20, req.workspaceId || undefined);
 
     return create(grackle.ListRecentKnowledgeNodesResponseSchema, {
       nodes: result.nodes.map(knowledgeNodeToProto),
