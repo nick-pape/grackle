@@ -42,7 +42,7 @@ export interface CronPhaseDeps {
     getTask: (id: string) => TaskRow | undefined;
     logger: Pick<Logger, "debug" | "info" | "warn" | "error">;
     publishToStdin: (sessionId: string, text: string) => void;
-    reanimateAgent: (sessionId: string) => Promise<void>;
+    reanimateAgent: (sessionId: string) => unknown;
     resolveEnvironment: (task: TaskRow) => string | undefined;
     setScheduleEnabled: (id: string, enabled: boolean, nextRunAt: string | null) => void;
     setTaskScheduleId: (taskId: string, scheduleId: string) => void;

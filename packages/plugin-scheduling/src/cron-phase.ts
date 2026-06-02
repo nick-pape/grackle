@@ -66,8 +66,14 @@ export interface CronPhaseDeps {
   getTask: (id: string) => TaskRow | undefined;
   /** Latest session for a task (skip-on-overrun + reanimate target). */
   getLatestSessionForTask: (taskId: string) => SessionRow | undefined;
-  /** Reanimate an existing session by id. Throws on failure (env offline, no runtime id, etc). */
-  reanimateAgent: (sessionId: string) => Promise<void>;
+  /**
+   * Reanimate an existing session by id. Throws on failure (env offline, no
+   * runtime id, etc). Return value is ignored — typed `unknown` so the real
+   * sync `reanimateAgent` from `@grackle-ai/core` (which returns `SessionRow`)
+   * can be passed directly without a Promise-wrapping shim. The cron-phase
+   * awaits the call so it works for both sync and async implementations.
+   */
+  reanimateAgent: (sessionId: string) => unknown;
   /** Deliver raw bytes as the next user message into a live session. */
   publishToStdin: (sessionId: string, text: string) => void;
   /** Start a new session for a task (fresh-spawn fallback). Returns error string on failure. */

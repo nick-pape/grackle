@@ -16,6 +16,7 @@ import {
   agentStore,
   sessionStore,
   dispatchQueueStore,
+  type TaskRow,
 } from "@grackle-ai/database";
 import {
   findFirstConnectedEnvironment,
@@ -25,6 +26,27 @@ import {
 } from "@grackle-ai/core";
 import { createScheduleHandlers } from "./schedule-handlers.js";
 import { createCronPhase } from "./cron-phase.js";
+
+/**
+ * Resolve the environment for a heartbeat fresh-spawn fallback (#1438).
+ *
+ * Heartbeats target Agent root tasks; the natural environment is the Agent's
+ * home environment (#1418). Falls back to the first connected environment
+ * when the agent has no home env (or no agent at all — generalized for
+ * future task-heartbeat callers).
+ *
+ * Exported so it can be unit tested directly (the cron-phase deps pass it as
+ * `resolveEnvironment`, without a wrapper arrow).
+ */
+export function resolveEnvironmentForHeartbeat(task: TaskRow): string | undefined {
+  if (task.agentId) {
+    const agent = agentStore.getAgent(task.agentId);
+    if (agent?.environmentId) {
+      return agent.environmentId;
+    }
+  }
+  return findFirstConnectedEnvironment()?.id;
+}
 
 /**
  * Create the scheduling plugin that contributes schedule CRUD and cron phase.
@@ -53,26 +75,15 @@ export function createSchedulingPlugin(): GracklePlugin {
         emit: ctx.emit,
         getPersona: personaStore.getPersona,
         setScheduleEnabled: scheduleStore.setScheduleEnabled,
-        // Heartbeat branch wiring (#1438)
+        // Heartbeat branch wiring (#1438). `reanimateAgent` is sync (returns
+        // SessionRow); the CronPhaseDep type accepts `unknown` so it can be
+        // passed directly without an async wrapper.
         getTask: taskStore.getTask,
         getLatestSessionForTask: sessionStore.getLatestSessionForTask,
-        reanimateAgent: async (sessionId: string) => {
-          await reanimateAgent(sessionId);
-        },
+        reanimateAgent,
         publishToStdin,
         startTaskSession,
-        resolveEnvironment: (task) => {
-          // Heartbeats target Agent root tasks; the natural environment is the
-          // Agent's home environment (#1418). Fall back to first-connected if
-          // the agent or env can't be resolved.
-          if (task.agentId) {
-            const agent = agentStore.getAgent(task.agentId);
-            if (agent?.environmentId) {
-              return agent.environmentId;
-            }
-          }
-          return findFirstConnectedEnvironment()?.id;
-        },
+        resolveEnvironment: resolveEnvironmentForHeartbeat,
         logger: ctx.logger,
       }),
     ],

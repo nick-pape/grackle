@@ -43,7 +43,10 @@ vi.mock("@grackle-ai/common", () => ({
   SESSION_STATUS: { PENDING: "pending", RUNNING: "running", IDLE: "idle", STOPPED: "stopped" },
 }));
 
-import { createSchedulingPlugin } from "./scheduling-plugin.js";
+import { agentStore } from "@grackle-ai/database";
+import { findFirstConnectedEnvironment } from "@grackle-ai/core";
+import { createSchedulingPlugin, resolveEnvironmentForHeartbeat } from "./scheduling-plugin.js";
+import type { TaskRow } from "@grackle-ai/database";
 
 /** Create a minimal mock PluginContext for testing. */
 function createMockContext(): PluginContext {
@@ -124,5 +127,42 @@ describe("createSchedulingPlugin", () => {
   it("has no mcpTools", () => {
     const plugin = createSchedulingPlugin();
     expect(plugin.mcpTools).toBeUndefined();
+  });
+});
+
+describe("resolveEnvironmentForHeartbeat (#1438)", () => {
+  const taskWithAgent = { id: "task-A", agentId: "agent-1" } as TaskRow;
+  const taskNoAgent = { id: "task-B", agentId: "" } as TaskRow;
+
+  it("returns the agent's home environment when task.agentId is set and the agent has one", () => {
+    vi.mocked(agentStore.getAgent).mockReturnValue({
+      id: "agent-1",
+      environmentId: "env-agent",
+    } as ReturnType<typeof agentStore.getAgent>);
+    expect(resolveEnvironmentForHeartbeat(taskWithAgent)).toBe("env-agent");
+    expect(findFirstConnectedEnvironment).not.toHaveBeenCalled();
+  });
+
+  it("falls back to first-connected when the task has no agentId", () => {
+    vi.mocked(findFirstConnectedEnvironment).mockReturnValue({
+      id: "env-first",
+    } as ReturnType<typeof findFirstConnectedEnvironment>);
+    expect(resolveEnvironmentForHeartbeat(taskNoAgent)).toBe("env-first");
+  });
+
+  it("falls back to first-connected when the agent has no home environment", () => {
+    vi.mocked(agentStore.getAgent).mockReturnValue({
+      id: "agent-1",
+      environmentId: "",
+    } as ReturnType<typeof agentStore.getAgent>);
+    vi.mocked(findFirstConnectedEnvironment).mockReturnValue({
+      id: "env-fallback",
+    } as ReturnType<typeof findFirstConnectedEnvironment>);
+    expect(resolveEnvironmentForHeartbeat(taskWithAgent)).toBe("env-fallback");
+  });
+
+  it("returns undefined when no environment is connected and no agent is set", () => {
+    vi.mocked(findFirstConnectedEnvironment).mockReturnValue(undefined);
+    expect(resolveEnvironmentForHeartbeat(taskNoAgent)).toBeUndefined();
   });
 });
