@@ -3,6 +3,7 @@ import { createGrackleClients } from "../client.js";
 import Table from "cli-table3";
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline";
+import { readStdinAll } from "./stdin.js";
 
 /** Register the `token set` and `token list` subcommands on the CLI program. */
 export function registerTokenCommands(program: Command): void {
@@ -32,8 +33,7 @@ export function registerTokenCommands(program: Command): void {
             console.error(`Environment variable ${opts.env} is not set`);
             process.exit(1);
           }
-        } else {
-          // Interactive
+        } else if (process.stdin.isTTY) {
           value = await new Promise<string>((resolve) => {
             const rl = createInterface({ input: process.stdin, output: process.stdout });
             rl.question(`Enter value for ${name}: `, (answer) => {
@@ -41,6 +41,19 @@ export function registerTokenCommands(program: Command): void {
               resolve(answer);
             });
           });
+        } else {
+          // Non-TTY (pipe, redirect, CI): read the value from stdin.
+          // Standard convention — matches `gh auth login --with-token`,
+          // `kubectl create secret --from-file=-`, etc.
+          value = await readStdinAll(process.stdin);
+          if (!value) {
+            console.error(
+              `Error: no value provided on stdin for token ${name}. ` +
+                `Pipe the value in (e.g. \`echo "$SECRET" | grackle token set ${name}\`), ` +
+                `or use --file/--env.`,
+            );
+            process.exit(1);
+          }
         }
 
         const validTokenTypes = ["env_var", "file"];
