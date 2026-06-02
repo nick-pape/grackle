@@ -48,7 +48,13 @@ import { deliverPendingEscalations } from "@grackle-ai/core";
 import { createEventStream } from "@grackle-ai/core";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, toDialableHost, killSessionAndCleanup } from "./grpc-shared.js";
-import { resolveSpawnSelection, buildCreateSessionParams } from "./spawn-request.js";
+import { buildCreateSessionParams } from "./spawn-request.js";
+import {
+  resolveSpawnSpec,
+  personaToLayer,
+  spawnRequestToLayer,
+  hostDefaults,
+} from "@grackle-ai/core";
 import { personaMcpServersToJson } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
 import { resolveBootstrapRuntime } from "@grackle-ai/core";
@@ -159,10 +165,21 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
   const sessionId = uuid();
   const cfg = req.config;
   const parentSessionId = cfg?.parentSessionId ?? "";
-  const { runtime, model } = resolveSpawnSelection(req.provider, req.model?.id ?? "", {
-    runtime: resolved.runtime,
-    model: resolved.model,
+
+  // Unified spawn-config cascade (#1427): host → persona → spawnOverride. No
+  // workspace/task/agent layers here — direct spawnAgent has no task context.
+  const spec = resolveSpawnSpec({
+    host: hostDefaults(),
+    persona: personaToLayer(resolved),
+    spawnOverride: spawnRequestToLayer({
+      provider: req.provider,
+      modelId: req.model?.id,
+      configMaxTurns: cfg?.maxTurns,
+      configWorkingDirectory: cfg?.workingDirectory,
+      configUseWorktrees: cfg?.useWorktrees,
+    }),
   });
+  const { runtime, model, maxTurns } = spec;
 
   // Supply credentials on demand for this runtime, just before spawn (AHP HR6).
   // For local envs, skip file tokens — the PowerLine is on the same machine.
@@ -174,7 +191,6 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     env.adapterType === "local" ? { excludeFileTokens: true } : undefined,
   );
 
-  const maxTurns = cfg?.maxTurns || resolved.maxTurns;
   const logPath = join(grackleHome, LOGS_DIR, sessionId);
 
   const builderPrompt = new SystemPromptBuilder({
@@ -242,12 +258,10 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     loadOrCreateApiKey(grackleHome),
   );
 
-  const workingDirectory = cfg?.branch
-    ? (cfg?.workingDirectory ?? "").trim() ||
-      process.env.GRACKLE_WORKING_DIRECTORY ||
-      process.env.GRACKLE_WORKTREE_BASE ||
-      "/workspace"
-    : "";
+  // `workingDirectory` is only meaningful when the session pins to a branch
+  // — the workflow rule "no branch → no working dir" stays at the call site;
+  // the cascade itself is handled by resolveSpawnSpec above.
+  const workingDirectory = cfg?.branch ? spec.workingDirectory : "";
   const createParams = buildCreateSessionParams({
     sessionId,
     runtime,

@@ -1,14 +1,12 @@
 /**
- * Unit tests for the createSession (AHP HR4+5) spawn-shape helpers:
- * runtime/model override resolution and the config→PowerLine wire mapping
- * (task_id plumbing + optional use_worktrees passthrough).
+ * Unit tests for the createSession (AHP HR4+5) config→PowerLine wire mapping
+ * (task_id plumbing + optional use_worktrees passthrough). Cascade resolution
+ * tests live in `resolve-spawn-spec.test.ts` (#1427).
  */
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import { resolveSpawnSelection, buildCreateSessionParams } from "./spawn-request.js";
-
-const persona = { runtime: "claude-code", model: "sonnet" };
+import { buildCreateSessionParams } from "./spawn-request.js";
 
 const serverInputs = {
   sessionId: "sess-1",
@@ -24,36 +22,6 @@ const serverInputs = {
   workingDirectory: "",
   workspaceId: "",
 };
-
-describe("resolveSpawnSelection", () => {
-  it("uses an explicit provider over the persona runtime", () => {
-    expect(resolveSpawnSelection("copilot", "", persona)).toEqual({
-      runtime: "copilot",
-      model: "sonnet",
-    });
-  });
-
-  it("uses an explicit model id over the persona model", () => {
-    expect(resolveSpawnSelection("", "opus", persona)).toEqual({
-      runtime: "claude-code",
-      model: "opus",
-    });
-  });
-
-  it("overrides both when both are provided", () => {
-    expect(resolveSpawnSelection("codex", "o3", persona)).toEqual({
-      runtime: "codex",
-      model: "o3",
-    });
-  });
-
-  it("falls back to the persona when neither is provided", () => {
-    expect(resolveSpawnSelection("", "", persona)).toEqual({
-      runtime: "claude-code",
-      model: "sonnet",
-    });
-  });
-});
 
 describe("buildCreateSessionParams", () => {
   it("plumbs task_id from config (no longer hardcoded empty)", () => {

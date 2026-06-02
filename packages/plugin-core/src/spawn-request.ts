@@ -1,29 +1,15 @@
 /**
- * Pure helpers for the createSession (AHP HR4+5) spawn shape: resolving the
- * runtime/model selection and mapping the reshaped `grackle.SpawnRequest`
- * `config` onto the host-transport `CreateSessionParams`. Kept free of I/O
- * (and of the core/database import graph) so the wire mapping is
- * unit-testable.
+ * Pure helper for mapping the reshaped `grackle.SpawnRequest` `config` onto
+ * the host-transport `CreateSessionParams`. Kept free of I/O (and of the
+ * core/database import graph) so the wire mapping is unit-testable.
+ *
+ * Runtime/model/maxTurns/workingDirectory/useWorktrees cascade resolution
+ * lives in `@grackle-ai/core`'s `resolveSpawnSpec` (#1427).
  *
  * @module
  */
 import { grackle } from "@grackle-ai/common";
 import type { CreateSessionParams } from "@grackle-ai/adapter-sdk";
-
-/**
- * Resolve the runtime + model for a spawn, honoring explicit request overrides
- * (AHP createSession `provider`/`model`) over the resolved persona's defaults.
- */
-export function resolveSpawnSelection(
-  provider: string,
-  modelId: string,
-  persona: { runtime: string; model: string },
-): { runtime: string; model: string } {
-  return {
-    runtime: provider || persona.runtime,
-    model: modelId || persona.model,
-  };
-}
 
 /** Server-resolved values for a spawn that don't come from the client `config`. */
 export interface CreateSessionInputs {

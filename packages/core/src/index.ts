@@ -129,3 +129,26 @@ export {
 export { toPersonaResolveInput, buildOrchestratorContextInput } from "./persona-mapper.js";
 export { importAccountsFromGhCli } from "./github-account-import.js";
 export type { ImportAccountsResult } from "./github-account-import.js";
+export {
+  resolveSpawnSpec,
+  mergeToolConfig,
+  mergeMcpServers,
+  personaToLayer,
+  workspaceToLayer,
+  taskToLayer,
+  agentToLayer,
+  spawnRequestToLayer,
+  hostDefaults,
+} from "./resolve-spawn-spec.js";
+export type {
+  SpawnConfigLayer,
+  ResolvedSpawnSpec,
+  ResolveSpawnSpecInput,
+  ToolConfigSpec,
+  McpServerSpec,
+  PersonaConfigSource,
+  WorkspaceConfigSource,
+  TaskConfigSource,
+  AgentConfigSource,
+  SpawnRequestSource,
+} from "./resolve-spawn-spec.js";
