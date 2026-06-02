@@ -111,8 +111,8 @@ export const TABS: AppTab[] = [
     icon: <User size={ICON_LG} />,
     route: PERSONAS_URL,
     testId: "sidebar-tab-personas",
-    order: 1.5,
-    group: "workbench",
+    order: 6.2,
+    group: "fleet",
   },
   {
     view: "chat",
@@ -164,18 +164,14 @@ export const TABS: AppTab[] = [
     order: 6.5,
     group: "fleet",
   },
-  // `global` infrastructure tabs are pinned to the right edge (`align: "end"`)
-  // so they read as a cluster separate from the workbench views. Environments
-  // moved here from the workbench row as part of the context-axis reframing
-  // (#1414); the page itself is unchanged and still fully reachable.
   {
     view: "environments",
     label: "Environments",
     icon: <Monitor size={ICON_LG} />,
     route: ENVIRONMENTS_URL,
     testId: "sidebar-tab-environments",
-    align: "end",
-    group: "global",
+    order: 6.4,
+    group: "fleet",
   },
   {
     view: "settings",
@@ -208,7 +204,12 @@ export function getActiveView(pathname: string): AppView {
   if (pathname.startsWith("/chat")) {
     return "chat";
   }
-  if (pathname.startsWith("/workspaces") || pathname.startsWith("/environments")) {
+  if (pathname.startsWith("/workspaces") || /^\/environments\/[^/]+\/workspaces\//.test(pathname)) {
+    // Workspace routes (including environment-scoped workspaces) are workbench-level,
+    // not fleet. Return "tasks" so AppNav stays visible (#1419).
+    return "tasks";
+  }
+  if (pathname.startsWith("/environments")) {
     return "environments";
   }
   if (pathname.startsWith(KNOWLEDGE_URL)) {

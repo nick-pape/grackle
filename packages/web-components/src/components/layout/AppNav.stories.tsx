@@ -268,15 +268,15 @@ export const AriaAttributes: Story = {
 };
 
 /**
- * Default canonical TABS: the `global` cluster (Environments + Settings) is
- * pinned to the right edge, after the workbench/fleet views (#1414).
+ * Default canonical TABS: Settings (the sole remaining `global` tab) is
+ * pinned to the right edge after the workbench/fleet views (#1414, #1419).
+ * Environments moved to fleet in #1419.
  */
 export const GlobalClusterEndAligned: Story = {
   play: async ({ canvas }) => {
     const tabs = canvas.getAllByRole("tab");
-    // Settings is rightmost; Environments sits immediately before it.
+    // Settings is rightmost (sole global/end-aligned tab after #1419).
     await expect(tabs[tabs.length - 1]).toHaveAccessibleName(/Settings/);
-    await expect(tabs[tabs.length - 2]).toHaveAccessibleName(/Environments/);
     // Workbench views lead the row.
     await expect(tabs[0]).toHaveAccessibleName(/Dashboard/);
   },
@@ -285,34 +285,38 @@ export const GlobalClusterEndAligned: Story = {
 /**
  * The `groups` filter restricts the bar to chosen axes — the lever #1415 uses to
  * pull `fleet`/`global` tabs out of the view bar. Here only workbench + fleet
- * render, so Environments and Settings (both `global`) are absent.
+ * render, so Settings (`global`) is absent. Environments and Personas are fleet
+ * since #1419, so they appear here.
  */
 export const WorkbenchAndFleetOnly: Story = {
   args: { groups: ["workbench", "fleet"] },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
-    // Both fleet surfaces (Coordination + Schedules) render at this altitude.
+    // Fleet surfaces: Coordination, Personas, Environments, Schedules (#1419).
     await expect(canvas.getByRole("tab", { name: /Coordination/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Personas/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Environments/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Schedules/ })).toBeInTheDocument();
-    await expect(canvas.queryByRole("tab", { name: /Environments/ })).not.toBeInTheDocument();
+    // Settings remains global, so absent here.
     await expect(canvas.queryByRole("tab", { name: /Settings/ })).not.toBeInTheDocument();
   },
 };
 
 /**
- * The composition the app actually ships (#1415): the view bar renders only
- * `workbench` + `global` tabs, so every `fleet` tab is pulled out — Coordination
- * and Schedules now live at the fleet altitude in the context rail. Guards that
- * the new Schedules tab (#1416) participates in that move rather than being
- * stranded in the view bar.
+ * The composition the app actually ships (#1415, #1419): the view bar renders
+ * only `workbench` + `global` tabs, so all `fleet` tabs are pulled out —
+ * Coordination, Personas, Environments, and Schedules now live at the fleet
+ * altitude in the context rail.
  */
 export const WorkbenchAndGlobalOnly: Story = {
   args: { groups: ["workbench", "global"] },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
-    await expect(canvas.getByRole("tab", { name: /Environments/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Settings/ })).toBeInTheDocument();
+    // All fleet tabs absent from the workbench+global bar.
     await expect(canvas.queryByRole("tab", { name: /Coordination/ })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /Personas/ })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tab", { name: /Environments/ })).not.toBeInTheDocument();
     await expect(canvas.queryByRole("tab", { name: /Schedules/ })).not.toBeInTheDocument();
   },
 };
