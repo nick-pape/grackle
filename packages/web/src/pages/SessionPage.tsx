@@ -139,6 +139,9 @@ export function SessionPage(): JSX.Element {
   }
 
   const isActive = session?.status === "running" || session?.status === "idle";
+  // Suspended sessions are non-terminal and reanimatable: show ChatInput so
+  // the user can see the disconnected-env hint + reconnect button (#1485 / #400).
+  const showChatInput = isActive || session?.status === "suspended";
 
   return (
     <div className={styles.panelContainer}>
@@ -171,7 +174,7 @@ export function SessionPage(): JSX.Element {
             : undefined
         }
       />
-      {isActive && (
+      {showChatInput && (
         <ChatInput
           mode="send"
           sessionId={sessionId}
