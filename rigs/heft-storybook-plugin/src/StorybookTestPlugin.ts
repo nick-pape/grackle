@@ -141,9 +141,11 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
         STORYBOOK_DISABLE_TELEMETRY: "1",
         CI: "true",
         NODE_NO_WARNINGS: "1",
-        TEST_ROOT: buildFolder,
+        TEST_ROOT: fwd(buildFolder),
         STORYBOOK_STORIES_PATTERN: storiesPattern,
       };
+
+      const port: number = await findFreePort();
 
       const jestConfigPath: string = path.join(buildFolder, "test-runner-jest.config.js");
       const fwdBuildFolder: string = fwd(buildFolder);
@@ -159,8 +161,6 @@ class StorybookTestPlugin implements IHeftTaskPlugin {
         `};`,
       ].join("\n");
       writeFileSync(jestConfigPath, jestConfigContent);
-
-      const port: number = await findFreePort();
       session.logger.terminal.writeLine(`Starting Storybook static server on port ${port}...`);
 
       const server: ChildProcess = spawn(
