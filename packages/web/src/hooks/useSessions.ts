@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   MAX_EVENTS,
   isSessionEvent,
@@ -333,13 +333,16 @@ export function useSessions(): UseSessionsResult {
     }
   }, []);
 
-  const domainHook: DomainHook = {
-    onConnect: () => loadSessions(),
-    onDisconnect: () => {
-      clearEvents();
-    },
-    handleEvent: () => false, // Session events are routed separately via handleSessionEvent
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: () => loadSessions(),
+      onDisconnect: () => {
+        clearEvents();
+      },
+      handleEvent: () => false, // Session events are routed separately via handleSessionEvent
+    }),
+    [loadSessions, clearEvents],
+  );
 
   return {
     sessions,

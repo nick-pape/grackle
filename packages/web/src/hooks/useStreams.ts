@@ -8,7 +8,7 @@
  * @module
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import type {
   StreamData,
   StreamMessageData,
@@ -136,17 +136,20 @@ export function useStreams(): UseStreamsResult {
     [loadStreams],
   );
 
-  const domainHook: DomainHook = {
-    onConnect: loadStreams,
-    onDisconnect: () => {
-      epochRef.current += 1;
-      setStreams([]);
-      setLiveMessages({});
-      setStreamsLoadedOnce(false);
-      setStreamsLoadError(false);
-    },
-    handleEvent,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      onConnect: loadStreams,
+      onDisconnect: () => {
+        epochRef.current += 1;
+        setStreams([]);
+        setLiveMessages({});
+        setStreamsLoadedOnce(false);
+        setStreamsLoadError(false);
+      },
+      handleEvent,
+    }),
+    [loadStreams, handleEvent],
+  );
 
   return {
     streams,

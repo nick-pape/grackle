@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { DockerContainer, UseDockerContainersResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
@@ -39,13 +39,16 @@ export function useDockerContainers(): UseDockerContainersResult {
     }
   }, []);
 
-  const domainHook: DomainHook = {
-    // Container discovery is lazy (loaded when the user opens the picker), so
-    // there is nothing to refresh on connect.
-    onConnect: async () => {},
-    onDisconnect: () => {},
-    handleEvent: () => false,
-  };
+  const domainHook: DomainHook = useMemo(
+    () => ({
+      // Container discovery is lazy (loaded when the user opens the picker), so
+      // there is nothing to refresh on connect.
+      onConnect: async () => {},
+      onDisconnect: () => {},
+      handleEvent: () => false,
+    }),
+    [],
+  );
 
   return {
     dockerContainers,
