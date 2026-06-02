@@ -204,7 +204,12 @@ export function getActiveView(pathname: string): AppView {
   if (pathname.startsWith("/chat")) {
     return "chat";
   }
-  if (pathname.startsWith("/workspaces") || pathname.startsWith("/environments")) {
+  if (pathname.startsWith("/workspaces") || /^\/environments\/[^/]+\/workspaces\//.test(pathname)) {
+    // Workspace routes (including environment-scoped workspaces) are workbench-level,
+    // not fleet. Return "tasks" so AppNav stays visible (#1419).
+    return "tasks";
+  }
+  if (pathname.startsWith("/environments")) {
     return "environments";
   }
   if (pathname.startsWith(KNOWLEDGE_URL)) {

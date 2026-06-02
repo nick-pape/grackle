@@ -9,15 +9,18 @@ test.describe(
   "Persona Library — top-level surface",
   { tag: ["@persona", "@persona-library"] },
   () => {
-    test("Personas tab in AppNav navigates to /personas and is selected", async ({ appPage }) => {
+    test("Personas in fleet rail navigates to /personas and is active", async ({ appPage }) => {
       const page = appPage;
 
+      // Personas moved from AppNav to fleet rail (#1419).
       await page.locator('[data-testid="sidebar-tab-personas"]').click();
       await expect(page).toHaveURL(/\/personas$/, { timeout: 5_000 });
-      // The AppNav tab uses role=tab with aria-selected driven by getActiveView.
-      await expect(page.getByRole("tab", { name: "Personas", selected: true })).toBeVisible({
-        timeout: 5_000,
-      });
+      // Fleet items use aria-current="page" (not role=tab/aria-selected).
+      await expect(page.locator('[data-testid="sidebar-tab-personas"]')).toHaveAttribute(
+        "aria-current",
+        "page",
+        { timeout: 5_000 },
+      );
       // The PersonaManager renders an h2 with the page title.
       await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible({ timeout: 5_000 });
     });
