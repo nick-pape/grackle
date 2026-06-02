@@ -174,13 +174,30 @@ describe("mergeToolConfig", () => {
     expect(merged.allowedTools.sort()).toEqual(["read", "write"]);
   });
 
-  it("unions disallowedTools across layers — deny wins on conflict", () => {
+  it("unions disallowedTools across layers — deny wins: disallowed tools are stripped from allowed", () => {
     const merged = mergeToolConfig([
       { toolConfig: { allowedTools: ["exec"], disallowedTools: [] } },
       { toolConfig: { allowedTools: [], disallowedTools: ["exec"] } },
     ]);
-    expect(merged.allowedTools).toEqual(["exec"]);
+    expect(merged.allowedTools).toEqual([]);
     expect(merged.disallowedTools).toEqual(["exec"]);
+  });
+
+  it("deny in any layer removes the tool from allowedTools regardless of layer order", () => {
+    // Higher-precedence layer denies; lower-precedence allows.
+    const denyHigh = mergeToolConfig([
+      { toolConfig: { allowedTools: ["exec"], disallowedTools: [] } },
+      { toolConfig: { allowedTools: [], disallowedTools: ["exec"] } },
+    ]);
+    // Higher-precedence layer allows; lower-precedence denies.
+    const denyLow = mergeToolConfig([
+      { toolConfig: { allowedTools: [], disallowedTools: ["exec"] } },
+      { toolConfig: { allowedTools: ["exec"], disallowedTools: [] } },
+    ]);
+    expect(denyHigh.allowedTools).toEqual([]);
+    expect(denyLow.allowedTools).toEqual([]);
+    expect(denyHigh.disallowedTools).toEqual(["exec"]);
+    expect(denyLow.disallowedTools).toEqual(["exec"]);
   });
 
   it("skips layers with no toolConfig contribution", () => {
@@ -246,12 +263,13 @@ describe("personaToLayer — sentinel handling", () => {
     });
     expect(layer.runtime).toBeUndefined();
     expect(layer.model).toBeUndefined();
-    expect(layer.maxTurns).toBeUndefined();
+    // Persona maxTurns=0 means "unlimited" (not "unset"), so it's passed through.
+    expect(layer.maxTurns).toBe(0);
     expect(layer.toolConfig).toBeUndefined();
     expect(layer.mcpServers).toBeUndefined();
   });
 
-  it("treats 0 maxTurns as unset", () => {
+  it("passes maxTurns=0 through (Persona semantics: 0 = unlimited, not unset)", () => {
     const layer = personaToLayer({
       runtime: "claude-code",
       model: "sonnet",
@@ -259,7 +277,7 @@ describe("personaToLayer — sentinel handling", () => {
       toolConfig: "{}",
       mcpServers: "[]",
     });
-    expect(layer.maxTurns).toBeUndefined();
+    expect(layer.maxTurns).toBe(0);
   });
 
   it("parses non-empty toolConfig JSON", () => {
@@ -485,5 +503,43 @@ describe("end-to-end — adapter + resolver against realistic shapes", () => {
     expect(spec.runtime).toBe("copilot");
     expect(spec.model).toBe("opus");
     expect(spec.maxTurns).toBe(25);
+  });
+
+  it("persona maxTurns=0 (unlimited) survives the cascade even when host has a non-zero default", () => {
+    // Demonstrates why personaToLayer passes maxTurns through verbatim: a
+    // future lower-precedence layer with a positive default must not silently
+    // override an explicit "unlimited" expressed by the persona.
+    const persona = personaToLayer({
+      runtime: "claude-code",
+      model: "sonnet",
+      maxTurns: 0, // explicit "unlimited"
+      toolConfig: "{}",
+      mcpServers: "[]",
+    });
+    const spec = resolveSpawnSpec({
+      host: { workingDirectory: "/workspace", maxTurns: 50 }, // would-be host default
+      persona,
+    });
+    expect(spec.maxTurns).toBe(0);
+  });
+
+  it("SpawnRequest maxTurns=0 falls through to persona (proto unset sentinel)", () => {
+    // On the request wire, configMaxTurns=0 means "no opinion; use persona."
+    // This is the inverse of the persona's "0 = unlimited" semantics, and
+    // both adapters get it right.
+    const persona = personaToLayer({
+      runtime: "claude-code",
+      model: "sonnet",
+      maxTurns: 100,
+      toolConfig: "{}",
+      mcpServers: "[]",
+    });
+    const spawnOverride = spawnRequestToLayer({ configMaxTurns: 0 });
+    const spec = resolveSpawnSpec({
+      host: { workingDirectory: "/workspace" },
+      persona,
+      spawnOverride,
+    });
+    expect(spec.maxTurns).toBe(100);
   });
 });

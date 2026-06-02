@@ -154,9 +154,11 @@ function pickBoolean(layers: SpawnConfigLayer[], key: "useWorktrees"): boolean |
 /**
  * Merge `ToolConfigSpec` across layers (low → high precedence).
  *
- * - `allowedTools`: union of every contributing layer's list.
- * - `disallowedTools`: union of every contributing layer's list (deny wins
- *   even when a higher-precedence layer allows the same tool).
+ * - `disallowedTools`: union of every contributing layer's list.
+ * - `allowedTools`: union of every contributing layer's list, then
+ *   **filtered** so any tool in `disallowedTools` is removed. Deny-wins is
+ *   enforced *here* so consumers can use `allowedTools` directly without
+ *   re-implementing the rule (and without risking accidental allows).
  *
  * Rationale: workspace/task/agent overrides should *tighten* persona's
  * permissions, not widen them. A `disallowedTools` entry in any layer
@@ -179,6 +181,9 @@ export function mergeToolConfig(layers: SpawnConfigLayer[]): ToolConfigSpec {
     for (const t of tc.disallowedTools) {
       disallowed.add(t);
     }
+  }
+  for (const t of disallowed) {
+    allowed.delete(t);
   }
   return {
     allowedTools: [...allowed],
@@ -228,12 +233,20 @@ export interface PersonaConfigSource {
 /**
  * Build a persona-layer contribution from an already-resolved persona record.
  * Caller resolves the persona via `resolvePersona()` from `@grackle-ai/prompt`.
+ *
+ * `maxTurns` is passed through verbatim: on a persona, `0` documents
+ * *unlimited* (per `PersonaResolveInput` in `@grackle-ai/prompt`), not
+ * "unset" — so the persona always contributes a concrete value and a
+ * future lower-precedence default cannot accidentally override an explicit
+ * "unlimited". The `SpawnRequest`-side adapter normalizes `0 → undefined`
+ * because for the `SessionConfig.max_turns` proto field, `0` is the
+ * unset sentinel that means "use the persona default."
  */
 export function personaToLayer(p: PersonaConfigSource): SpawnConfigLayer {
   return {
     runtime: p.runtime || undefined,
     model: p.model || undefined,
-    maxTurns: p.maxTurns || undefined,
+    maxTurns: p.maxTurns,
     toolConfig: parseToolConfigJson(p.toolConfig),
     mcpServers: parseMcpServersJson(p.mcpServers),
   };
