@@ -820,10 +820,14 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
       last_run_at         TEXT,
       next_run_at         TEXT,
       run_count           INTEGER NOT NULL DEFAULT 0,
-      task_id             TEXT REFERENCES tasks(id),
       created_at          TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    -- Note: schedules.task_id and uq_schedules_heartbeat_per_task are added
+    -- by migration v22 (#1438), not the baseline. Fresh installs run the
+    -- migration loop after the baseline so the column lands either way; the
+    -- "v21-shape DB" migration realism test relies on the baseline NOT
+    -- pre-creating them.
 
     CREATE TABLE IF NOT EXISTS workspace_environment_links (
       workspace_id    TEXT NOT NULL REFERENCES workspaces(id),
@@ -862,11 +866,6 @@ export function initDatabase(sqliteOverride?: InstanceType<typeof Database>): vo
     );
 
     CREATE INDEX IF NOT EXISTS idx_schedules_due ON schedules(enabled, next_run_at);
-
-    -- One heartbeat per task. Transitively enforces one heartbeat per Agent
-    -- (Agent → exactly one root task per #1418). NULL task_ids are unbounded.
-    CREATE UNIQUE INDEX IF NOT EXISTS uq_schedules_heartbeat_per_task
-      ON schedules(task_id) WHERE task_id IS NOT NULL;
   `);
 
   // Mark unversioned databases as baseline now that tables are confirmed
