@@ -306,20 +306,26 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName, undefined, undefined, ghToken);
     await tunnel.open();
 
-    // Open reverse tunnel (codespace → host MCP server) for agent tool calls
-    const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-    const reverseTunnel = new CodespaceReverseTunnel(
-      mcpPort,
-      mcpPort,
-      cfg.codespaceName,
-      this.sleepFn,
-      undefined,
-      undefined,
-      ghToken,
-    );
-    await reverseTunnel.open();
+    // Open reverse tunnel (codespace → host MCP server) for agent tool calls.
+    // Wrap in try/catch so the forward tunnel is cleaned up if the reverse fails.
+    try {
+      const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+      const reverseTunnel = new CodespaceReverseTunnel(
+        mcpPort,
+        mcpPort,
+        cfg.codespaceName,
+        this.sleepFn,
+        undefined,
+        undefined,
+        ghToken,
+      );
+      await reverseTunnel.open();
 
-    registerTunnel(environmentId, { tunnel, reverseTunnel });
+      registerTunnel(environmentId, { tunnel, reverseTunnel });
+    } catch (err) {
+      await tunnel.close();
+      throw err;
+    }
 
     yield {
       stage: "connecting",
@@ -373,19 +379,24 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName, undefined, undefined, ghToken);
     await tunnel.open();
 
-    const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-    const reverseTunnel = new CodespaceReverseTunnel(
-      mcpPort,
-      mcpPort,
-      cfg.codespaceName,
-      this.sleepFn,
-      undefined,
-      undefined,
-      ghToken,
-    );
-    await reverseTunnel.open();
+    try {
+      const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+      const reverseTunnel = new CodespaceReverseTunnel(
+        mcpPort,
+        mcpPort,
+        cfg.codespaceName,
+        this.sleepFn,
+        undefined,
+        undefined,
+        ghToken,
+      );
+      await reverseTunnel.open();
 
-    registerTunnel(environmentId, { tunnel, reverseTunnel });
+      registerTunnel(environmentId, { tunnel, reverseTunnel });
+    } catch (err) {
+      await tunnel.close();
+      throw err;
+    }
 
     yield { stage: "reconnecting", message: "Reconnected to codespace", progress: 0.9 };
   }
