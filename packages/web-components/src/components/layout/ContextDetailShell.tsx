@@ -82,7 +82,9 @@ export function ContextDetailShell({
         return;
       }
 
-      const currentIndex = orderedTabs.findIndex((t) => t.id === activeTab);
+      const focusedIndex = Array.from(buttons).findIndex((b) => b === document.activeElement);
+      const currentIndex =
+        focusedIndex >= 0 ? focusedIndex : orderedTabs.findIndex((t) => t.id === activeTab);
       let nextIndex = currentIndex;
 
       if (e.key === "ArrowRight" || e.key === "ArrowDown") {

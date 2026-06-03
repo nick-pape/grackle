@@ -2,7 +2,7 @@
   "changes": [
     {
       "comment": "Extract shared ContextDetailShell for Code and Agent context headers",
-      "type": "none",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],
