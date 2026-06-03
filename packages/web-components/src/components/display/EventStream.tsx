@@ -34,8 +34,8 @@ const LARGE_MESSAGE_THRESHOLD_BYTES: number = 10 * 1024;
 /** Active session statuses eligible as forward targets. */
 const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["running", "idle"]);
 
-/** Number of off-screen rows to render above/below the visible area. */
-const VIRTUALIZER_OVERSCAN: number = 150;
+/** Pixel buffer rendered above/below the visible viewport (react-virtuoso measures in px). */
+const VIRTUALIZER_OVERSCAN_PX: number = 150;
 
 /** localStorage key for persisting the direction preference. */
 const DIRECTION_STORAGE_KEY: string = "grackle-stream-direction";
@@ -450,11 +450,11 @@ export function EventStream({
         ref={virtuosoRef}
         className={styles.scrollContainer}
         totalCount={displayEvents.length}
-        overscan={VIRTUALIZER_OVERSCAN}
+        overscan={VIRTUALIZER_OVERSCAN_PX}
         computeItemKey={computeItemKey}
         itemContent={itemContent}
         followOutput={isReversed ? false : followOutput}
-        initialTopMostItemIndex={isReversed ? 0 : displayEvents.length - 1}
+        initialTopMostItemIndex={isReversed ? 0 : Math.max(0, displayEvents.length - 1)}
         atBottomStateChange={handleAtBottomChange}
         atTopStateChange={handleAtTopChange}
         components={{ Scroller: CustomScroller }}
