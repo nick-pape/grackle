@@ -71,6 +71,7 @@ export function AgentChatTab(): JSX.Element {
   }, [events, latestSession?.id]);
 
   const isActive = latestSession ? ACTIVE_STATUSES.has(latestSession.status) : false;
+  const showSend = isActive || latestSession?.status === "suspended";
 
   const docEnvironmentId = latestSession?.environmentId;
 
@@ -107,11 +108,11 @@ export function AgentChatTab(): JSX.Element {
         />
       </div>
       <ChatInput
-        mode={isActive ? "send" : "start"}
-        sessionId={isActive ? latestSession!.id : undefined}
+        mode={showSend ? "send" : "start"}
+        sessionId={showSend ? latestSession!.id : undefined}
         taskId={rootTask.id}
         environmentId={
-          isActive
+          showSend
             ? latestSession!.environmentId
             : (environments.find((e) => e.id === agent.environmentId)?.id ?? environments[0]?.id)
         }

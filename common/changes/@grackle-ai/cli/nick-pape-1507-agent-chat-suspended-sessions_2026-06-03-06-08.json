@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Fix provision-clear timers firing after component unmount in useEnvironments",
+      "comment": "Fix AgentChatTab to render ChatInput for suspended sessions so the reconnect button remains reachable",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
