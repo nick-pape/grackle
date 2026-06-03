@@ -107,9 +107,11 @@ export function EventStream({
   const [isReversed, setIsReversed] = useState(readStoredDirection);
   const [isAtAnchor, setIsAtAnchor] = useState(true);
 
-  // Previous event count for new-event animation detection.
-  // Initialized to current length so pre-existing events on mount don't animate.
-  const prevLengthRef = useRef<number>(events.length);
+  // Timestamp of the last event in the previous render — events newer than this
+  // get the entry animation. Survives MAX_EVENTS trimming (timestamps are monotonic).
+  const prevLastTimestampRef = useRef<string>(
+    events.length > 0 ? events[events.length - 1].timestamp : "",
+  );
 
   // Forward flow state
   const [showSessionPicker, setShowSessionPicker] = useState(false);
@@ -142,11 +144,13 @@ export function EventStream({
     return [...events].reverse();
   }, [events, isReversed]);
 
-  // Determine which events are "new" (appended since last render) for entry animation.
-  const newEventThreshold = prevLengthRef.current;
+  // Update the "last seen" timestamp after each render so new events animate.
+  const prevLastTimestamp = prevLastTimestampRef.current;
   useEffect(() => {
-    prevLengthRef.current = events.length;
-  }, [events.length]);
+    if (events.length > 0) {
+      prevLastTimestampRef.current = events[events.length - 1].timestamp;
+    }
+  }, [events]);
 
   // Virtuoso ref for imperative scroll control
   const virtuosoRef = useRef<import("react-virtuoso").VirtuosoHandle>(null);
@@ -336,7 +340,7 @@ export function EventStream({
           onCopied={handleItemCopied}
           sandboxProxyUrl={sandboxProxyUrl}
           onOpenDocument={onOpenDocument}
-          isNew={originalIndex >= newEventThreshold}
+          isNew={event.timestamp > prevLastTimestamp}
           isReversed={isReversed}
         />
       );
@@ -352,8 +356,17 @@ export function EventStream({
       handleItemCopied,
       sandboxProxyUrl,
       onOpenDocument,
-      newEventThreshold,
+      prevLastTimestamp,
     ],
+  );
+
+  // Stable key per item using event identity — survives MAX_EVENTS trimming
+  const computeItemKey = useCallback(
+    (displayIndex: number): string => {
+      const event = displayEvents[displayIndex];
+      return `${event.sessionId}-${event.timestamp}-${displayIndex}`;
+    },
+    [displayEvents],
   );
 
   return (
@@ -387,6 +400,7 @@ export function EventStream({
         className={`${styles.scrollContainer} ${selection.isSelecting ? styles.selectingPadding : ""}`}
         totalCount={displayEvents.length}
         overscan={VIRTUALIZER_OVERSCAN}
+        computeItemKey={computeItemKey}
         itemContent={itemContent}
         followOutput={followOutput}
         initialTopMostItemIndex={isReversed ? 0 : displayEvents.length - 1}
