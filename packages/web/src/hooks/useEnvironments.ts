@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import { warnBadPayload } from "@grackle-ai/web-components";
 import type {
@@ -231,6 +231,14 @@ export function useEnvironments(): UseEnvironmentsResult {
     } catch (err) {
       setOperationError(extractErrorMessage(err));
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      for (const t of Object.values(provisionClearTimersRef.current)) {
+        clearTimeout(t);
+      }
+    };
   }, []);
 
   const domainHook: DomainHook = useMemo(
