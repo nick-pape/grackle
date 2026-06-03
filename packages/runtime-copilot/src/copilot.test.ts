@@ -361,6 +361,70 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
   });
 });
 
+describe("CopilotRuntime — CopilotClient options", () => {
+  afterEach(() => {
+    _setCopilotSdkForTesting(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  it("passes --yolo in cliArgs to enable headless auto-approval", async () => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+
+    const capturedOpts: Record<string, unknown>[] = [];
+    const idleHandlers: Record<string, () => void> = {};
+    const mockCopilotSession = {
+      sessionId: "copilot-opts-session",
+      on: vi.fn((event: string, fn: () => void) => {
+        idleHandlers[event] = fn;
+      }),
+      send: vi.fn(async () => {
+        setTimeout(() => idleHandlers["session.idle"]?.(), 0);
+      }),
+      destroy: vi.fn(async () => {}),
+      abort: vi.fn(),
+    };
+
+    _setCopilotSdkForTesting({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      CopilotClient: class {
+        constructor(opts?: Record<string, unknown>) {
+          capturedOpts.push(opts ?? {});
+          return {
+            start: vi.fn(async () => {}),
+            stop: vi.fn(async () => []),
+            createSession: vi.fn(async () => mockCopilotSession),
+            resumeSession: vi.fn(async () => mockCopilotSession),
+          };
+        }
+      } as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      defineTool: vi.fn() as any,
+      approveAll: vi.fn(),
+    });
+
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "cop-opts-test",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+
+    for await (const event of session.stream()) {
+      if (
+        event.type === "status" &&
+        (event.content === "waiting_input" || event.content === "failed")
+      ) {
+        session.kill();
+        break;
+      }
+    }
+
+    expect(capturedOpts).toHaveLength(1);
+    expect(capturedOpts[0]!.cliArgs).toEqual(["--yolo"]);
+  });
+});
+
 describe("CopilotRuntime — usage event emission", () => {
   beforeEach(() => {
     vi.stubEnv("GRACKLE_MCP_CONFIG", "");
