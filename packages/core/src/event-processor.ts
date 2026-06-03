@@ -43,7 +43,7 @@ export interface EventStreamOptions {
   taskId?: string;
   /** System context injected into the agent session. Emitted as the first event in the stream. */
   systemContext?: string;
-  /** Initial user prompt sent to the agent. Emitted as a user_input event after systemContext. */
+  /** Initial user prompt. Retained for call-site compatibility; no longer emitted as a user_input event (the runtime's turn_started event serves that role). */
   prompt?: string;
   /** Trace ID for correlating logs across the request lifecycle. */
   traceId?: string;
@@ -216,17 +216,10 @@ export function processEventStream(
         await logWriter.writeEvent(logPath, sysCtxEvent);
         streamHub.publish(sysCtxEvent);
       }
-      if (options.prompt && options.taskId) {
-        const promptEvent = create(grackle.SessionEventSchema, {
-          sessionId,
-          type: grackle.EventType.USER_INPUT,
-          timestamp: new Date().toISOString(),
-          content: options.prompt,
-        });
-        promptEvent.serverSeq = recordSessionAction(promptEvent) ?? "";
-        await logWriter.writeEvent(logPath, promptEvent);
-        streamHub.publish(promptEvent);
-      }
+      // The initial prompt is NOT emitted as a USER_INPUT event here.
+      // The runtime emits a turn_started event (AHP HR2) carrying the user
+      // message, which the UI renders as the user input bubble — emitting a
+      // separate USER_INPUT would duplicate it.
 
       for await (const envelope of envelopes) {
         const event = envelope.event;

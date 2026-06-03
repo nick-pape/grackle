@@ -14,6 +14,7 @@ const CONTENT_BEARING_TYPES: ReadonlySet<string> = new Set([
   "text",
   "output",
   "user_input",
+  "turn_started",
   "tool_use",
   "tool_result",
   "error",
@@ -124,7 +125,8 @@ export function formatEventsAsMarkdown(events: DisplayEvent[]): string {
         parts.push(`**Assistant** (${time}):\n${event.content}`);
         break;
       }
-      case "user_input": {
+      case "user_input":
+      case "turn_started": {
         parts.push(`**User** (${time}):\n${event.content}`);
         break;
       }
