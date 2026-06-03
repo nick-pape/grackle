@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent } from "@storybook/test";
+import { expect, fn, userEvent, waitFor } from "@storybook/test";
 import { EventStream } from "./EventStream.js";
 import type { DisplayEvent } from "../../utils/sessionEvents.js";
 import { makeEvent, makeSession, makeEnvironment } from "../../test-utils/storybook-helpers.js";
@@ -41,7 +41,9 @@ const meta: Meta<typeof EventStream> = {
   tags: ["autodocs"],
   decorators: [
     (Story) => (
-      <div style={{ height: "400px", display: "flex", flexDirection: "column" }}>
+      <div
+        style={{ height: "400px", display: "flex", flexDirection: "column", overflow: "hidden" }}
+      >
         <Story />
       </div>
     ),
@@ -80,15 +82,12 @@ export const EmptyState: Story = {
 /** Hover over a content event to see action buttons. */
 export const HoverActions: Story = {
   play: async ({ canvas }) => {
-    // Wait for virtualizer to render, then check hover actions
-    const hoverRows = await canvas.findAllByTestId("event-hover-row");
-    await expect(hoverRows.length).toBeGreaterThan(0);
-
-    const copyButtons = await canvas.findAllByTestId("event-hover-copy");
-    await expect(copyButtons.length).toBe(sampleEvents.length);
-
-    const selectButtons = await canvas.findAllByTestId("event-hover-select");
-    await expect(selectButtons.length).toBe(sampleEvents.length);
+    // Wait for Virtuoso to render all items before asserting counts
+    await waitFor(async () => {
+      await expect(canvas.getAllByTestId("event-hover-row").length).toBe(sampleEvents.length);
+    });
+    await expect(canvas.getAllByTestId("event-hover-copy").length).toBe(sampleEvents.length);
+    await expect(canvas.getAllByTestId("event-hover-select").length).toBe(sampleEvents.length);
   },
 };
 
@@ -98,9 +97,11 @@ export const NonContentNoHover: Story = {
     events: mixedEvents,
   },
   play: async ({ canvas }) => {
-    // 4 content events out of 5 total (status is not content-bearing)
-    const hoverRows = await canvas.findAllByTestId("event-hover-row");
-    await expect(hoverRows.length).toBe(4);
+    // Wait for Virtuoso to render all 4 content-bearing rows (status is not content-bearing)
+    await waitFor(async () => {
+      const hoverRows = canvas.getAllByTestId("event-hover-row");
+      await expect(hoverRows.length).toBe(4);
+    });
   },
 };
 
@@ -110,8 +111,13 @@ export const SelectionMode: Story = {
     events: mixedEvents,
   },
   play: async ({ canvas }) => {
-    // Wait for virtualizer, then click Select on the first event
-    const selectButtons = await canvas.findAllByTestId("event-hover-select");
+    // Wait for all items to render before interacting
+    await waitFor(async () => {
+      const buttons = canvas.getAllByTestId("event-hover-select");
+      await expect(buttons.length).toBe(4);
+    });
+
+    const selectButtons = canvas.getAllByTestId("event-hover-select");
     await userEvent.click(selectButtons[0]);
 
     // Floating action bar should appear
@@ -123,8 +129,10 @@ export const SelectionMode: Story = {
     await expect(count).toHaveTextContent("1 selected");
 
     // Checkboxes should be visible
-    const checkboxes = await canvas.findAllByTestId("event-select-checkbox");
-    await expect(checkboxes.length).toBe(4); // 4 content-bearing events
+    await waitFor(async () => {
+      const checkboxes = canvas.getAllByTestId("event-select-checkbox");
+      await expect(checkboxes.length).toBe(4);
+    });
   },
 };
 
@@ -134,12 +142,22 @@ export const MultiSelect: Story = {
     events: mixedEvents,
   },
   play: async ({ canvas }) => {
-    // Enter selection mode via first event
-    const selectButtons = await canvas.findAllByTestId("event-hover-select");
+    // Wait for all items
+    await waitFor(async () => {
+      const buttons = canvas.getAllByTestId("event-hover-select");
+      await expect(buttons.length).toBe(4);
+    });
+
+    const selectButtons = canvas.getAllByTestId("event-hover-select");
     await userEvent.click(selectButtons[0]);
 
-    // Click second checkbox to select it too
-    const checkboxes = await canvas.findAllByTestId("event-select-checkbox");
+    // Wait for checkboxes
+    await waitFor(async () => {
+      const checkboxes = canvas.getAllByTestId("event-select-checkbox");
+      await expect(checkboxes.length).toBe(4);
+    });
+
+    const checkboxes = canvas.getAllByTestId("event-select-checkbox");
     await userEvent.click(checkboxes[1]);
 
     // Count should show 2
@@ -154,20 +172,18 @@ export const SelectAll: Story = {
     events: mixedEvents,
   },
   play: async ({ canvas }) => {
-    // Enter selection mode
-    const selectButtons = await canvas.findAllByTestId("event-hover-select");
-    await userEvent.click(selectButtons[0]);
+    await waitFor(async () => {
+      await expect(canvas.getAllByTestId("event-hover-select").length).toBe(4);
+    });
 
-    // Click "Select all"
-    const selectAllBtn = canvas.getByTestId("floating-bar-select-all");
+    await userEvent.click(canvas.getAllByTestId("event-hover-select")[0]);
+
+    const selectAllBtn = await canvas.findByTestId("floating-bar-select-all");
     await expect(selectAllBtn).toHaveTextContent("Select all");
     await userEvent.click(selectAllBtn);
 
-    // Count should show all content-bearing events (4 of 5)
     const count = canvas.getByTestId("floating-bar-count");
     await expect(count).toHaveTextContent("4 selected");
-
-    // Button should now say "Deselect all"
     await expect(selectAllBtn).toHaveTextContent("Deselect all");
   },
 };
@@ -189,11 +205,11 @@ export const ForwardButtonVisible: Story = {
     onForward: fn(),
   },
   play: async ({ canvas }) => {
-    // Enter selection mode
-    const selectButtons = await canvas.findAllByTestId("event-hover-select");
-    await userEvent.click(selectButtons[0]);
+    await waitFor(async () => {
+      await expect(canvas.getAllByTestId("event-hover-select").length).toBe(4);
+    });
+    await userEvent.click(canvas.getAllByTestId("event-hover-select")[0]);
 
-    // Forward button should be present and enabled (there is an active target session)
     const forwardBtn = await canvas.findByTestId("floating-bar-forward");
     await expect(forwardBtn).toBeInTheDocument();
     await expect(forwardBtn).toBeEnabled();
@@ -210,8 +226,10 @@ export const ForwardButtonDisabled: Story = {
     onForward: fn(),
   },
   play: async ({ canvas }) => {
-    const selectButtons = await canvas.findAllByTestId("event-hover-select");
-    await userEvent.click(selectButtons[0]);
+    await waitFor(async () => {
+      await expect(canvas.getAllByTestId("event-hover-select").length).toBe(4);
+    });
+    await userEvent.click(canvas.getAllByTestId("event-hover-select")[0]);
 
     const forwardBtn = await canvas.findByTestId("floating-bar-forward");
     await expect(forwardBtn).toHaveAttribute("aria-disabled", "true");
@@ -235,19 +253,16 @@ export const ForwardOpensSessionPicker: Story = {
     onForward: fn(),
   },
   play: async ({ canvas }) => {
-    // Enter selection mode
-    const selectButtons = await canvas.findAllByTestId("event-hover-select");
-    await userEvent.click(selectButtons[0]);
+    await waitFor(async () => {
+      await expect(canvas.getAllByTestId("event-hover-select").length).toBe(4);
+    });
+    await userEvent.click(canvas.getAllByTestId("event-hover-select")[0]);
 
-    // Click Forward
     const forwardBtn = await canvas.findByTestId("floating-bar-forward");
     await userEvent.click(forwardBtn);
 
-    // Session picker dialog should appear
     const dialog = await canvas.findByTestId("session-picker-dialog");
     await expect(dialog).toBeInTheDocument();
-
-    // The target session should be listed
     await expect(canvas.getByTestId("session-picker-item-sess-target")).toBeInTheDocument();
   },
 };
@@ -264,12 +279,11 @@ export const LargeEventList: Story = {
     ),
   },
   play: async ({ canvas }) => {
-    // Wait for the virtualizer to render its first batch of rows
-    const rows = await canvas.findAllByTestId("event-hover-row");
-
-    // Virtualization: DOM should have far fewer rows than the 500 events
-    await expect(rows.length).toBeLessThan(50);
-    await expect(rows.length).toBeGreaterThan(0);
+    await waitFor(async () => {
+      const rows = canvas.getAllByTestId("event-hover-row");
+      await expect(rows.length).toBeGreaterThan(0);
+      await expect(rows.length).toBeLessThan(50);
+    });
   },
 };
 
@@ -279,24 +293,23 @@ export const CancelSelection: Story = {
     events: mixedEvents,
   },
   play: async ({ canvas, canvasElement }) => {
-    // Enter selection mode
-    const selectButtons = await canvas.findAllByTestId("event-hover-select");
-    await userEvent.click(selectButtons[0]);
+    await waitFor(async () => {
+      await expect(canvas.getAllByTestId("event-hover-select").length).toBe(4);
+    });
+    await userEvent.click(canvas.getAllByTestId("event-hover-select")[0]);
 
-    // Verify checkboxes are present (selection mode active)
-    const checkboxes = await canvas.findAllByTestId("event-select-checkbox");
-    await expect(checkboxes.length).toBe(4);
+    await waitFor(async () => {
+      await expect(canvas.getAllByTestId("event-select-checkbox").length).toBe(4);
+    });
 
-    // Click cancel
     const cancelBtn = canvas.getByTestId("floating-bar-cancel");
     await userEvent.click(cancelBtn);
 
-    // Selection mode exited: checkboxes should be gone, hover rows should be back
     const checkboxesAfter = canvasElement.querySelectorAll("[data-testid='event-select-checkbox']");
     await expect(checkboxesAfter.length).toBe(0);
 
-    // Hover rows should be back (content events re-render in normal mode)
-    const hoverRows = await canvas.findAllByTestId("event-hover-row");
-    await expect(hoverRows.length).toBe(4);
+    await waitFor(async () => {
+      await expect(canvas.getAllByTestId("event-hover-row").length).toBe(4);
+    });
   },
 };
