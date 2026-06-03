@@ -7,18 +7,18 @@ import { useManifest, ManifestProvider } from "../context/ManifestContext.js";
 const wrapper = ManifestProvider;
 
 describe("useManifest", () => {
-  const originalFetch = global.fetch;
+  const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   afterEach(() => {
-    global.fetch = originalFetch;
+    globalThis.fetch = originalFetch;
   });
 
   it("starts in loading state with fail-open plugin names", () => {
-    global.fetch = vi.fn(
+    globalThis.fetch = vi.fn(
       () =>
         new Promise(() => {
           /* never resolves */
@@ -33,7 +33,7 @@ describe("useManifest", () => {
   });
 
   it("returns pluginNames from a successful manifest fetch", async () => {
-    global.fetch = vi.fn(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ plugins: [{ name: "core" }, { name: "orchestration" }] }),
@@ -51,7 +51,7 @@ describe("useManifest", () => {
   });
 
   it("falls back to all known plugins when fetch throws", async () => {
-    global.fetch = vi.fn(() => Promise.reject(new Error("network error"))) as typeof fetch;
+    globalThis.fetch = vi.fn(() => Promise.reject(new Error("network error"))) as typeof fetch;
 
     const { result } = renderHook(() => useManifest(), { wrapper });
 
@@ -64,7 +64,7 @@ describe("useManifest", () => {
   });
 
   it("falls back to all known plugins when response is not ok", async () => {
-    global.fetch = vi.fn(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve({
         ok: false,
         status: 503,
@@ -83,7 +83,7 @@ describe("useManifest", () => {
   });
 
   it("falls back when json parsing fails", async () => {
-    global.fetch = vi.fn(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
         json: () => Promise.reject(new Error("invalid json")),

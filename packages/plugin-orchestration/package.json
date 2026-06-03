@@ -1,7 +1,7 @@
 {
   "name": "@grackle-ai/plugin-orchestration",
   "version": "0.163.0",
-  "description": "Orchestration plugin for Grackle — tasks, personas, findings, and escalations",
+  "description": "Orchestration plugin for Grackle â€” tasks, personas, findings, and escalations",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -45,7 +45,8 @@
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",
-    "@vitest/coverage-v8": "^3.1.1",
-    "vitest": "^3.2.1"
+    "@vitest/coverage-v8": "^4.1.0",
+    "vitest": "^4.1.0",
+    "@vitest/spy": "^4.1.0"
   }
 }

@@ -186,8 +186,9 @@ export function parseLcov(lcov: string, lcovFilePath?: string): Map<string, File
           if (parts.length >= 4) {
             const key: string = `${parts[0]},${parts[1]},${parts[2]}`;
             const takenRaw: string = parts[3];
+            const takenParsed: number = Number.parseInt(takenRaw, 10);
             const taken: number | undefined =
-              takenRaw === "-" ? undefined : Number.parseInt(takenRaw, 10);
+              takenRaw === "-" ? undefined : Number.isNaN(takenParsed) ? 0 : takenParsed;
             const prev: number | undefined = current.branchHits.get(key);
             current.branchHits.set(key, addBranchTaken(prev, taken));
           }

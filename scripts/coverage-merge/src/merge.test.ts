@@ -132,6 +132,15 @@ describe("parseLcov", () => {
   it("returns an empty map for empty input", () => {
     expect(parseLcov("").size).toBe(0);
   });
+
+  it("treats NaN in BRDA taken field as 0 (vitest 4.x coverage bug)", () => {
+    const lcov = ["SF:packages/a/src/x.ts", "BRDA:5,0,0,NaN", "BRDA:5,0,1,3", "end_of_record"].join(
+      "\n",
+    );
+    const cov = parseLcov(lcov).get("packages/a/src/x.ts")!;
+    expect(cov.branchHits.get("5,0,0")).toBe(0);
+    expect(cov.branchHits.get("5,0,1")).toBe(3);
+  });
 });
 
 describe("unionFileCoverage", () => {
