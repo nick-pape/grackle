@@ -46,15 +46,15 @@ export function toDialableHost(bindHost: string): string {
  * Walk up the task parent chain and return the environmentId from the first
  * ancestor that has a session. Returns empty string if no ancestor has one.
  *
- * Uses batch queries: getAncestors (1 workspace fetch) + getLatestSessionsByTaskIds
- * (1 session query) instead of per-level N+1.
+ * Uses batch queries: getAncestors (1 getTask + 1 listTasks) + getLatestSessionsByTaskIds
+ * (1 session query) = 3 total instead of up to 2×MAX_TASK_DEPTH.
  */
 export function resolveAncestorEnvironmentId(parentTaskId: string): string {
   if (!parentTaskId) {
     return "";
   }
   const ancestors = taskStore.getAncestors(parentTaskId);
-  const ancestorIds = [parentTaskId, ...ancestors.reverse().map((a) => a.id)];
+  const ancestorIds = [parentTaskId, ...[...ancestors].reverse().map((a) => a.id)];
 
   const sessionMap = sessionStore.getLatestSessionsByTaskIds(ancestorIds);
 
