@@ -324,7 +324,7 @@ export function EventStream({
             return (
               <motion.div
                 key={`${event.sessionId}-${event.timestamp}-${originalIndex}`}
-                initial={{ opacity: 0, y: enterY }}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: enterY }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: animationDuration, ease: "easeOut" }}
               >

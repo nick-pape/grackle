@@ -39,6 +39,13 @@ const meta: Meta<typeof EventStream> = {
   component: EventStream,
   title: "Grackle/Display/EventStream",
   tags: ["autodocs"],
+  decorators: [
+    (Story) => (
+      <div style={{ height: 400, display: "flex", flexDirection: "column" }}>
+        <Story />
+      </div>
+    ),
+  ],
   args: {
     events: sampleEvents,
     eventsDropped: 0,
