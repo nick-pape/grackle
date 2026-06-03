@@ -1,7 +1,7 @@
 {
   "name": "@grackle-ai/plugin-orchestration",
   "version": "0.163.0",
-  "description": "Orchestration plugin for Grackle â€” tasks, personas, findings, and escalations",
+  "description": "Orchestration plugin for Grackle — tasks, personas, findings, and escalations",
   "license": "MIT",
   "repository": {
     "type": "git",
