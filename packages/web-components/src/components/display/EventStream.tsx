@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from "react";
 import { AlertTriangle, ArrowDown, ArrowUp } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { VirtualList } from "./VirtualList.js";
+import { Virtuoso } from "react-virtuoso";
 import { VirtualEventItem } from "./VirtualEventItem.js";
 import { FloatingActionBar } from "./FloatingActionBar.js";
 import { SessionPicker } from "./SessionPicker.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
 import { Tooltip } from "./Tooltip.js";
-import { useSmartScroll } from "../../hooks/useSmartScroll.js";
 import { useEventSelection } from "../../hooks/useEventSelection.js";
 import {
   isContentBearingEvent,
@@ -26,11 +25,8 @@ const LARGE_MESSAGE_THRESHOLD_BYTES: number = 10 * 1024;
 /** Active session statuses eligible as forward targets. */
 const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["running", "idle"]);
 
-/** Estimated average height (px) of an event row for the virtualizer. */
-const ESTIMATED_EVENT_HEIGHT_PX: number = 80;
-
 /** Number of off-screen rows to render above/below the visible area. */
-const VIRTUALIZER_OVERSCAN: number = 5;
+const VIRTUALIZER_OVERSCAN: number = 150;
 
 /** localStorage key for persisting the direction preference. */
 const DIRECTION_STORAGE_KEY: string = "grackle-stream-direction";
@@ -108,8 +104,8 @@ export function EventStream({
   sandboxProxyUrl,
   onOpenDocument,
 }: EventStreamProps): JSX.Element {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [isReversed, setIsReversed] = useState(readStoredDirection);
+  const [isAtAnchor, setIsAtAnchor] = useState(true);
 
   // Previous event count for new-event animation detection.
   // Initialized to current length so pre-existing events on mount don't animate.
@@ -146,48 +142,30 @@ export function EventStream({
     return [...events].reverse();
   }, [events, isReversed]);
 
-  // Stable key per item — uses event identity fields, not global eventsDropped
-  const getItemKey = useCallback(
-    (displayIndex: number, event: DisplayEvent): string => {
-      const originalIndex = isReversed ? events.length - 1 - displayIndex : displayIndex;
-      return `${event.sessionId}-${event.timestamp}-${originalIndex}`;
-    },
-    [events.length, isReversed],
-  );
-
   // Determine which events are "new" (appended since last render) for entry animation.
-  // Tracks per-session events.length, not the global eventsDropped total, to avoid
-  // spurious animations when unrelated sessions cause drops.
   const newEventThreshold = prevLengthRef.current;
   useEffect(() => {
     prevLengthRef.current = events.length;
   }, [events.length]);
 
-  const { isAtAnchor, scrollToAnchor } = useSmartScroll({
-    scrollRef,
-    contentLength: events.length,
-    isReversed,
-    paused: selection.isSelecting,
-  });
+  // Virtuoso ref for imperative scroll control
+  const virtuosoRef = useRef<import("react-virtuoso").VirtuosoHandle>(null);
 
-  // The virtualizer needs a frame after mount to render items and compute
-  // scrollHeight. useSmartScroll's initial scroll fires too early (before
-  // items exist). This deferred scroll ensures the anchor is correct after
-  // the virtualizer's first paint.
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      const el = scrollRef.current;
-      if (!el) {
-        return;
-      }
-      el.scrollTop = isReversed ? 0 : el.scrollHeight;
-    });
-    return () => {
-      cancelAnimationFrame(frame);
-    };
-    // Only on mount — subsequent scrolls are handled by useSmartScroll
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const scrollToAnchor = useCallback((): void => {
+    if (!virtuosoRef.current) {
+      return;
+    }
+    if (isReversed) {
+      virtuosoRef.current.scrollToIndex({ index: 0, behavior: "smooth" });
+    } else {
+      virtuosoRef.current.scrollToIndex({
+        index: displayEvents.length - 1,
+        align: "end",
+        behavior: "smooth",
+      });
+    }
+    setIsAtAnchor(true);
+  }, [isReversed, displayEvents.length]);
 
   const handleToggleDirection = (): void => {
     const next = !isReversed;
@@ -200,7 +178,6 @@ export function EventStream({
   };
 
   // Escape key exits selection mode, but not while a modal is open
-  // (the modal's own Escape handler takes priority)
   useEffect(() => {
     if (!selection.isSelecting) {
       return;
@@ -332,6 +309,53 @@ export function EventStream({
     ? Math.round(new TextEncoder().encode(pendingForward.text).length / 1024)
     : 0;
 
+  // Virtuoso followOutput: auto-scroll when at anchor, suppress during selection
+  const followOutput = useCallback(
+    (atBottom: boolean): false | "smooth" => {
+      if (selection.isSelecting) {
+        return false;
+      }
+      return atBottom ? "smooth" : false;
+    },
+    [selection.isSelecting],
+  );
+
+  // Render callback for Virtuoso — receives display index
+  const itemContent = useCallback(
+    (displayIndex: number): JSX.Element => {
+      const event = displayEvents[displayIndex];
+      const originalIndex = isReversed ? events.length - 1 - displayIndex : displayIndex;
+      return (
+        <VirtualEventItem
+          event={event}
+          originalIndex={originalIndex}
+          isSelecting={selection.isSelecting}
+          isSelected={selection.selectedIndices.has(originalIndex)}
+          onSelect={handleEnterSelection}
+          onToggle={handleToggleEvent}
+          onCopied={handleItemCopied}
+          sandboxProxyUrl={sandboxProxyUrl}
+          onOpenDocument={onOpenDocument}
+          isNew={originalIndex >= newEventThreshold}
+          isReversed={isReversed}
+        />
+      );
+    },
+    [
+      displayEvents,
+      events.length,
+      isReversed,
+      selection.isSelecting,
+      selection.selectedIndices,
+      handleEnterSelection,
+      handleToggleEvent,
+      handleItemCopied,
+      sandboxProxyUrl,
+      onOpenDocument,
+      newEventThreshold,
+    ],
+  );
+
   return (
     <div className={styles.wrapper}>
       {/* Direction toggle */}
@@ -352,43 +376,22 @@ export function EventStream({
         </Tooltip>
       </div>
 
-      {/* Non-scrollable content above the virtual list — kept outside the
-          scroll container so the virtualizer's scroll offset starts at 0. */}
       {events.length === 0 && emptyState}
       <EventOverflowBanner eventsDropped={eventsDropped} />
 
-      {/* Scroll container — only the VirtualList lives here */}
-      <div
-        ref={scrollRef}
-        className={`${styles.scrollContainer} ${selection.isSelecting ? styles.selectingPadding : ""}`}
+      {/* Virtuoso owns the scroll container — handles auto-scroll,
+          dynamic heights, and initial scroll position natively. */}
+      <Virtuoso
+        ref={virtuosoRef}
         data-testid="event-stream-scroll"
-      >
-        <VirtualList
-          items={displayEvents}
-          scrollRef={scrollRef}
-          estimateSize={ESTIMATED_EVENT_HEIGHT_PX}
-          overscan={VIRTUALIZER_OVERSCAN}
-          getItemKey={getItemKey}
-          renderItem={(event, displayIndex) => {
-            const originalIndex = isReversed ? events.length - 1 - displayIndex : displayIndex;
-            return (
-              <VirtualEventItem
-                event={event}
-                originalIndex={originalIndex}
-                isSelecting={selection.isSelecting}
-                isSelected={selection.selectedIndices.has(originalIndex)}
-                onSelect={handleEnterSelection}
-                onToggle={handleToggleEvent}
-                onCopied={handleItemCopied}
-                sandboxProxyUrl={sandboxProxyUrl}
-                onOpenDocument={onOpenDocument}
-                isNew={originalIndex >= newEventThreshold}
-                isReversed={isReversed}
-              />
-            );
-          }}
-        />
-      </div>
+        className={`${styles.scrollContainer} ${selection.isSelecting ? styles.selectingPadding : ""}`}
+        totalCount={displayEvents.length}
+        overscan={VIRTUALIZER_OVERSCAN}
+        itemContent={itemContent}
+        followOutput={followOutput}
+        initialTopMostItemIndex={isReversed ? 0 : displayEvents.length - 1}
+        atBottomStateChange={setIsAtAnchor}
+      />
 
       {/* Floating action bar for multi-select mode */}
       <AnimatePresence>
