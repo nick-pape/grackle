@@ -123,18 +123,39 @@ export function registerSessionVerbCommands(program: Command): void {
     .description("Attach to a live session")
     .action(async (sessionId: string) => {
       const { core: client } = createGrackleClients();
-      console.log(`Attached to ${sessionId} (Ctrl+C to detach)\n`);
+      const interactive = Boolean(process.stdin.isTTY);
+      console.log(
+        interactive
+          ? `Attached to ${sessionId} (Ctrl+C to detach)\n`
+          : `Streaming ${sessionId} (non-interactive: input prompts will print a hint)\n`,
+      );
 
-      const readline = await import("node:readline");
-      const rl = readline.createInterface({
+      const readline = interactive ? await import("node:readline") : null;
+      const rl = readline?.createInterface({
         input: process.stdin,
         output: process.stdout,
       });
 
       let prompting = false;
+      let hintedNonInteractive = false;
 
       /** Prompt for input once and send the response. */
       function promptForInput(): void {
+        if (!rl) {
+          // Non-TTY: nobody is at the keyboard. Print a one-shot hint
+          // pointing to `grackle send-input` so an operator (or sibling
+          // script) can unblock the session from elsewhere.
+          if (!hintedNonInteractive) {
+            hintedNonInteractive = true;
+            console.error(
+              chalk.yellow(
+                `[hint] session ${sessionId} is waiting for input. ` +
+                  `Send a reply with: grackle send-input ${sessionId} "<text>"`,
+              ),
+            );
+          }
+          return;
+        }
         if (prompting) {
           return;
         }
@@ -148,14 +169,16 @@ export function registerSessionVerbCommands(program: Command): void {
         });
       }
 
-      for await (const event of client.streamSession({ id: sessionId })) {
-        printEvent(event);
-        if (event.type === grackle.EventType.STATUS && event.content === "waiting_input") {
-          promptForInput();
+      try {
+        for await (const event of client.streamSession({ id: sessionId })) {
+          printEvent(event);
+          if (event.type === grackle.EventType.STATUS && event.content === "waiting_input") {
+            promptForInput();
+          }
         }
+      } finally {
+        rl?.close();
       }
-
-      rl.close();
     });
 }
 

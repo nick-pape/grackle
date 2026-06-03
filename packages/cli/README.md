@@ -278,6 +278,8 @@ Attach to a live session and stream events in real time. When the agent requests
 grackle attach abc12345
 ```
 
+In a non-TTY context (piped output, CI logs, `< /dev/null`), `attach` still streams events but skips the interactive prompt. If the session reaches `waiting_input`, it prints a one-shot hint pointing to `grackle send-input <session-id> "<text>"` so an operator or sibling script can unblock it.
+
 #### `grackle resume <session-id>`
 
 Resume a stopped or suspended session.
@@ -526,11 +528,14 @@ List all configured tokens.
 
 #### `grackle token set <name>`
 
-Set a token value. The value can come from a file, an environment variable, or interactive input.
+Set a token value. The value can come from a file, an environment variable, piped stdin, or an interactive prompt.
 
 ```bash
-# Interactive prompt
+# Interactive prompt (TTY only)
 grackle token set anthropic
+
+# Piped stdin (for scripts / CI)
+echo "$ANTHROPIC_API_KEY" | grackle token set anthropic
 
 # From environment variable
 grackle token set anthropic --env ANTHROPIC_API_KEY
@@ -542,6 +547,8 @@ grackle token set anthropic --file ~/.secrets/anthropic.key
 grackle token set github --env GITHUB_TOKEN --type env_var --env-var GITHUB_TOKEN
 grackle token set ssh-key --file ~/.ssh/id_rsa --type file --file-path /home/agent/.ssh/id_rsa
 ```
+
+When stdin is not a TTY (piped, redirected, or running under CI), the command reads the value from stdin instead of prompting. If stdin is empty in that case, it exits with a clear error rather than hanging.
 
 | Option               | Description                                         |
 | -------------------- | --------------------------------------------------- |
