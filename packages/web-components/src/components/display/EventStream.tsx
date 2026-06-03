@@ -111,9 +111,9 @@ export function EventStream({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isReversed, setIsReversed] = useState(readStoredDirection);
 
-  // Track previous event count for new-event animation.
-  // Initialized to current length so pre-existing events on mount don't animate.
-  const prevEventsLengthRef = useRef<number>(events.length);
+  // Monotonic total of events ever seen (survives MAX_EVENTS trimming).
+  // Initialized to current total so pre-existing events on mount don't animate.
+  const prevTotalRef = useRef<number>(eventsDropped + events.length);
 
   // Forward flow state
   const [showSessionPicker, setShowSessionPicker] = useState(false);
@@ -159,11 +159,14 @@ export function EventStream({
     },
   });
 
-  // Determine which event indices are "new" (just appended) for entry animation
-  const newEventThreshold = prevEventsLengthRef.current;
+  // Determine which events are "new" (appended since last render) for entry animation.
+  // Uses a monotonic total (eventsDropped + events.length) so animations still
+  // trigger after the MAX_EVENTS cap trims the array.
+  const currentTotal = eventsDropped + events.length;
+  const prevTotal = prevTotalRef.current;
   useEffect(() => {
-    prevEventsLengthRef.current = events.length;
-  }, [events.length]);
+    prevTotalRef.current = currentTotal;
+  }, [currentTotal]);
 
   const { isAtAnchor, scrollToAnchor } = useSmartScroll({
     scrollRef,
@@ -377,7 +380,7 @@ export function EventStream({
                   onOpenDocument={onOpenDocument}
                   measureRef={virtualizer.measureElement}
                   dataIndex={displayIndex}
-                  isNew={originalIndex >= newEventThreshold}
+                  isNew={eventsDropped + originalIndex >= prevTotal}
                   isReversed={isReversed}
                 />
               </div>
