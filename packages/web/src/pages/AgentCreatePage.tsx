@@ -52,7 +52,7 @@ export function AgentCreatePage(): JSX.Element {
         agentsLoading={agentsLoading}
         onCreate={handleCreate}
         onDelete={() => {}}
-        onNavigateBack={() => navigate("/")}
+        onNavigateBack={() => navigate(HOME_URL)}
       />
     </>
   );

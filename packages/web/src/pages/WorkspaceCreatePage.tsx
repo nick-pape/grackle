@@ -112,29 +112,29 @@ export function WorkspaceCreatePage(): JSX.Element {
   return (
     <div className={styles.container}>
       {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerTitle}>
-          <PageHeader segments={breadcrumbs} />
-        </div>
-        <div className={styles.headerActions}>
-          <button
-            className={styles.btnGhost}
-            onClick={handleCancel}
-            disabled={workspaceCreating}
-            data-testid="workspace-create-cancel"
-          >
-            Cancel
-          </button>
-          <button
-            className={styles.btnPrimary}
-            onClick={handleSave}
-            disabled={workspaceCreating || !values.name.trim() || !values.environmentId}
-            data-testid="workspace-create-save"
-          >
-            {workspaceCreating ? <Spinner size="sm" label="Creating" /> : "Create Workspace"}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        segments={breadcrumbs}
+        actions={
+          <>
+            <button
+              className={styles.btnGhost}
+              onClick={handleCancel}
+              disabled={workspaceCreating}
+              data-testid="workspace-create-cancel"
+            >
+              Cancel
+            </button>
+            <button
+              className={styles.btnPrimary}
+              onClick={handleSave}
+              disabled={workspaceCreating || !values.name.trim() || !values.environmentId}
+              data-testid="workspace-create-save"
+            >
+              {workspaceCreating ? <Spinner size="sm" label="Creating" /> : "Create Workspace"}
+            </button>
+          </>
+        }
+      />
 
       {/* Form body */}
       <div className={styles.body}>
