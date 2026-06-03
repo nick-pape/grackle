@@ -238,6 +238,7 @@ export function useEnvironments(): UseEnvironmentsResult {
       clearTimeout(timerId);
     }
     provisionClearTimersRef.current = {};
+    setProvisionStatus({});
   }, []);
 
   useEffect(() => {

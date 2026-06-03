@@ -261,32 +261,26 @@ describe("useEnvironments — provision-clear timer cleanup", () => {
     act(() => {
       result.current.handleEvent(readyEvent("env-1"));
     });
+    expect(vi.getTimerCount()).toBe(1);
 
     unmount();
-
-    act(() => {
-      vi.advanceTimersByTime(5_000);
-    });
-    // No error — setProvisionStatus was not called on unmounted component
+    expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("cancels the timer on onDisconnect", () => {
+  it("cancels timers and clears provisionStatus on onDisconnect", () => {
     const { result } = renderHook(() => useEnvironments());
 
     act(() => {
       result.current.handleEvent(readyEvent("env-1"));
     });
     expect(result.current.provisionStatus["env-1"]).toBeDefined();
+    expect(vi.getTimerCount()).toBe(1);
 
     act(() => {
       result.current.domainHook.onDisconnect();
     });
-
-    act(() => {
-      vi.advanceTimersByTime(5_000);
-    });
-    // Status was set by the event but not cleared by the cancelled timer
-    expect(result.current.provisionStatus["env-1"]).toBeDefined();
+    expect(vi.getTimerCount()).toBe(0);
+    expect(result.current.provisionStatus).toEqual({});
   });
 
   it("deduplicates timers for the same environment", () => {
