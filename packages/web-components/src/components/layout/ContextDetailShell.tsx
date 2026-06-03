@@ -111,6 +111,7 @@ export function ContextDetailShell({
     <>
       <header className={styles.header} data-testid={headerTestId}>
         <button
+          type="button"
           className={styles.backButton}
           onClick={onNavigateBack}
           aria-label="Back"
