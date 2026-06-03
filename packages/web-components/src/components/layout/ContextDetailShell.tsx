@@ -121,7 +121,9 @@ export function ContextDetailShell({
         >
           <ArrowLeft size={18} />
         </button>
-        <span className={styles.icon}>{icon}</span>
+        <span className={styles.icon} aria-hidden="true">
+          {icon}
+        </span>
         <div className={styles.info}>
           <h2
             className={styles.name}
