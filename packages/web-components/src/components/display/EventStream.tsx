@@ -111,9 +111,9 @@ export function EventStream({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isReversed, setIsReversed] = useState(readStoredDirection);
 
-  // Monotonic total of events ever seen (survives MAX_EVENTS trimming).
-  // Initialized to current total so pre-existing events on mount don't animate.
-  const prevTotalRef = useRef<number>(eventsDropped + events.length);
+  // Previous event count for new-event animation detection.
+  // Initialized to current length so pre-existing events on mount don't animate.
+  const prevLengthRef = useRef<number>(events.length);
 
   // Forward flow state
   const [showSessionPicker, setShowSessionPicker] = useState(false);
@@ -146,24 +146,22 @@ export function EventStream({
     return [...events].reverse();
   }, [events, isReversed]);
 
-  // Stable key using monotonic index so keys survive MAX_EVENTS trimming
+  // Stable key per item — uses event identity fields, not global eventsDropped
   const getItemKey = useCallback(
     (displayIndex: number, event: DisplayEvent): string => {
       const originalIndex = isReversed ? events.length - 1 - displayIndex : displayIndex;
-      const monotonicIndex = eventsDropped + originalIndex;
-      return `${event.sessionId}-${event.timestamp}-${monotonicIndex}`;
+      return `${event.sessionId}-${event.timestamp}-${originalIndex}`;
     },
-    [events.length, isReversed, eventsDropped],
+    [events.length, isReversed],
   );
 
   // Determine which events are "new" (appended since last render) for entry animation.
-  // Uses a monotonic total (eventsDropped + events.length) so animations still
-  // trigger after the MAX_EVENTS cap trims the array.
-  const currentTotal = eventsDropped + events.length;
-  const prevTotal = prevTotalRef.current;
+  // Tracks per-session events.length, not the global eventsDropped total, to avoid
+  // spurious animations when unrelated sessions cause drops.
+  const newEventThreshold = prevLengthRef.current;
   useEffect(() => {
-    prevTotalRef.current = currentTotal;
-  }, [currentTotal]);
+    prevLengthRef.current = events.length;
+  }, [events.length]);
 
   const { isAtAnchor, scrollToAnchor } = useSmartScroll({
     scrollRef,
@@ -365,7 +363,7 @@ export function EventStream({
                 onCopied={handleItemCopied}
                 sandboxProxyUrl={sandboxProxyUrl}
                 onOpenDocument={onOpenDocument}
-                isNew={eventsDropped + originalIndex >= prevTotal}
+                isNew={originalIndex >= newEventThreshold}
                 isReversed={isReversed}
               />
             );
