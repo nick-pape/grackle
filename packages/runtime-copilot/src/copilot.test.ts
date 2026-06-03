@@ -429,6 +429,7 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
 
 describe("CopilotRuntime — SDK 1.0 client option wiring", () => {
   let capturedClientOpts: Record<string, unknown> | undefined;
+  let capturedSessionConfig: Record<string, unknown> | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockRuntimeConnection: { forStdio: any; forUri: any; forTcp: any };
 
@@ -440,6 +441,7 @@ describe("CopilotRuntime — SDK 1.0 client option wiring", () => {
     vi.stubEnv("GH_TOKEN", "");
     vi.stubEnv("GITHUB_TOKEN", "");
     capturedClientOpts = undefined;
+    capturedSessionConfig = undefined;
 
     const idleHandlers: Record<string, () => void> = {};
     const mockCopilotSession = {
@@ -467,7 +469,10 @@ describe("CopilotRuntime — SDK 1.0 client option wiring", () => {
           capturedClientOpts = opts;
           return {
             stop: vi.fn(async () => []),
-            createSession: vi.fn(async () => mockCopilotSession),
+            createSession: vi.fn(async (config: Record<string, unknown>) => {
+              capturedSessionConfig = config;
+              return mockCopilotSession;
+            }),
             resumeSession: vi.fn(async () => mockCopilotSession),
           };
         }
@@ -559,6 +564,26 @@ describe("CopilotRuntime — SDK 1.0 client option wiring", () => {
     }
     expect(capturedClientOpts?.useLoggedInUser).toBe(true);
     expect(capturedClientOpts?.gitHubToken).toBeUndefined();
+  });
+
+  it("passes approve-once permission handler in session config", async () => {
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "wt-5",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    for await (const e of session.stream()) {
+      if (e.type === "status" && (e.content === "waiting_input" || e.content === "failed")) {
+        session.kill();
+        break;
+      }
+    }
+    expect(capturedSessionConfig).toBeDefined();
+    const permHandler = capturedSessionConfig!.onPermissionRequest;
+    expect(permHandler).toBeTypeOf("function");
+    expect((permHandler as () => unknown)()).toEqual({ kind: "approve-once" });
   });
 });
 

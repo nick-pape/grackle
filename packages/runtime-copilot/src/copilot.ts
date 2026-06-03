@@ -194,7 +194,7 @@ export class CopilotSession extends BaseAgentSession {
     const sessionConfig: Record<string, unknown> = {
       model: this.model,
       streaming: true,
-      onPermissionRequest: copilotSdk.approveAll,
+      onPermissionRequest: () => ({ kind: "approve-once" }),
     };
 
     // Inject system context via SDK-native systemMessage
