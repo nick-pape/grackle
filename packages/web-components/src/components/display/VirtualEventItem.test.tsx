@@ -18,8 +18,6 @@ function makeProps(overrides: Partial<VirtualEventItemProps> = {}): VirtualEvent
     onSelect: vi.fn(),
     onToggle: vi.fn(),
     onCopied: vi.fn(),
-    measureRef: vi.fn(),
-    dataIndex: 0,
     isNew: false,
     isReversed: false,
     ...overrides,
@@ -51,12 +49,6 @@ describe("VirtualEventItem", () => {
     const { container } = render(<VirtualEventItem {...makeProps({ isNew: false })} />);
     const wrapper = container.firstElementChild as HTMLElement;
     expect(wrapper.className).not.toContain("eventFadeIn");
-  });
-
-  it("sets data-index attribute for the virtualizer", () => {
-    const { container } = render(<VirtualEventItem {...makeProps({ dataIndex: 7 })} />);
-    const wrapper = container.firstElementChild as HTMLElement;
-    expect(wrapper.getAttribute("data-index")).toBe("7");
   });
 
   it("renders hover row with copy and select in normal mode", () => {

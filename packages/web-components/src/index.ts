@@ -36,6 +36,8 @@ export type { TooltipProps, TooltipPlacement } from "./components/display/index.
 export type { McpAppWidgetProps, McpAppWidgetCallToolParams } from "./components/display/index.js";
 export { grackleHostStyleVariables } from "./utils/grackleHostStyleVariables.js";
 export { EventStream } from "./components/display/EventStream.js";
+export { VirtualList } from "./components/display/VirtualList.js";
+export type { VirtualListProps } from "./components/display/VirtualList.js";
 export { EventHoverRow } from "./components/display/EventHoverRow.js";
 export type { EventHoverRowProps } from "./components/display/EventHoverRow.js";
 export { FloatingActionBar } from "./components/display/FloatingActionBar.js";

@@ -45,11 +45,6 @@ export interface VirtualEventItemProps {
   sandboxProxyUrl?: string;
   /** Open a file in the live-docs pane. */
   onOpenDocument?: (uri: string) => void;
-  /** Ref callback for @tanstack/react-virtual measureElement. */
-  // eslint-disable-next-line @rushstack/no-new-null -- library-imposed callback signature
-  measureRef: (node: HTMLElement | null) => void;
-  /** data-index for the virtualizer. */
-  dataIndex: number;
   /** Whether this event is newly appended (triggers entry animation). */
   isNew: boolean;
   /** Whether the stream is in reversed (newest-at-top) mode. */
@@ -71,8 +66,6 @@ function arePropsEqual(
     prev.onCopied === next.onCopied &&
     prev.sandboxProxyUrl === next.sandboxProxyUrl &&
     prev.onOpenDocument === next.onOpenDocument &&
-    prev.measureRef === next.measureRef &&
-    prev.dataIndex === next.dataIndex &&
     prev.isNew === next.isNew &&
     prev.isReversed === next.isReversed
   );
@@ -80,7 +73,8 @@ function arePropsEqual(
 
 /**
  * Memoized event row for the virtualized EventStream.
- * Wraps EventHoverRow + EventRenderer with a measurement ref for dynamic heights.
+ * Wraps EventHoverRow + EventRenderer. Measurement and positioning are
+ * handled by the parent VirtualList component.
  */
 export const VirtualEventItem: React.NamedExoticComponent<VirtualEventItemProps> = memo(
   function VirtualEventItem({
@@ -93,8 +87,6 @@ export const VirtualEventItem: React.NamedExoticComponent<VirtualEventItemProps>
     onCopied,
     sandboxProxyUrl,
     onOpenDocument,
-    measureRef,
-    dataIndex,
     isNew,
     isReversed,
   }: VirtualEventItemProps): JSX.Element {
@@ -120,7 +112,7 @@ export const VirtualEventItem: React.NamedExoticComponent<VirtualEventItemProps>
       : undefined;
 
     return (
-      <div ref={measureRef} data-index={dataIndex} className={animationClass}>
+      <div className={animationClass}>
         <EventHoverRow
           copyText={copyText}
           isContentBearing={contentBearing}

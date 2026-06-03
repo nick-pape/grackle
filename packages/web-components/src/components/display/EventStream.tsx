@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from "react";
 import { AlertTriangle, ArrowDown, ArrowUp } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { VirtualList } from "./VirtualList.js";
 import { VirtualEventItem } from "./VirtualEventItem.js";
 import { FloatingActionBar } from "./FloatingActionBar.js";
 import { SessionPicker } from "./SessionPicker.js";
@@ -146,18 +146,14 @@ export function EventStream({
     return [...events].reverse();
   }, [events, isReversed]);
 
-  // Virtualizer — only renders visible rows + overscan
-  const virtualizer = useVirtualizer({
-    count: displayEvents.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => ESTIMATED_EVENT_HEIGHT_PX,
-    overscan: VIRTUALIZER_OVERSCAN,
-    getItemKey: (displayIndex: number) => {
-      const event = displayEvents[displayIndex];
+  // Stable key function for the virtual list
+  const getItemKey = useCallback(
+    (displayIndex: number, event: DisplayEvent): string => {
       const originalIndex = isReversed ? events.length - 1 - displayIndex : displayIndex;
       return `${event.sessionId}-${event.timestamp}-${originalIndex}`;
     },
-  });
+    [events.length, isReversed],
+  );
 
   // Determine which events are "new" (appended since last render) for entry animation.
   // Uses a monotonic total (eventsDropped + events.length) so animations still
@@ -344,49 +340,31 @@ export function EventStream({
       >
         {events.length === 0 && emptyState}
         <EventOverflowBanner eventsDropped={eventsDropped} />
-        {/* Virtualized event list — only visible rows + overscan are in the DOM */}
-        <div
-          style={{
-            height: `${virtualizer.getTotalSize()}px`,
-            width: "100%",
-            position: "relative",
-          }}
-        >
-          {virtualizer.getVirtualItems().map((virtualItem) => {
-            const displayIndex = virtualItem.index;
-            const event = displayEvents[displayIndex];
+        <VirtualList
+          items={displayEvents}
+          scrollRef={scrollRef}
+          estimateSize={ESTIMATED_EVENT_HEIGHT_PX}
+          overscan={VIRTUALIZER_OVERSCAN}
+          getItemKey={getItemKey}
+          renderItem={(event, displayIndex) => {
             const originalIndex = isReversed ? events.length - 1 - displayIndex : displayIndex;
-
             return (
-              <div
-                key={virtualItem.key}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  transform: `translateY(${virtualItem.start}px)`,
-                }}
-              >
-                <VirtualEventItem
-                  event={event}
-                  originalIndex={originalIndex}
-                  isSelecting={selection.isSelecting}
-                  isSelected={selection.selectedIndices.has(originalIndex)}
-                  onSelect={handleEnterSelection}
-                  onToggle={handleToggleEvent}
-                  onCopied={handleItemCopied}
-                  sandboxProxyUrl={sandboxProxyUrl}
-                  onOpenDocument={onOpenDocument}
-                  measureRef={virtualizer.measureElement}
-                  dataIndex={displayIndex}
-                  isNew={eventsDropped + originalIndex >= prevTotal}
-                  isReversed={isReversed}
-                />
-              </div>
+              <VirtualEventItem
+                event={event}
+                originalIndex={originalIndex}
+                isSelecting={selection.isSelecting}
+                isSelected={selection.selectedIndices.has(originalIndex)}
+                onSelect={handleEnterSelection}
+                onToggle={handleToggleEvent}
+                onCopied={handleItemCopied}
+                sandboxProxyUrl={sandboxProxyUrl}
+                onOpenDocument={onOpenDocument}
+                isNew={eventsDropped + originalIndex >= prevTotal}
+                isReversed={isReversed}
+              />
             );
-          })}
-        </div>
+          }}
+        />
       </div>
 
       {/* Floating action bar for multi-select mode */}
