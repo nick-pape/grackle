@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from "react";
 import { AlertTriangle, ArrowDown, ArrowUp } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { EventRenderer } from "./EventRenderer.js";
-import { EventHoverRow } from "./EventHoverRow.js";
+import { AnimatePresence, motion } from "motion/react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { VirtualEventItem } from "./VirtualEventItem.js";
 import { FloatingActionBar } from "./FloatingActionBar.js";
 import { SessionPicker } from "./SessionPicker.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
@@ -11,14 +11,13 @@ import { useSmartScroll } from "../../hooks/useSmartScroll.js";
 import { useEventSelection } from "../../hooks/useEventSelection.js";
 import {
   isContentBearingEvent,
-  getEventCopyText,
   formatEventsAsMarkdown,
   formatForwardEnvelope,
 } from "../../utils/eventContent.js";
 import type { ToastVariant } from "../../context/ToastContext.js";
 import { ICON_MD } from "../../utils/iconSize.js";
 import type { DisplayEvent } from "../../utils/sessionEvents.js";
-import type { Session, Environment, PersonaData, SessionEvent } from "../../hooks/types.js";
+import type { Session, Environment, PersonaData } from "../../hooks/types.js";
 import styles from "./EventStream.module.scss";
 
 /** Byte size threshold above which a large-message confirmation is shown (10 KB). */
@@ -27,24 +26,11 @@ const LARGE_MESSAGE_THRESHOLD_BYTES: number = 10 * 1024;
 /** Active session statuses eligible as forward targets. */
 const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["running", "idle"]);
 
-/** Build a descriptive label for the selection checkbox aria-label. */
-function buildCheckboxLabel(event: SessionEvent): string {
-  const time = new Date(event.timestamp).toLocaleTimeString();
-  switch (event.eventType) {
-    case "text":
-    case "output":
-      return `Select message from assistant at ${time}`;
-    case "user_input":
-      return `Select message from user at ${time}`;
-    case "tool_result":
-    case "tool_use":
-      return `Select tool event at ${time}`;
-    case "error":
-      return `Select error at ${time}`;
-    default:
-      return `Select event at ${time}`;
-  }
-}
+/** Estimated average height (px) of an event row for the virtualizer. */
+const ESTIMATED_EVENT_HEIGHT_PX: number = 80;
+
+/** Number of off-screen rows to render above/below the visible area. */
+const VIRTUALIZER_OVERSCAN: number = 5;
 
 /** localStorage key for persisting the direction preference. */
 const DIRECTION_STORAGE_KEY: string = "grackle-stream-direction";
@@ -124,7 +110,9 @@ export function EventStream({
 }: EventStreamProps): JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isReversed, setIsReversed] = useState(readStoredDirection);
-  const shouldReduceMotion = useReducedMotion();
+
+  // Track which event indices have been rendered (for new-event animation)
+  const prevEventsLengthRef = useRef<number>(0);
 
   // Forward flow state
   const [showSessionPicker, setShowSessionPicker] = useState(false);
@@ -156,6 +144,25 @@ export function EventStream({
     }
     return [...events].reverse();
   }, [events, isReversed]);
+
+  // Virtualizer — only renders visible rows + overscan
+  const virtualizer = useVirtualizer({
+    count: displayEvents.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ESTIMATED_EVENT_HEIGHT_PX,
+    overscan: VIRTUALIZER_OVERSCAN,
+    getItemKey: (displayIndex: number) => {
+      const event = displayEvents[displayIndex];
+      const originalIndex = isReversed ? events.length - 1 - displayIndex : displayIndex;
+      return `${event.sessionId}-${event.timestamp}-${originalIndex}`;
+    },
+  });
+
+  // Determine which event indices are "new" (just appended) for entry animation
+  const newEventThreshold = prevEventsLengthRef.current;
+  useEffect(() => {
+    prevEventsLengthRef.current = events.length;
+  }, [events.length]);
 
   const { isAtAnchor, scrollToAnchor } = useSmartScroll({
     scrollRef,
@@ -282,8 +289,24 @@ export function EventStream({
     setPendingForward(undefined);
   }, []);
 
-  const animationDuration = shouldReduceMotion ? 0 : 0.2;
-  const enterY = isReversed ? -8 : 8;
+  // Stabilized callbacks for VirtualEventItem (avoids breaking memo)
+  const handleEnterSelection = useCallback(
+    (originalIndex: number) => {
+      selection.enterSelectionMode(originalIndex);
+    },
+    [selection.enterSelectionMode],
+  );
+
+  const handleToggleEvent = useCallback(
+    (originalIndex: number, shiftKey: boolean) => {
+      selection.toggleEvent(originalIndex, shiftKey);
+    },
+    [selection.toggleEvent],
+  );
+
+  const handleItemCopied = useCallback(() => {
+    onShowToast?.("Copied to clipboard", "success");
+  }, [onShowToast]);
 
   const largeMessageSizeKb = pendingForward
     ? Math.round(new TextEncoder().encode(pendingForward.text).length / 1024)
@@ -317,45 +340,49 @@ export function EventStream({
       >
         {events.length === 0 && emptyState}
         <EventOverflowBanner eventsDropped={eventsDropped} />
-        <AnimatePresence initial={false}>
-          {displayEvents.map((event, displayIndex) => {
-            // Use original index for stable keys regardless of direction
+        {/* Virtualized event list — only visible rows + overscan are in the DOM */}
+        <div
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: "100%",
+            position: "relative",
+          }}
+        >
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const displayIndex = virtualItem.index;
+            const event = displayEvents[displayIndex];
             const originalIndex = isReversed ? events.length - 1 - displayIndex : displayIndex;
+
             return (
-              <motion.div
-                key={`${event.sessionId}-${event.timestamp}-${originalIndex}`}
-                initial={{ opacity: 0, y: enterY }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: animationDuration, ease: "easeOut" }}
+              <div
+                key={virtualItem.key}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
               >
-                <EventHoverRow
-                  copyText={getEventCopyText(event)}
-                  isContentBearing={isContentBearingEvent(event)}
+                <VirtualEventItem
+                  event={event}
+                  originalIndex={originalIndex}
                   isSelecting={selection.isSelecting}
                   isSelected={selection.selectedIndices.has(originalIndex)}
-                  checkboxLabel={buildCheckboxLabel(event)}
-                  onSelect={() => {
-                    selection.enterSelectionMode(originalIndex);
-                  }}
-                  onToggle={(shiftKey) => {
-                    selection.toggleEvent(originalIndex, shiftKey);
-                  }}
-                  onCopied={() => {
-                    onShowToast?.("Copied to clipboard", "success");
-                  }}
-                >
-                  <EventRenderer
-                    event={event}
-                    toolUseCtx={event.toolUseCtx}
-                    settled={event.settled}
-                    sandboxProxyUrl={sandboxProxyUrl}
-                    onOpenDocument={onOpenDocument}
-                  />
-                </EventHoverRow>
-              </motion.div>
+                  onSelect={handleEnterSelection}
+                  onToggle={handleToggleEvent}
+                  onCopied={handleItemCopied}
+                  sandboxProxyUrl={sandboxProxyUrl}
+                  onOpenDocument={onOpenDocument}
+                  measureRef={virtualizer.measureElement}
+                  dataIndex={displayIndex}
+                  isNew={originalIndex >= newEventThreshold}
+                  isReversed={isReversed}
+                />
+              </div>
             );
           })}
-        </AnimatePresence>
+        </div>
       </div>
 
       {/* Floating action bar for multi-select mode */}

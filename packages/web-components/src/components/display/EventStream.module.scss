@@ -75,6 +75,49 @@
 }
 
 // ---------------------------------------------------------------------------
+// New-event entry animations (replaces per-item Framer Motion)
+// ---------------------------------------------------------------------------
+
+.eventFadeIn {
+  animation: eventFadeIn 0.2s ease-out;
+}
+
+.eventFadeInReversed {
+  animation: eventFadeInReversed 0.2s ease-out;
+}
+
+@keyframes eventFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes eventFadeInReversed {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eventFadeIn,
+  .eventFadeInReversed {
+    animation: none !important;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Event overflow warning (shown when events exceed the 5,000 in-memory cap)
 // ---------------------------------------------------------------------------
 

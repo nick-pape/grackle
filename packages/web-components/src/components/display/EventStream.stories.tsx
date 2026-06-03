@@ -246,6 +246,29 @@ export const ForwardOpensSessionPicker: Story = {
   },
 };
 
+/** Large event list to verify virtualization (only visible rows render). */
+export const LargeEventList: Story = {
+  args: {
+    events: Array.from({ length: 500 }, (_, i) =>
+      makeEvent({
+        eventType: i % 5 === 0 ? "user_input" : "text",
+        content: `Event ${i + 1}: ${i % 5 === 0 ? "User message" : "Agent response with some content to fill the row."}`,
+        timestamp: new Date(Date.UTC(2026, 0, 1, 0, 0, i)).toISOString(),
+      }),
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const scrollContainer = canvasElement.querySelector("[data-testid='event-stream-scroll']");
+    if (!scrollContainer) {
+      throw new Error("Scroll container not found");
+    }
+    // Virtualization: DOM should have far fewer rows than the 500 events
+    const rows = canvasElement.querySelectorAll("[data-testid='event-hover-row']");
+    await expect(rows.length).toBeLessThan(50);
+    await expect(rows.length).toBeGreaterThan(0);
+  },
+};
+
 /** Cancel exits selection mode -- checkboxes disappear. */
 export const CancelSelection: Story = {
   args: {
