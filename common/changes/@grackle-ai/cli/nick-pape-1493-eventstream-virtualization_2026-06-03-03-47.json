@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Virtualize EventStream with react-virtuoso to render only visible rows, memoize event items with React.memo, and replace per-item Framer Motion with CSS animations",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "nickpape@outlook.com"
+}
