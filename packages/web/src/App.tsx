@@ -273,7 +273,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
       if (id.startsWith(AGENT_CONTEXT_PREFIX)) {
         navigate(agentUrl(id.slice(AGENT_CONTEXT_PREFIX.length)));
       } else if (id === DEFAULT_CONTEXT_ID) {
-        navigate("/");
+        navigate("/chat");
       }
     },
     [navigate],
@@ -358,7 +358,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
             <ContextDetailShell
               icon={CODE_HEADER_ICON}
               name="Code"
-              onNavigateBack={() => navigate("/")}
+              onNavigateBack={() => navigate("/chat")}
               tabs={codeDetailTabs}
               activeTab={activeView}
               onSelectTab={handleCodeTabSelect}

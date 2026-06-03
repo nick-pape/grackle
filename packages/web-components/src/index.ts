@@ -147,10 +147,6 @@ export type { PersonaManagerProps } from "./components/personas/PersonaManager.j
 // Agents (#1417, #1419)
 export { AgentManager, isImageAvatar } from "./components/agents/AgentManager.js";
 export type { AgentManagerProps } from "./components/agents/AgentManager.js";
-export { AgentTabBar } from "./components/agents/AgentTabBar.js";
-export type { AgentTabBarProps } from "./components/agents/AgentTabBar.js";
-export { AgentHeader } from "./components/agents/AgentHeader.js";
-export type { AgentHeaderProps } from "./components/agents/AgentHeader.js";
 
 // Schedules
 export { ScheduleManager } from "./components/schedules/ScheduleManager.js";

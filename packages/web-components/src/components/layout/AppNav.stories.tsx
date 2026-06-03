@@ -292,7 +292,8 @@ export const WorkbenchAndFleetOnly: Story = {
   args: { groups: ["workbench", "fleet"] },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
-    // Fleet surfaces: Coordination, Personas, Environments, Schedules (#1419).
+    // Fleet surfaces: Dashboard, Coordination, Personas, Environments, Schedules.
+    await expect(canvas.getByRole("tab", { name: /Dashboard/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Coordination/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Personas/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Environments/ })).toBeInTheDocument();
@@ -314,6 +315,7 @@ export const WorkbenchAndGlobalOnly: Story = {
     await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Settings/ })).toBeInTheDocument();
     // All fleet tabs absent from the workbench+global bar.
+    await expect(canvas.queryByRole("tab", { name: /Dashboard/ })).not.toBeInTheDocument();
     await expect(canvas.queryByRole("tab", { name: /Coordination/ })).not.toBeInTheDocument();
     await expect(canvas.queryByRole("tab", { name: /Personas/ })).not.toBeInTheDocument();
     await expect(canvas.queryByRole("tab", { name: /Environments/ })).not.toBeInTheDocument();

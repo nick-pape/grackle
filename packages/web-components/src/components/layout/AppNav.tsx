@@ -120,8 +120,8 @@ export const TABS: AppTab[] = [
     icon: <Home size={ICON_LG} />,
     route: HOME_URL,
     testId: "sidebar-tab-dashboard",
-    order: 3,
-    group: "workbench",
+    order: 5.5,
+    group: "fleet",
   },
   {
     view: "knowledge",
@@ -129,7 +129,7 @@ export const TABS: AppTab[] = [
     icon: <Brain size={ICON_LG} />,
     route: KNOWLEDGE_URL,
     testId: "sidebar-tab-knowledge",
-    order: 4,
+    order: 3,
     group: "workbench",
   },
   {
