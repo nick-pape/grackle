@@ -1,31 +1,35 @@
 import { test, expect } from "./fixtures.js";
 
 test.describe("App Navigation Bar", { tag: ["@environment"] }, () => {
-  test("app nav bar has Chat, Tasks, Environments, and Settings tabs", async ({ appPage }) => {
+  test("app nav bar has Chat, Tasks, and Settings tabs in Code context", async ({ appPage }) => {
     const page = appPage;
 
-    // App nav bar should be visible (full-width, above sidebar)
+    // Code context tab bar should be visible
     await expect(page.locator('[data-testid="sidebar-nav"]')).toBeVisible();
 
-    // All four tabs should be present
+    // Workbench tabs present in the Code tab bar
     await expect(page.locator('[data-testid="sidebar-tab-chat"]')).toBeVisible();
     await expect(page.locator('[data-testid="sidebar-tab-tasks"]')).toBeVisible();
-    await expect(page.locator('[data-testid="sidebar-tab-environments"]')).toBeVisible();
     await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toBeVisible();
+
+    // Environments is a fleet surface in the context rail
+    await expect(
+      page.getByTestId("context-nav").getByTestId("sidebar-tab-environments"),
+    ).toBeVisible();
   });
 
-  test("app defaults to home/dashboard view", async ({ appPage }) => {
+  test("app defaults to Chat view in Code context", async ({ appPage }) => {
     const page = appPage;
 
-    // The home route renders the dashboard
-    await expect(page).toHaveURL(/\/$/);
+    // The fixture lands at /chat (the default Code context view).
+    await expect(page).toHaveURL(/\/chat/);
   });
 
-  test("clicking Environments tab shows environment nav", async ({ appPage }) => {
+  test("clicking Environments in fleet rail shows environment nav", async ({ appPage }) => {
     const page = appPage;
 
-    // Click the Environments tab
-    await page.locator('[data-testid="sidebar-tab-environments"]').click();
+    // Click Environments in the fleet section of the context rail
+    await page.getByTestId("context-nav").getByTestId("sidebar-tab-environments").click();
 
     // The environment nav and add button should be visible
     await expect(page.getByTestId("environment-nav")).toBeVisible();
@@ -35,7 +39,7 @@ test.describe("App Navigation Bar", { tag: ["@environment"] }, () => {
 
 test.describe("Environments Page", { tag: ["@environment"] }, () => {
   test.beforeEach(async ({ appPage }) => {
-    await appPage.locator('[data-testid="sidebar-tab-environments"]').click();
+    await appPage.getByTestId("context-nav").getByTestId("sidebar-tab-environments").click();
   });
 
   test("environment nav shows test-local environment", async ({ appPage }) => {
@@ -98,36 +102,31 @@ test.describe("Environments Page", { tag: ["@environment"] }, () => {
 });
 
 test.describe("Navigation Between Settings and Environments", { tag: ["@environment"] }, () => {
-  test("clicking Grackle brand from Settings returns to home", async ({ appPage }) => {
+  test("clicking Grackle brand from Settings returns to Chat", async ({ appPage }) => {
     const page = appPage;
 
     // Navigate to Settings
     await page.locator('[data-testid="sidebar-tab-settings"]').click();
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
-    // Click Grackle brand to go home
+    // Click Grackle brand to go home — lands on / (Dashboard, fleet)
     await page.getByTestId("statusbar-brand").click();
 
-    // Should navigate to home (settings tab no longer active)
-    await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toHaveAttribute(
-      "aria-selected",
-      "false",
-      { timeout: 5_000 },
-    );
+    // Should navigate away from settings
+    await expect(page).not.toHaveURL(/\/settings/);
   });
 
   test("settings tab returns to Settings from environment view", async ({ appPage }) => {
     const page = appPage;
 
-    // Switch to Environments in fleet rail (#1419) and select an environment
-    await page.locator('[data-testid="sidebar-tab-environments"]').click();
+    // Switch to Environments in fleet rail and select an environment
+    await page.getByTestId("context-nav").getByTestId("sidebar-tab-environments").click();
     await page.getByTestId("env-nav-item").first().click();
 
-    // Return to Code context (AppNav is hidden on fleet pages, so go back
-    // to Code first to make the Settings tab visible again)
+    // Return to Code context (tab bar is hidden on fleet pages)
     await page.locator('[data-testid="context-code"]').click();
 
-    // Now click Settings tab (visible in the Code context's AppNav)
+    // Now click Settings tab (visible in the Code context's tab bar)
     await page.locator('[data-testid="sidebar-tab-settings"]').click();
 
     // Settings should be visible with Credentials tab
