@@ -71,6 +71,7 @@ function arePropsEqual(
     prev.onCopied === next.onCopied &&
     prev.sandboxProxyUrl === next.sandboxProxyUrl &&
     prev.onOpenDocument === next.onOpenDocument &&
+    prev.measureRef === next.measureRef &&
     prev.dataIndex === next.dataIndex &&
     prev.isNew === next.isNew &&
     prev.isReversed === next.isReversed

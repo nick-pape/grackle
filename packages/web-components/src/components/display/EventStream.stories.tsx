@@ -257,13 +257,13 @@ export const LargeEventList: Story = {
       }),
     ),
   },
-  play: async ({ canvasElement }) => {
-    const scrollContainer = canvasElement.querySelector("[data-testid='event-stream-scroll']");
-    if (!scrollContainer) {
-      throw new Error("Scroll container not found");
-    }
+  play: async ({ canvas }) => {
+    // Wait for the virtualizer to render its first batch of rows
+    const firstRow = await canvas.findByTestId("event-hover-row");
+    await expect(firstRow).toBeInTheDocument();
+
     // Virtualization: DOM should have far fewer rows than the 500 events
-    const rows = canvasElement.querySelectorAll("[data-testid='event-hover-row']");
+    const rows = canvas.getAllByTestId("event-hover-row");
     await expect(rows.length).toBeLessThan(50);
     await expect(rows.length).toBeGreaterThan(0);
   },
