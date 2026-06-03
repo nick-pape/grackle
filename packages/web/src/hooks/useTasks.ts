@@ -130,6 +130,10 @@ export function useTasks(): UseTasksResult {
 
   const onDisconnect = useCallback(() => {
     setTaskStartingId(undefined);
+    for (const t of Object.values(debounceTimersRef.current)) {
+      clearTimeout(t);
+    }
+    debounceTimersRef.current = {};
   }, []);
 
   const handleLegacyMessage = useCallback((msg: WsMessage): boolean => {

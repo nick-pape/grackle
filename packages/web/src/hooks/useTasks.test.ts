@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { useTasks } from "./useTasks.js";
@@ -135,5 +135,42 @@ describe("useTasks startTask", () => {
 
     expect(result.current.taskStartingId).toBe(undefined);
     expect(caught).toBe(genericErr);
+  });
+});
+
+describe("useTasks onDisconnect clears debounce timers", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+    mockClient.listTasks.mockResolvedValue({ tasks: [] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("cancels pending debounce timers so loadTasks is not called after disconnect", () => {
+    const { result } = setup();
+
+    act(() => {
+      result.current.handleEvent({
+        id: "evt-1",
+        timestamp: "2026-01-01T00:00:00Z",
+        type: "task.updated",
+        payload: { workspaceId: "ws-1", taskId: "t-1" },
+      });
+    });
+
+    mockClient.listTasks.mockClear();
+
+    act(() => {
+      result.current.domainHook.onDisconnect();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(mockClient.listTasks).not.toHaveBeenCalled();
   });
 });
