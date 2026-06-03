@@ -106,7 +106,7 @@ function ComposerTextArea({
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
     // Enter submits; Shift+Enter falls through to insert a newline.
     // The isComposing guard avoids submitting mid-IME composition (e.g. CJK input).
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+    if (e.key === "Enter" && !e.shiftKey && !e.repeat && !e.nativeEvent.isComposing) {
       e.preventDefault();
       onSubmit();
     }
