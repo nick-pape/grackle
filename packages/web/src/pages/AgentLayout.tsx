@@ -1,17 +1,23 @@
 /**
  * AgentLayout — layout route component for `/agents/:agentId/*` (#1419).
- * Renders the agent header + tab bar and passes agent context to child
+ * Renders the shared {@link ContextDetailShell} with agent-specific
+ * avatar, name, heartbeat, and tabs, and passes agent context to child
  * routes via React Router's outlet context.
  *
  * @module
  */
 
+import { useMemo } from "react";
 import { Outlet, useLocation, useOutletContext, useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import {
-  AgentHeader,
-  AgentTabBar,
+  ContextDetailShell,
+  AGENT_DETAIL_TABS,
+  isImageAvatar,
   useAppNavigate,
+  agentUrl,
+  formatCountdown,
+  formatRelativeTime,
   type AgentTab,
   type AgentData,
 } from "@grackle-ai/web-components";
@@ -37,6 +43,79 @@ function deriveActiveTab(pathname: string): AgentTab {
   return "chat";
 }
 
+/** Render an agent avatar as a ReactNode for the shell header icon slot. */
+function AgentAvatar({ name, avatar }: { name: string; avatar: string }): JSX.Element {
+  if (avatar && isImageAvatar(avatar)) {
+    return (
+      <img
+        src={avatar}
+        alt=""
+        referrerPolicy="no-referrer"
+        loading="lazy"
+        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
+        data-testid="agent-header-avatar-image"
+      />
+    );
+  }
+  const glyph = avatar || (name.trim().charAt(0) || "?").toUpperCase();
+  return (
+    <span aria-hidden="true" data-testid="agent-header-avatar-glyph">
+      {glyph}
+    </span>
+  );
+}
+
+/** Heartbeat status indicators rendered below the agent name. */
+function HeartbeatStatus({
+  heartbeat,
+}: {
+  heartbeat: NonNullable<AgentData["heartbeat"]>;
+}): JSX.Element {
+  return (
+    <div
+      style={{ display: "flex", alignItems: "center", gap: "var(--space-md)", flexWrap: "wrap" }}
+      data-testid="agent-header-status"
+    >
+      {heartbeat.enabled && heartbeat.nextRunAt && (
+        <span
+          style={{
+            fontSize: "var(--font-size-xs)",
+            color: "var(--text-tertiary)",
+            whiteSpace: "nowrap",
+          }}
+          data-testid="agent-header-next-wake"
+        >
+          Next wake {formatCountdown(heartbeat.nextRunAt)}
+        </span>
+      )}
+      {!heartbeat.enabled && (
+        <span
+          style={{
+            fontSize: "var(--font-size-xs)",
+            color: "var(--text-tertiary)",
+            whiteSpace: "nowrap",
+          }}
+          data-testid="agent-header-paused"
+        >
+          Paused
+        </span>
+      )}
+      {heartbeat.lastRunAt && (
+        <span
+          style={{
+            fontSize: "var(--font-size-xs)",
+            color: "var(--text-tertiary)",
+            whiteSpace: "nowrap",
+          }}
+          data-testid="agent-header-last-activity"
+        >
+          Last activity {formatRelativeTime(heartbeat.lastRunAt)}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function AgentLayout(): JSX.Element {
   const { agentId } = useParams<{ agentId: string }>();
   const location = useLocation();
@@ -47,6 +126,11 @@ export function AgentLayout(): JSX.Element {
 
   const agent = agentId ? agents.find((a) => a.id === agentId) : undefined;
   const activeTab = deriveActiveTab(location.pathname);
+
+  const handleSelectTab = useMemo(() => {
+    if (!agent) return (_id: string) => {};
+    return (tabId: string) => navigate(agentUrl(agent.id, tabId as AgentTab));
+  }, [agent, navigate]);
 
   if (agentId && !agent && agentsLoading) {
     return (
@@ -72,13 +156,20 @@ export function AgentLayout(): JSX.Element {
 
   return (
     <div className={styles.container} data-testid="agent-layout">
-      <AgentHeader
+      <ContextDetailShell
+        icon={<AgentAvatar name={agent.name} avatar={agent.avatar} />}
         name={agent.name}
-        avatar={agent.avatar}
-        heartbeat={agent.heartbeat}
         onNavigateBack={() => navigate("/")}
+        statusContent={
+          agent.heartbeat ? <HeartbeatStatus heartbeat={agent.heartbeat} /> : undefined
+        }
+        tabs={AGENT_DETAIL_TABS}
+        activeTab={activeTab}
+        onSelectTab={handleSelectTab}
+        ariaLabel="Agent navigation"
+        headerTestId="agent-header"
+        tabBarTestId="agent-tab-bar"
       />
-      <AgentTabBar agentId={agent.id} activeTab={activeTab} />
       <div className={styles.content}>
         <Outlet context={{ agent } satisfies AgentOutletContext} />
       </div>

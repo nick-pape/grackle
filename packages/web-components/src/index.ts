@@ -91,6 +91,9 @@ export {
   ContextNav,
   CONTEXTS,
   DEFAULT_CONTEXT_ID,
+  ContextDetailShell,
+  CODE_HEADER_ICON,
+  AGENT_DETAIL_TABS,
 } from "./components/layout/index.js";
 export type {
   AppTab,
@@ -99,6 +102,8 @@ export type {
   NavGroup,
   ContextItem,
   ContextNavProps,
+  ContextDetailShellProps,
+  ContextDetailTab,
 } from "./components/layout/index.js";
 
 // Lists

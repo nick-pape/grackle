@@ -71,7 +71,7 @@ test.describe("Context nav (context axis)", { tag: ["@webui", "@smoke"] }, () =>
     await page.goto("/");
     await waitForConnected(page);
 
-    // Chat (Root) is a core workbench view, always present.
+    // Chat is a core workbench view, always present.
     await page.getByTestId("sidebar-tab-chat").click();
     await expect(page).toHaveURL(/\/chat$/);
 
