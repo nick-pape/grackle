@@ -34,8 +34,8 @@ export function createMockPluginContext(overrides?: Partial<PluginContext>): Plu
   return {
     subscribe: vi.fn(() => vi.fn()),
     emit: vi.fn(),
-    logger: MOCK_LOGGER,
-    config: MOCK_CONFIG,
+    logger: { ...MOCK_LOGGER },
+    config: { ...MOCK_CONFIG },
     ...overrides,
   };
 }
