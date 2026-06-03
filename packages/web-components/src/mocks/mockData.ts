@@ -169,6 +169,117 @@ export const MOCK_SESSIONS: Session[] = [
     endedAt: "2026-02-27T07:32:30Z",
     parentSessionId: "sess-002",
   },
+
+  // ── Refactor Bot agent sessions ────────────────────
+  {
+    id: "rb-sess-001",
+    environmentId: "env-local-01",
+    runtime: "claude-code",
+    status: "stopped",
+    endReason: "completed",
+    prompt: "Extract duplicated validation logic into shared validators",
+    startedAt: "2026-02-25T09:15:00Z",
+    endedAt: "2026-02-25T09:22:00Z",
+    taskId: "rb-task-001",
+    inputTokens: 34_200,
+    outputTokens: 8_400,
+    costMillicents: 18_000,
+  },
+  {
+    id: "rb-sess-002",
+    environmentId: "env-local-01",
+    runtime: "claude-code",
+    status: "stopped",
+    endReason: "completed",
+    prompt: "Simplify UserService class — extract auth and profile concerns",
+    startedAt: "2026-02-26T09:15:00Z",
+    endedAt: "2026-02-26T09:31:00Z",
+    taskId: "rb-task-002",
+    inputTokens: 52_100,
+    outputTokens: 14_800,
+    costMillicents: 29_000,
+  },
+  {
+    id: "rb-sess-prev",
+    environmentId: "env-local-01",
+    runtime: "claude-code",
+    status: "stopped",
+    endReason: "interrupted",
+    prompt: "Remove unused imports in routes/",
+    startedAt: "2026-02-27T09:15:00Z",
+    endedAt: "2026-02-27T09:20:00Z",
+    error: "Context window exceeded before completing scan",
+    taskId: "rb-task-003",
+    inputTokens: 78_400,
+    outputTokens: 4_200,
+    costMillicents: 33_000,
+  },
+  {
+    id: "rb-sess-active",
+    environmentId: "env-local-01",
+    runtime: "claude-code",
+    status: "running",
+    prompt: "Remove unused imports in routes/",
+    startedAt: "2026-02-27T09:30:00Z",
+    taskId: "rb-task-003",
+    inputTokens: 22_600,
+    outputTokens: 5_800,
+    costMillicents: 12_000,
+  },
+
+  // ── Security Auditor agent sessions ────────────────
+  {
+    id: "sa-sess-001",
+    environmentId: "env-docker-01",
+    runtime: "claude-code",
+    status: "stopped",
+    endReason: "completed",
+    prompt: "Investigate and fix CVE-2026-1234 in express-session",
+    startedAt: "2026-02-26T09:00:00Z",
+    endedAt: "2026-02-26T09:18:00Z",
+    taskId: "sa-task-001",
+    inputTokens: 41_600,
+    outputTokens: 11_200,
+    costMillicents: 23_000,
+  },
+  {
+    id: "sa-sess-002",
+    environmentId: "env-docker-01",
+    runtime: "claude-code",
+    status: "suspended",
+    prompt: "Scan config/ for hardcoded API keys and secrets",
+    startedAt: "2026-02-27T09:00:00Z",
+    taskId: "sa-task-002",
+    inputTokens: 28_900,
+    outputTokens: 7_600,
+    costMillicents: 16_000,
+  },
+  {
+    id: "sa-sess-prev",
+    environmentId: "env-docker-01",
+    runtime: "claude-code",
+    status: "stopped",
+    endReason: "completed",
+    prompt: "Daily security audit — dependency scan and secret detection",
+    startedAt: "2026-02-26T09:00:00Z",
+    endedAt: "2026-02-26T09:25:00Z",
+    taskId: "sa-root",
+    inputTokens: 44_300,
+    outputTokens: 12_400,
+    costMillicents: 25_000,
+  },
+  {
+    id: "sa-sess-active",
+    environmentId: "env-docker-01",
+    runtime: "claude-code",
+    status: "running",
+    prompt: "Daily security audit — dependency scan and secret detection",
+    startedAt: "2026-02-27T06:00:00Z",
+    taskId: "sa-root",
+    inputTokens: 36_200,
+    outputTokens: 9_800,
+    costMillicents: 20_000,
+  },
 ];
 
 // ─── Session Events ─────────────────────────────────
@@ -1033,6 +1144,234 @@ export const MOCK_EVENTS: SessionEvent[] = [
     timestamp: "2026-02-27T06:30:01Z",
     content: "suspended",
   },
+
+  // ── rb-sess-active: Refactor Bot removing unused imports ──
+
+  {
+    sessionId: "rb-sess-active",
+    eventType: "status",
+    timestamp: "2026-02-27T09:30:01Z",
+    content: "running",
+  },
+  {
+    sessionId: "rb-sess-active",
+    eventType: "text",
+    timestamp: "2026-02-27T09:30:02Z",
+    content:
+      "Scanning route files for unused imports. I'll check each file under `src/routes/` for imports that aren't referenced in the module body.",
+  },
+  {
+    sessionId: "rb-sess-active",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T09:30:04Z",
+    content: JSON.stringify({
+      tool: "Grep",
+      args: { pattern: "^import\\s", path: "src/routes/" },
+    }),
+    raw: JSON.stringify({ id: "rb-tool-01", type: "tool_use" }),
+  },
+  {
+    sessionId: "rb-sess-active",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T09:30:06Z",
+    content:
+      'src/routes/users.ts:1:import { Router, Request, Response } from "express";\nsrc/routes/users.ts:2:import { validateBody } from "../middleware/validate.js";\nsrc/routes/users.ts:3:import { deprecated } from "legacy";\nsrc/routes/billing.ts:1:import { Router } from "express";\nsrc/routes/billing.ts:2:import { StripeClient } from "../services/stripe-client.js";\nsrc/routes/billing.ts:3:import { formatCurrency, roundUp } from "../utils/format.js";\nsrc/routes/auth.ts:1:import { Router, Request, Response } from "express";\nsrc/routes/auth.ts:2:import { sign, verify, decode } from "jsonwebtoken";',
+    raw: JSON.stringify({ tool_use_id: "rb-tool-01" }),
+  },
+  {
+    sessionId: "rb-sess-active",
+    eventType: "text",
+    timestamp: "2026-02-27T09:30:08Z",
+    content:
+      'Found several imports to investigate. `deprecated` from `"legacy"` in users.ts looks suspicious. Let me also check whether `roundUp` is actually used in billing.ts and whether `decode` is used in auth.ts.',
+  },
+  {
+    sessionId: "rb-sess-active",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T09:30:10Z",
+    content: JSON.stringify({
+      tool: "Read",
+      args: { file_path: "src/routes/users.ts" },
+    }),
+    raw: JSON.stringify({ id: "rb-tool-02", type: "tool_use" }),
+  },
+  {
+    sessionId: "rb-sess-active",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T09:30:12Z",
+    content:
+      'import { Router, Request, Response } from "express";\nimport { validateBody } from "../middleware/validate.js";\nimport { deprecated } from "legacy";\n\nconst router = Router();\n\nrouter.get("/", async (req: Request, res: Response) => {\n  const users = await db.listUsers();\n  res.json(users);\n});\n\nrouter.post("/", validateBody, async (req: Request, res: Response) => {\n  const user = await db.createUser(req.body);\n  res.status(201).json(user);\n});\n\nexport default router;',
+    raw: JSON.stringify({ tool_use_id: "rb-tool-02" }),
+  },
+  {
+    sessionId: "rb-sess-active",
+    eventType: "text",
+    timestamp: "2026-02-27T09:30:14Z",
+    content:
+      'Confirmed: `deprecated` from `"legacy"` is imported but never used in users.ts. Removing it.',
+  },
+  {
+    sessionId: "rb-sess-active",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T09:30:16Z",
+    content: JSON.stringify({
+      tool: "Edit",
+      args: {
+        file_path: "src/routes/users.ts",
+        old_string: 'import { deprecated } from "legacy";\n',
+        new_string: "",
+      },
+    }),
+    raw: JSON.stringify({ id: "rb-tool-03", type: "tool_use" }),
+  },
+  {
+    sessionId: "rb-sess-active",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T09:30:17Z",
+    content: "File updated successfully.",
+    raw: JSON.stringify({ tool_use_id: "rb-tool-03" }),
+  },
+  {
+    sessionId: "rb-sess-active",
+    eventType: "text",
+    timestamp: "2026-02-27T09:30:19Z",
+    content:
+      "Removed unused `deprecated` import from `src/routes/users.ts`. Moving on to check `billing.ts` for the unused `roundUp` import.",
+  },
+  {
+    sessionId: "rb-sess-active",
+    eventType: "usage",
+    timestamp: "2026-02-27T09:30:20Z",
+    content: JSON.stringify({ input_tokens: 22600, output_tokens: 5800, cost_millicents: 12000 }),
+  },
+
+  // ── sa-sess-active: Security Auditor daily scan ───
+
+  {
+    sessionId: "sa-sess-active",
+    eventType: "status",
+    timestamp: "2026-02-27T06:00:01Z",
+    content: "running",
+  },
+  {
+    sessionId: "sa-sess-active",
+    eventType: "system",
+    timestamp: "2026-02-27T06:00:02Z",
+    content:
+      "You are a security auditor. Run a dependency audit, scan for hardcoded secrets, check for known CVEs, and report findings. Escalate critical and high severity issues.",
+  },
+  {
+    sessionId: "sa-sess-active",
+    eventType: "text",
+    timestamp: "2026-02-27T06:00:04Z",
+    content: "Starting daily security audit. I'll run `npm audit` first to check dependencies.",
+  },
+  {
+    sessionId: "sa-sess-active",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T06:00:06Z",
+    content: JSON.stringify({
+      tool: "Bash",
+      args: { command: "npm audit --json 2>/dev/null | head -80" },
+    }),
+    raw: JSON.stringify({ id: "sa-tool-01", type: "tool_use" }),
+  },
+  {
+    sessionId: "sa-sess-active",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T06:00:12Z",
+    content: JSON.stringify({
+      vulnerabilities: {
+        lodash: {
+          severity: "high",
+          title: "Prototype Pollution",
+          url: "https://github.com/advisories/GHSA-jf85-cpcp-j695",
+          range: "<4.17.21",
+          fixAvailable: true,
+        },
+        semver: {
+          severity: "moderate",
+          title: "Regular Expression Denial of Service",
+          range: "<7.5.4",
+          fixAvailable: true,
+        },
+        "sanitize-html": {
+          severity: "moderate",
+          title: "Cross-Site Scripting via data URIs",
+          range: "<2.12.1",
+          fixAvailable: true,
+        },
+      },
+      metadata: { vulnerabilities: { total: 3, high: 1, moderate: 2 } },
+    }),
+    raw: JSON.stringify({ tool_use_id: "sa-tool-01" }),
+  },
+  {
+    sessionId: "sa-sess-active",
+    eventType: "text",
+    timestamp: "2026-02-27T06:00:14Z",
+    content:
+      "Found **3 vulnerabilities** in dependencies:\n\n| Package | Severity | Issue | Fix Available |\n|---------|----------|-------|---------------|\n| `lodash` | **HIGH** | Prototype Pollution | Yes |\n| `semver` | Moderate | ReDoS | Yes |\n| `sanitize-html` | Moderate | XSS via data URIs | Yes |\n\nThe `lodash` issue is high severity. Now scanning for hardcoded secrets.",
+  },
+  {
+    sessionId: "sa-sess-active",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T06:00:18Z",
+    content: JSON.stringify({
+      tool: "Grep",
+      args: {
+        pattern: "(API_KEY|SECRET|PASSWORD|TOKEN)\\s*=\\s*['\"]",
+        path: ".",
+      },
+    }),
+    raw: JSON.stringify({ id: "sa-tool-02", type: "tool_use" }),
+  },
+  {
+    sessionId: "sa-sess-active",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T06:00:22Z",
+    content:
+      '.env.example:3:ANTHROPIC_API_KEY="sk-ant-placeholder"\n.env.example:5:GITHUB_TOKEN="ghp_placeholder"\nconfig/stripe.ts:14:const STRIPE_SECRET_KEY = "sk_test_FAKE_MOCK_DATA_PLACEHOLDER";',
+    raw: JSON.stringify({ tool_use_id: "sa-tool-02" }),
+  },
+  {
+    sessionId: "sa-sess-active",
+    eventType: "text",
+    timestamp: "2026-02-27T06:00:24Z",
+    content:
+      "Found a **hardcoded secret** in production code:\n\n- `.env.example` matches are safe (placeholder values)\n- `config/stripe.ts:14` contains a **live Stripe secret key** (`sk_test_...`)\n\nThis is a **critical finding**. Let me read the file to confirm.",
+  },
+  {
+    sessionId: "sa-sess-active",
+    eventType: "tool_use",
+    timestamp: "2026-02-27T06:00:26Z",
+    content: JSON.stringify({
+      tool: "Read",
+      args: { file_path: "config/stripe.ts" },
+    }),
+    raw: JSON.stringify({ id: "sa-tool-03", type: "tool_use" }),
+  },
+  {
+    sessionId: "sa-sess-active",
+    eventType: "tool_result",
+    timestamp: "2026-02-27T06:00:28Z",
+    content:
+      'import Stripe from "stripe";\n\n// WARNING: This key should be in an environment variable\nconst STRIPE_SECRET_KEY = "sk_test_FAKE_MOCK_DATA_PLACEHOLDER";\nconst STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? "";\n\nexport const stripe = new Stripe(STRIPE_SECRET_KEY, {\n  apiVersion: "2024-12-18.acacia",\n});',
+    raw: JSON.stringify({ tool_use_id: "sa-tool-03" }),
+  },
+  {
+    sessionId: "sa-sess-active",
+    eventType: "text",
+    timestamp: "2026-02-27T06:00:32Z",
+    content:
+      "## Daily Audit Summary\n\n### Critical\n| # | Finding | File | Recommendation |\n|---|---------|------|----------------|\n| 1 | Hardcoded Stripe live secret key | `config/stripe.ts:4` | Move to `STRIPE_SECRET_KEY` env var, rotate the exposed key immediately |\n\n### High\n| # | Finding | Package | Recommendation |\n|---|---------|---------|----------------|\n| 2 | Prototype Pollution | `lodash@4.17.20` | Upgrade to `>=4.17.21` |\n\n### Moderate\n| # | Finding | Package | Recommendation |\n|---|---------|---------|----------------|\n| 3 | ReDoS | `semver@7.5.2` | Upgrade to `>=7.5.4` |\n| 4 | XSS via data URIs | `sanitize-html@2.10.0` | Upgrade to `>=2.12.1` |\n\n**Action required:** Finding #1 is a credential leak — the Stripe key should be rotated and moved to an environment variable before the next deploy.",
+  },
+  {
+    sessionId: "sa-sess-active",
+    eventType: "usage",
+    timestamp: "2026-02-27T06:00:34Z",
+    content: JSON.stringify({ input_tokens: 36200, output_tokens: 9800, cost_millicents: 20000 }),
+  },
 ];
 
 // ─── Workspaces ─────────────────────────────────────
@@ -1496,6 +1835,183 @@ export const MOCK_TASKS: TaskData[] = [
     tokenBudget: 0,
     costBudgetMillicents: 0,
   },
+
+  // ── Refactor Bot agent tasks ─────────────────────
+  {
+    id: "rb-root",
+    workspaceId: undefined,
+    title: "Refactor Bot — Root",
+    description: "Standing root task for the Refactor Bot agent. Heartbeat sessions attach here.",
+    status: "working",
+    branch: "",
+    latestSessionId: "rb-sess-active",
+    dependsOn: [],
+    reviewNotes: undefined,
+    sortOrder: 0,
+    createdAt: "2026-02-22T09:00:00Z",
+    parentTaskId: "",
+    depth: 0,
+    childTaskIds: ["rb-task-001", "rb-task-002", "rb-task-003"],
+    canDecompose: true,
+    injectKnowledge: false,
+    defaultPersonaId: "persona-fe",
+    workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+    agentId: "refactor-bot",
+    kind: "root",
+  },
+  {
+    id: "rb-task-001",
+    workspaceId: "proj-alpha",
+    title: "Extract duplicated validation logic",
+    description:
+      "Duplicated request-body validators found in users.ts, billing.ts, and admin.ts. Extract into shared middleware.",
+    status: "complete",
+    branch: "refactor-bot/extract-validators",
+    latestSessionId: "rb-sess-001",
+    dependsOn: [],
+    reviewNotes: undefined,
+    sortOrder: 1,
+    createdAt: "2026-02-25T09:15:00Z",
+    parentTaskId: "rb-root",
+    depth: 1,
+    childTaskIds: [],
+    canDecompose: false,
+    injectKnowledge: false,
+    defaultPersonaId: "persona-fe",
+    workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+    agentId: "refactor-bot",
+    kind: "task",
+  },
+  {
+    id: "rb-task-002",
+    workspaceId: "proj-alpha",
+    title: "Simplify UserService class (>200 LOC)",
+    description:
+      "UserService mixes auth, profile, and notification concerns. Extract into AuthService and NotificationService.",
+    status: "complete",
+    branch: "refactor-bot/simplify-user-service",
+    latestSessionId: "rb-sess-002",
+    dependsOn: [],
+    reviewNotes: undefined,
+    sortOrder: 2,
+    createdAt: "2026-02-26T09:15:00Z",
+    parentTaskId: "rb-root",
+    depth: 1,
+    childTaskIds: [],
+    canDecompose: false,
+    injectKnowledge: false,
+    defaultPersonaId: "persona-fe",
+    workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+    agentId: "refactor-bot",
+    kind: "task",
+  },
+  {
+    id: "rb-task-003",
+    workspaceId: "proj-alpha",
+    title: "Remove unused imports in routes/",
+    description: "Scan all route files for imports that are never referenced and remove them.",
+    status: "working",
+    branch: "refactor-bot/unused-imports",
+    latestSessionId: "rb-sess-active",
+    dependsOn: [],
+    reviewNotes: undefined,
+    sortOrder: 3,
+    createdAt: "2026-02-27T09:15:00Z",
+    parentTaskId: "rb-root",
+    depth: 1,
+    childTaskIds: [],
+    canDecompose: false,
+    injectKnowledge: false,
+    defaultPersonaId: "persona-fe",
+    workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+    agentId: "refactor-bot",
+    kind: "task",
+  },
+
+  // ── Security Auditor agent tasks ──────────────────
+  {
+    id: "sa-root",
+    workspaceId: undefined,
+    title: "Security Auditor — Root",
+    description:
+      "Standing root task for the Security Auditor agent. Daily audit sessions attach here.",
+    status: "working",
+    branch: "",
+    latestSessionId: "sa-sess-active",
+    dependsOn: [],
+    reviewNotes: undefined,
+    sortOrder: 0,
+    createdAt: "2026-02-20T14:00:00Z",
+    parentTaskId: "",
+    depth: 0,
+    childTaskIds: ["sa-task-001", "sa-task-002"],
+    canDecompose: true,
+    injectKnowledge: false,
+    defaultPersonaId: "persona-arch",
+    workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+    agentId: "security-auditor",
+    kind: "root",
+  },
+  {
+    id: "sa-task-001",
+    workspaceId: "proj-alpha",
+    title: "Audit: Fix CVE-2026-1234 in express-session",
+    description:
+      "High-severity prototype pollution in express-session <1.18.1. Upgrade and verify no breaking changes.",
+    status: "complete",
+    branch: "security-auditor/fix-cve-2026-1234",
+    latestSessionId: "sa-sess-001",
+    dependsOn: [],
+    reviewNotes: undefined,
+    sortOrder: 1,
+    createdAt: "2026-02-26T09:02:00Z",
+    parentTaskId: "sa-root",
+    depth: 1,
+    childTaskIds: [],
+    canDecompose: false,
+    injectKnowledge: false,
+    defaultPersonaId: "persona-arch",
+    workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+    agentId: "security-auditor",
+    kind: "task",
+  },
+  {
+    id: "sa-task-002",
+    workspaceId: "proj-alpha",
+    title: "Audit: Hardcoded API keys in config/",
+    description:
+      "Found a live Stripe secret key hardcoded in config/stripe.ts. Needs to be moved to env var and key rotated.",
+    status: "paused",
+    branch: "",
+    latestSessionId: "sa-sess-002",
+    dependsOn: [],
+    reviewNotes: undefined,
+    sortOrder: 2,
+    createdAt: "2026-02-27T09:05:00Z",
+    parentTaskId: "sa-root",
+    depth: 1,
+    childTaskIds: [],
+    canDecompose: false,
+    injectKnowledge: false,
+    defaultPersonaId: "persona-arch",
+    workpad: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+    agentId: "security-auditor",
+    kind: "task",
+  },
 ];
 
 // ─── Tokens ──────────────────────────────────────────
@@ -1633,16 +2149,48 @@ export const MOCK_AGENTS: AgentData[] = [
   {
     id: "refactor-bot",
     name: "Refactor Bot",
-    avatar: "",
+    avatar: "\u{1F527}",
     primaryPersonaId: "persona-fe",
-    environmentId: "local",
+    environmentId: "env-local-01",
+    heartbeat: {
+      id: "hb-refactor-bot",
+      title: "Refactor Bot Heartbeat",
+      description:
+        "Wake every 15 minutes. Scan for code smells in src/. If found, create a refactoring task and fix it. Focus on function length > 50 lines, duplicated blocks, and unused imports.",
+      scheduleExpression: "*/15 * * * *",
+      personaId: "persona-fe",
+      workspaceId: "proj-alpha",
+      parentTaskId: "rb-root",
+      enabled: true,
+      lastRunAt: ts(-8 * 60_000),
+      nextRunAt: ts(7 * 60_000),
+      runCount: 42,
+      createdAt: "2026-02-22T09:00:00Z",
+      updatedAt: "2026-02-25T18:30:00Z",
+    },
   },
   {
     id: "security-auditor",
     name: "Security Auditor",
-    avatar: "",
+    avatar: "\u{1F6E1}️",
     primaryPersonaId: "persona-arch",
-    environmentId: "local",
+    environmentId: "env-docker-01",
+    heartbeat: {
+      id: "hb-security-auditor",
+      title: "Security Auditor Heartbeat",
+      description:
+        "Wake daily at 09:00 UTC. Run dependency audit (npm audit), scan for hardcoded secrets, check for known CVEs, and report findings. Escalate critical/high severity issues.",
+      scheduleExpression: "0 9 * * *",
+      personaId: "persona-arch",
+      workspaceId: "proj-alpha",
+      parentTaskId: "sa-root",
+      enabled: true,
+      lastRunAt: ts(-3 * 60 * 60_000),
+      nextRunAt: ts(21 * 60 * 60_000),
+      runCount: 18,
+      createdAt: "2026-02-20T14:00:00Z",
+      updatedAt: "2026-02-28T09:00:00Z",
+    },
   },
 ];
 
@@ -1677,6 +2225,54 @@ export const MOCK_TASK_SESSIONS: Record<string, Session[]> = {
       status: "running",
       prompt: "Add compression options",
       startedAt: "2026-02-27T09:00:00Z",
+    },
+  ],
+  "rb-root": [
+    {
+      id: "rb-sess-active",
+      environmentId: "env-local-01",
+      runtime: "claude-code",
+      status: "running",
+      prompt: "Remove unused imports in routes/",
+      startedAt: "2026-02-27T09:30:00Z",
+    },
+  ],
+  "rb-task-003": [
+    {
+      id: "rb-sess-prev",
+      environmentId: "env-local-01",
+      runtime: "claude-code",
+      status: "stopped",
+      endReason: "interrupted",
+      prompt: "Remove unused imports in routes/",
+      startedAt: "2026-02-27T09:15:00Z",
+    },
+    {
+      id: "rb-sess-active",
+      environmentId: "env-local-01",
+      runtime: "claude-code",
+      status: "running",
+      prompt: "Remove unused imports in routes/",
+      startedAt: "2026-02-27T09:30:00Z",
+    },
+  ],
+  "sa-root": [
+    {
+      id: "sa-sess-prev",
+      environmentId: "env-docker-01",
+      runtime: "claude-code",
+      status: "stopped",
+      endReason: "completed",
+      prompt: "Daily security audit — dependency scan and secret detection",
+      startedAt: "2026-02-26T09:00:00Z",
+    },
+    {
+      id: "sa-sess-active",
+      environmentId: "env-docker-01",
+      runtime: "claude-code",
+      status: "running",
+      prompt: "Daily security audit — dependency scan and secret detection",
+      startedAt: "2026-02-27T06:00:00Z",
     },
   ],
 };
@@ -2137,6 +2733,260 @@ export const MOCK_STREAM_SCENARIOS: MockStreamScenario[] = [
       {
         delayMs: 8800,
         event: { eventType: "status", timestamp: ts(8800), content: "completed" },
+      },
+    ],
+  },
+
+  // ── Scenario E — Code Smell Scan (refactoring-themed, straight-through) ─
+  {
+    label: "Code Smell Scan",
+    pauseForInput: false,
+    steps: [
+      {
+        delayMs: 0,
+        event: { eventType: "status", timestamp: ts(0), content: "running" },
+      },
+      {
+        delayMs: 500,
+        event: {
+          eventType: "text",
+          timestamp: ts(500),
+          content: "Scanning for functions exceeding 50 lines.",
+        },
+      },
+      {
+        delayMs: 1200,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(1200),
+          content: JSON.stringify({
+            tool: "Bash",
+            args: { command: "grep -rnc '{' src/ | awk -F: '$2 > 50'" },
+          }),
+          raw: JSON.stringify({ id: "smell-01", type: "tool_use" }),
+        },
+      },
+      {
+        delayMs: 1800,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(1800),
+          content: "src/services/UserService.ts:218\nsrc/middleware/errorHandler.ts:64",
+          raw: JSON.stringify({ tool_use_id: "smell-01" }),
+        },
+      },
+      {
+        delayMs: 2600,
+        event: {
+          eventType: "text",
+          timestamp: ts(2600),
+          content:
+            "Found 2 files with long functions. `UserService.ts` at 218 lines is the worst offender. Let me read it and extract helpers.",
+        },
+      },
+      {
+        delayMs: 3200,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(3200),
+          content: JSON.stringify({
+            tool: "Read",
+            args: { file_path: "src/services/UserService.ts" },
+          }),
+          raw: JSON.stringify({ id: "smell-02", type: "tool_use" }),
+        },
+      },
+      {
+        delayMs: 4000,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(4000),
+          content:
+            "export class UserService {\n  async register(data: RegisterInput) {\n    // 80+ lines of validation, hashing, DB insert, email send...\n  }\n  async updateProfile(userId: string, patch: ProfilePatch) {\n    // 60+ lines mixing auth checks with profile logic\n  }\n  // ... 8 more methods\n}",
+          raw: JSON.stringify({ tool_use_id: "smell-02" }),
+        },
+      },
+      {
+        delayMs: 4800,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(4800),
+          content: JSON.stringify({
+            tool: "Edit",
+            args: {
+              file_path: "src/services/UserService.ts",
+              old_string: "async register(data: RegisterInput) {",
+              new_string:
+                "async register(data: RegisterInput) {\n    const validated = await this.validateRegistration(data);\n    const hashed = await hashPassword(validated.password);\n    return this.createUserRecord(validated, hashed);",
+            },
+          }),
+          raw: JSON.stringify({ id: "smell-03", type: "tool_use" }),
+        },
+      },
+      {
+        delayMs: 5400,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(5400),
+          content: "File updated successfully.",
+          raw: JSON.stringify({ tool_use_id: "smell-03" }),
+        },
+      },
+      {
+        delayMs: 6000,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(6000),
+          content: JSON.stringify({
+            tool: "Bash",
+            args: { command: "npm test -- --testPathPattern=UserService" },
+          }),
+          raw: JSON.stringify({ id: "smell-04", type: "tool_use" }),
+        },
+      },
+      {
+        delayMs: 6800,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(6800),
+          content:
+            " PASS  src/services/__tests__/UserService.test.ts\n\nTest Suites: 1 passed, 1 total\nTests:       14 passed, 14 total",
+          raw: JSON.stringify({ tool_use_id: "smell-04" }),
+        },
+      },
+      {
+        delayMs: 7200,
+        event: {
+          eventType: "text",
+          timestamp: ts(7200),
+          content:
+            "Extracted `validateRegistration`, `hashPassword`, and `createUserRecord` from the 80-line `register` method. All 14 tests pass.",
+        },
+      },
+      {
+        delayMs: 7600,
+        event: {
+          eventType: "usage",
+          timestamp: ts(7600),
+          content: JSON.stringify({
+            input_tokens: 31200,
+            output_tokens: 8400,
+            cost_millicents: 17000,
+          }),
+        },
+      },
+      {
+        delayMs: 8000,
+        event: { eventType: "status", timestamp: ts(8000), content: "completed" },
+      },
+    ],
+  },
+
+  // ── Scenario F — Dependency Audit (security-themed, pause-for-input) ─
+  {
+    label: "Dependency Audit",
+    pauseForInput: true,
+    pauseAfterStep: 4,
+    steps: [
+      {
+        delayMs: 0,
+        event: { eventType: "status", timestamp: ts(0), content: "running" },
+      },
+      {
+        delayMs: 500,
+        event: {
+          eventType: "text",
+          timestamp: ts(500),
+          content: "Running dependency audit to check for known vulnerabilities.",
+        },
+      },
+      {
+        delayMs: 1200,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(1200),
+          content: JSON.stringify({
+            tool: "Bash",
+            args: { command: "npm audit 2>&1 | tail -20" },
+          }),
+          raw: JSON.stringify({ id: "audit-01", type: "tool_use" }),
+        },
+      },
+      {
+        delayMs: 2000,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(2000),
+          content:
+            "xml2js  <0.5.0\nSeverity: critical\nPrototype Pollution - https://github.com/advisories/GHSA-776f-qx25-q3cc\nfix available via `npm audit fix --force`\nWill install xml2js@0.6.2, which is a breaking change\n\n1 critical severity vulnerability\n\nTo address all issues, run:\n  npm audit fix --force",
+          raw: JSON.stringify({ tool_use_id: "audit-01" }),
+        },
+      },
+      {
+        delayMs: 2800,
+        event: {
+          eventType: "text",
+          timestamp: ts(2800),
+          content:
+            "Found **1 critical vulnerability**:\n\n- `xml2js@0.4.19` — **Prototype Pollution** (CVE-2023-0842)\n- Fix: upgrade to `>=0.5.0` (latest: `0.6.2`)\n- **This is a breaking change** — the `explicitArray` default changed from `true` to `false`\n\nShould I proceed with the upgrade? Existing XML parsers may need updating.",
+        },
+      },
+    ],
+    resumeSteps: [
+      {
+        delayMs: 500,
+        event: {
+          eventType: "text",
+          timestamp: ts(0),
+          content: "Proceeding with the upgrade. Updating `xml2js` to `0.6.2`.",
+        },
+      },
+      {
+        delayMs: 1200,
+        event: {
+          eventType: "tool_use",
+          timestamp: ts(700),
+          content: JSON.stringify({
+            tool: "Bash",
+            args: { command: "npm install xml2js@0.6.2 && npm test" },
+          }),
+          raw: JSON.stringify({ id: "audit-02", type: "tool_use" }),
+        },
+      },
+      {
+        delayMs: 2400,
+        event: {
+          eventType: "tool_result",
+          timestamp: ts(1900),
+          content:
+            "added 1 package, removed 1 package, changed 1 package in 4s\n\n PASS  src/parsers/__tests__/xml.test.ts\n PASS  src/importers/__tests__/feed.test.ts\n\nTest Suites: 2 passed, 2 total\nTests:       8 passed, 8 total",
+          raw: JSON.stringify({ tool_use_id: "audit-02" }),
+        },
+      },
+      {
+        delayMs: 3000,
+        event: {
+          eventType: "text",
+          timestamp: ts(2500),
+          content:
+            "Upgraded `xml2js` from `0.4.19` to `0.6.2`. All 8 XML-related tests pass — no breaking changes affected our codebase.",
+        },
+      },
+      {
+        delayMs: 3400,
+        event: {
+          eventType: "usage",
+          timestamp: ts(2900),
+          content: JSON.stringify({
+            input_tokens: 18600,
+            output_tokens: 4200,
+            cost_millicents: 9800,
+          }),
+        },
+      },
+      {
+        delayMs: 3800,
+        event: { eventType: "status", timestamp: ts(3300), content: "completed" },
       },
     ],
   },
