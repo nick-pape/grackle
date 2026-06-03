@@ -360,14 +360,40 @@ export function EventStream({
     ],
   );
 
-  // Stable key per item using event identity — survives MAX_EVENTS trimming
+  // Stable key per item — no indices, survives MAX_EVENTS trimming
   const computeItemKey = useCallback(
     (displayIndex: number): string => {
       const event = displayEvents[displayIndex];
-      return `${event.sessionId}-${event.timestamp}-${displayIndex}`;
+      return `${event.sessionId}-${event.timestamp}`;
     },
     [displayEvents],
   );
+
+  // Anchor tracking callbacks — bottom for normal mode, top for reversed
+  const handleAtBottomChange = useCallback(
+    (atBottom: boolean) => {
+      if (!isReversed) {
+        setIsAtAnchor(atBottom);
+      }
+    },
+    [isReversed],
+  );
+
+  const handleAtTopChange = useCallback(
+    (atTop: boolean) => {
+      if (isReversed) {
+        setIsAtAnchor(atTop);
+      }
+    },
+    [isReversed],
+  );
+
+  // In reversed mode, auto-scroll to top when new events prepend
+  useEffect(() => {
+    if (isReversed && isAtAnchor && !selection.isSelecting && virtuosoRef.current) {
+      virtuosoRef.current.scrollToIndex({ index: 0, behavior: "smooth" });
+    }
+  }, [displayEvents.length, isReversed, isAtAnchor, selection.isSelecting]);
 
   return (
     <div className={styles.wrapper}>
@@ -395,6 +421,7 @@ export function EventStream({
       {/* Virtuoso owns the scroll container — handles auto-scroll,
           dynamic heights, and initial scroll position natively. */}
       <Virtuoso
+        key={String(isReversed)}
         ref={virtuosoRef}
         data-testid="event-stream-scroll"
         className={`${styles.scrollContainer} ${selection.isSelecting ? styles.selectingPadding : ""}`}
@@ -402,9 +429,10 @@ export function EventStream({
         overscan={VIRTUALIZER_OVERSCAN}
         computeItemKey={computeItemKey}
         itemContent={itemContent}
-        followOutput={followOutput}
+        followOutput={isReversed ? false : followOutput}
         initialTopMostItemIndex={isReversed ? 0 : displayEvents.length - 1}
-        atBottomStateChange={setIsAtAnchor}
+        atBottomStateChange={handleAtBottomChange}
+        atTopStateChange={handleAtTopChange}
       />
 
       {/* Floating action bar for multi-select mode */}

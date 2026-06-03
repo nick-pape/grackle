@@ -52,12 +52,27 @@ export interface VirtualEventItemProps {
 }
 
 /** Custom equality check for React.memo — avoids re-rendering unchanged items. */
+/** Compare events by identity — reference first, then stable fields as fallback. */
+function eventsEqual(a: DisplayEvent, b: DisplayEvent): boolean {
+  if (a === b) {
+    return true;
+  }
+  return (
+    a.sessionId === b.sessionId &&
+    a.timestamp === b.timestamp &&
+    a.eventType === b.eventType &&
+    a.content === b.content &&
+    a.toolUseCtx === b.toolUseCtx &&
+    a.settled === b.settled
+  );
+}
+
 function arePropsEqual(
   prev: Readonly<VirtualEventItemProps>,
   next: Readonly<VirtualEventItemProps>,
 ): boolean {
   return (
-    prev.event === next.event &&
+    eventsEqual(prev.event, next.event) &&
     prev.originalIndex === next.originalIndex &&
     prev.isSelecting === next.isSelecting &&
     prev.isSelected === next.isSelected &&
