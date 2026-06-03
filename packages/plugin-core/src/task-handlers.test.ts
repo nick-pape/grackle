@@ -235,3 +235,131 @@ describe("scoped-token revocation on task lifecycle (GHSA-f9ff-5x35-7gfw F12)", 
     expect(isRevokedTask("task-1")).toBe(true);
   });
 });
+
+describe("dependency validation", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let handlers: Record<string, (...args: any[]) => any>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    handlers = getHandlers();
+  });
+
+  describe("createTask", () => {
+    it("rejects nonexistent dependency", async () => {
+      vi.mocked(workspaceStore.getWorkspace).mockReturnValue(makeWorkspaceRow() as never);
+      vi.mocked(taskStore.getTask).mockReturnValue(undefined as never);
+
+      const err = (await handlers
+        .createTask({
+          workspaceId: "ws-1",
+          title: "New Task",
+          description: "",
+          dependsOn: ["nonexistent"],
+          parentTaskId: "",
+        })
+        .catch((e: unknown) => e)) as ConnectError;
+
+      expect(err).toBeInstanceOf(ConnectError);
+      expect(err.code).toBe(Code.NotFound);
+      expect(err.message).toContain("Dependency task not found");
+    });
+  });
+
+  describe("updateTask", () => {
+    it("rejects self-dependency", async () => {
+      vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow() as never);
+
+      const err = (await handlers
+        .updateTask({
+          id: "task-1",
+          title: "",
+          description: "",
+          status: 0,
+          dependsOn: ["task-1"],
+          sessionId: "",
+        })
+        .catch((e: unknown) => e)) as ConnectError;
+
+      expect(err).toBeInstanceOf(ConnectError);
+      expect(err.code).toBe(Code.InvalidArgument);
+      expect(err.message).toContain("cannot depend on itself");
+    });
+
+    it("rejects nonexistent dependency", async () => {
+      vi.mocked(taskStore.getTask).mockImplementation((id: string) => {
+        if (id === "task-1") {
+          return makeTaskRow() as never;
+        }
+        return undefined as never;
+      });
+
+      const err = (await handlers
+        .updateTask({
+          id: "task-1",
+          title: "",
+          description: "",
+          status: 0,
+          dependsOn: ["nonexistent"],
+          sessionId: "",
+        })
+        .catch((e: unknown) => e)) as ConnectError;
+
+      expect(err).toBeInstanceOf(ConnectError);
+      expect(err.code).toBe(Code.NotFound);
+      expect(err.message).toContain("Dependency task not found");
+    });
+
+    it("rejects circular dependency", async () => {
+      vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow() as never);
+      vi.mocked(taskStore.detectDependencyCycle).mockReturnValue(["task-2", "task-1"]);
+
+      const err = (await handlers
+        .updateTask({
+          id: "task-1",
+          title: "",
+          description: "",
+          status: 0,
+          dependsOn: ["task-2"],
+          sessionId: "",
+        })
+        .catch((e: unknown) => e)) as ConnectError;
+
+      expect(err).toBeInstanceOf(ConnectError);
+      expect(err.code).toBe(Code.InvalidArgument);
+      expect(err.message).toContain("Circular dependency detected");
+    });
+
+    it("allows valid dependency update", async () => {
+      vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow() as never);
+      vi.mocked(taskStore.detectDependencyCycle).mockReturnValue(null);
+
+      await handlers.updateTask({
+        id: "task-1",
+        title: "",
+        description: "",
+        status: 0,
+        dependsOn: ["task-2"],
+        sessionId: "",
+      });
+
+      expect(taskStore.updateTask).toHaveBeenCalled();
+    });
+
+    it("skips validation when dependsOn is empty", async () => {
+      vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow() as never);
+
+      await handlers.updateTask({
+        id: "task-1",
+        title: "",
+        description: "",
+        status: 0,
+        dependsOn: [],
+        sessionId: "",
+      });
+
+      expect(taskStore.detectDependencyCycle).not.toHaveBeenCalled();
+      expect(taskStore.updateTask).toHaveBeenCalled();
+    });
+  });
+});

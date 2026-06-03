@@ -369,6 +369,52 @@ export function areDependenciesMet(taskId: string): boolean {
   return depRows.every((row) => row.status === TASK_STATUS.COMPLETE);
 }
 
+/**
+ * Detect whether adding the proposed dependencies to a task would create a cycle.
+ * Returns the cycle path (array of task IDs) if a cycle exists, or null if safe.
+ */
+export function detectDependencyCycle(
+  taskId: string,
+  proposedDependsOn: string[],
+): string[] | null {
+  if (proposedDependsOn.includes(taskId)) {
+    return [taskId];
+  }
+  const visited = new Set<string>();
+  const parent = new Map<string, string>();
+  const queue = [...proposedDependsOn];
+  for (const depId of proposedDependsOn) {
+    parent.set(depId, taskId);
+  }
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (current === taskId) {
+      const path: string[] = [];
+      let node = parent.get(current)!;
+      while (node !== taskId) {
+        path.unshift(node);
+        node = parent.get(node)!;
+      }
+      return path;
+    }
+    if (visited.has(current)) {
+      continue;
+    }
+    visited.add(current);
+    const task = getTask(current);
+    if (!task) {
+      continue;
+    }
+    for (const depId of safeParseJsonArray(task.dependsOn)) {
+      if (!visited.has(depId)) {
+        parent.set(depId, current);
+        queue.push(depId);
+      }
+    }
+  }
+  return null;
+}
+
 // ─── Tree Queries ────────────────────────────────────
 
 /** Build a map from parentTaskId to child IDs from a pre-fetched list of rows. Avoids N+1 queries. */

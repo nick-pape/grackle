@@ -69,6 +69,7 @@ export function createDatabaseMock() {
       getUnblockedTasks: vi.fn(() => []),
       checkAndUnblock: vi.fn(() => []),
       areDependenciesMet: vi.fn(() => true),
+      detectDependencyCycle: vi.fn(() => null),
       buildChildIdsMap: vi.fn(() => new Map()),
       getChildren: vi.fn(() => []),
       getDescendants: vi.fn(() => []),
