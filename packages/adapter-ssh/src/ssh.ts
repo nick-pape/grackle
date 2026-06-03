@@ -17,7 +17,7 @@ import {
   registerTunnel,
   getTunnel,
   closeTunnel,
-  findFreePort,
+  withFreePort,
   remoteStop,
   remoteDestroy,
   remoteHealthCheck,
@@ -247,16 +247,22 @@ export class SshAdapter implements EnvironmentAdapter {
       defaultRuntime: (config.defaultRuntime as string) || undefined,
     });
 
-    // Open SSH tunnel
-    const localPort = cfg.localPort || (await findFreePort());
+    // Open SSH tunnel (retry with a fresh port on TOCTOU conflict, #1486)
+    const openTunnel = async (port: number): Promise<{ port: number; tunnel: SshTunnel }> => {
+      const t = new SshTunnel(port, cfg);
+      await t.open();
+      return { port, tunnel: t };
+    };
+
+    const { port: localPort, tunnel } = cfg.localPort
+      ? await openTunnel(cfg.localPort)
+      : await withFreePort(openTunnel);
+
     yield {
       stage: "tunneling",
       message: `Opening SSH tunnel on local port ${localPort}...`,
       progress: 0.8,
     };
-
-    const tunnel = new SshTunnel(localPort, cfg);
-    await tunnel.open();
 
     // Open reverse tunnel (remote → host MCP server) for agent tool calls.
     // Wrap in try/catch so the forward tunnel is cleaned up if the reverse fails.
@@ -313,15 +319,22 @@ export class SshAdapter implements EnvironmentAdapter {
       yield { stage: "reconnecting", message: "PowerLine restarted", progress: 0.5 };
     }
 
-    // 3. Open new SSH tunnel + reverse tunnel for MCP
-    const localPort = cfg.localPort || (await findFreePort());
+    // 3. Open new SSH tunnel + reverse tunnel for MCP (retry on port conflict, #1486)
+    const openTunnel = async (port: number): Promise<{ port: number; tunnel: SshTunnel }> => {
+      const t = new SshTunnel(port, cfg);
+      await t.open();
+      return { port, tunnel: t };
+    };
+
+    const { port: localPort, tunnel } = cfg.localPort
+      ? await openTunnel(cfg.localPort)
+      : await withFreePort(openTunnel);
+
     yield {
       stage: "reconnecting",
       message: `Opening SSH tunnel on local port ${localPort}...`,
       progress: 0.7,
     };
-    const tunnel = new SshTunnel(localPort, cfg);
-    await tunnel.open();
 
     try {
       const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);

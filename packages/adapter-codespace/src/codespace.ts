@@ -18,7 +18,7 @@ import {
   registerTunnel,
   getTunnel,
   closeTunnel,
-  findFreePort,
+  withFreePort,
   remoteStop,
   remoteDestroy,
   remoteHealthCheck,
@@ -295,16 +295,22 @@ export class CodespaceAdapter implements EnvironmentAdapter {
       defaultRuntime: (config.defaultRuntime as string) || undefined,
     });
 
-    // Open port-forward tunnel (host → codespace PowerLine)
-    const localPort = cfg.localPort || (await findFreePort());
+    // Open port-forward tunnel (retry on port conflict, #1486)
+    const openTunnel = async (port: number): Promise<{ port: number; tunnel: CodespaceTunnel }> => {
+      const t = new CodespaceTunnel(port, cfg.codespaceName, undefined, undefined, ghToken);
+      await t.open();
+      return { port, tunnel: t };
+    };
+
+    const { port: localPort, tunnel } = cfg.localPort
+      ? await openTunnel(cfg.localPort)
+      : await withFreePort(openTunnel);
+
     yield {
       stage: "tunneling",
       message: `Forwarding local port ${localPort} to codespace...`,
       progress: 0.8,
     };
-
-    const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName, undefined, undefined, ghToken);
-    await tunnel.open();
 
     // Open reverse tunnel (codespace → host MCP server) for agent tool calls.
     // Wrap in try/catch so the forward tunnel is cleaned up if the reverse fails.
@@ -369,15 +375,22 @@ export class CodespaceAdapter implements EnvironmentAdapter {
       yield { stage: "reconnecting", message: "PowerLine restarted", progress: 0.5 };
     }
 
-    // 3. Open new port-forward tunnel + reverse tunnel for MCP
-    const localPort = cfg.localPort || (await findFreePort());
+    // 3. Open new port-forward tunnel + reverse tunnel for MCP (retry on port conflict, #1486)
+    const openTunnel = async (port: number): Promise<{ port: number; tunnel: CodespaceTunnel }> => {
+      const t = new CodespaceTunnel(port, cfg.codespaceName, undefined, undefined, ghToken);
+      await t.open();
+      return { port, tunnel: t };
+    };
+
+    const { port: localPort, tunnel } = cfg.localPort
+      ? await openTunnel(cfg.localPort)
+      : await withFreePort(openTunnel);
+
     yield {
       stage: "reconnecting",
       message: `Forwarding local port ${localPort} to codespace...`,
       progress: 0.7,
     };
-    const tunnel = new CodespaceTunnel(localPort, cfg.codespaceName, undefined, undefined, ghToken);
-    await tunnel.open();
 
     try {
       const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);

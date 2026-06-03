@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   closeTunnel: vi.fn().mockResolvedValue(undefined),
   registerTunnel: vi.fn(),
   findFreePort: vi.fn().mockResolvedValue(9999),
+  withFreePort: vi.fn(),
   startRemotePowerLine: vi.fn().mockResolvedValue({ alreadyRunning: true }),
   bootstrapPowerLine: vi.fn(),
   tunnelInstances: [] as MockTunnelInstance[],
@@ -26,6 +27,7 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
     closeTunnel: mocks.closeTunnel,
     registerTunnel: mocks.registerTunnel,
     findFreePort: mocks.findFreePort,
+    withFreePort: mocks.withFreePort,
     startRemotePowerLine: mocks.startRemotePowerLine,
     bootstrapPowerLine: async function* () {
       yield { stage: "bootstrapping", message: "mock", progress: 0.5 };
@@ -79,6 +81,9 @@ describe("SshAdapter.reconnect()", () => {
     mocks.tunnelOpenCallCount = 0;
     mocks.tunnelOpenFailOnCall = -1;
     mocks.startRemotePowerLine.mockResolvedValue({ alreadyRunning: true });
+    mocks.withFreePort.mockImplementation(async (action: (port: number) => Promise<unknown>) =>
+      action(9999),
+    );
     adapter = new SshAdapter({
       exec: mockExec,
       sleep: mockSleep,
@@ -191,6 +196,9 @@ describe("SshAdapter.provision() — tunnel cleanup", () => {
     mocks.tunnelInstances.length = 0;
     mocks.tunnelOpenCallCount = 0;
     mocks.tunnelOpenFailOnCall = -1;
+    mocks.withFreePort.mockImplementation(async (action: (port: number) => Promise<unknown>) =>
+      action(9999),
+    );
     adapter = new SshAdapter({
       exec: mockExec,
       sleep: mockSleep,
