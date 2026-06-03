@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Unify PluginContext interface: plugin-sdk is now the single source of truth for PluginContext, Disposable, and SubscriberFactory",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
