@@ -1,4 +1,4 @@
-import { type ReactNode, type RefObject, type JSX } from "react";
+import { type ReactNode, type RefObject, type JSX, useState, useEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 /** Default estimated item height in pixels. */
@@ -56,6 +56,14 @@ export function VirtualList<T>({
   getItemKey,
   className,
 }: VirtualListProps<T>): JSX.Element {
+  // Force a re-render after mount so the virtualizer picks up the scroll
+  // element. On first render scrollRef.current is null (ref not yet attached);
+  // this ensures a second render where it's available.
+  const [, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollRef.current,
