@@ -360,11 +360,15 @@ export function EventStream({
     ],
   );
 
-  // Stable key per item — no indices, survives MAX_EVENTS trimming
+  // Stable key per item — uses toolCallId when available (unique per tool event),
+  // falls back to timestamp+eventType+displayIndex for disambiguation.
   const computeItemKey = useCallback(
     (displayIndex: number): string => {
       const event = displayEvents[displayIndex];
-      return `${event.sessionId}-${event.timestamp}-${event.eventType}`;
+      if (event.toolCallId) {
+        return `${event.sessionId}-${event.toolCallId}`;
+      }
+      return `${event.sessionId}-${event.timestamp}-${event.eventType}-${displayIndex}`;
     },
     [displayEvents],
   );

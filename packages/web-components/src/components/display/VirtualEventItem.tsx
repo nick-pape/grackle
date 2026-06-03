@@ -60,10 +60,14 @@ function toolCtxEqual(a: DisplayEvent["toolUseCtx"], b: DisplayEvent["toolUseCtx
   if (!a || !b) {
     return false;
   }
-  return a.tool === b.tool && a.detailedResult === b.detailedResult && a.args === b.args;
+  return (
+    a.tool === b.tool &&
+    a.detailedResult === b.detailedResult &&
+    JSON.stringify(a.args) === JSON.stringify(b.args)
+  );
 }
 
-/** Compare events by identity — reference first, then stable fields as fallback. */
+/** Compare events by stable fields that affect rendering. */
 function eventsEqual(a: DisplayEvent, b: DisplayEvent): boolean {
   if (a === b) {
     return true;
@@ -73,8 +77,11 @@ function eventsEqual(a: DisplayEvent, b: DisplayEvent): boolean {
     a.timestamp === b.timestamp &&
     a.eventType === b.eventType &&
     a.content === b.content &&
-    toolCtxEqual(a.toolUseCtx, b.toolUseCtx) &&
-    a.settled === b.settled
+    a.toolCallId === b.toolCallId &&
+    a.toolError === b.toolError &&
+    a.raw === b.raw &&
+    a.settled === b.settled &&
+    toolCtxEqual(a.toolUseCtx, b.toolUseCtx)
   );
 }
 
