@@ -111,8 +111,9 @@ export function EventStream({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isReversed, setIsReversed] = useState(readStoredDirection);
 
-  // Track which event indices have been rendered (for new-event animation)
-  const prevEventsLengthRef = useRef<number>(0);
+  // Track previous event count for new-event animation.
+  // Initialized to current length so pre-existing events on mount don't animate.
+  const prevEventsLengthRef = useRef<number>(events.length);
 
   // Forward flow state
   const [showSessionPicker, setShowSessionPicker] = useState(false);
