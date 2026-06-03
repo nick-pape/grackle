@@ -259,6 +259,13 @@ describe("task-store tree operations", () => {
       taskStore.updateTaskStatus("a", "working");
       expect(taskStore.areDependenciesMet("b")).toBe(false);
     });
+
+    it("handles duplicate dependency IDs correctly", () => {
+      taskStore.createTask("a", "test-proj", "Dep A", "desc", [], "proj");
+      taskStore.createTask("b", "test-proj", "Task", "desc", ["a", "a"], "proj");
+      taskStore.markTaskComplete("a");
+      expect(taskStore.areDependenciesMet("b")).toBe(true);
+    });
   });
 
   describe("getUnblockedTasks", () => {

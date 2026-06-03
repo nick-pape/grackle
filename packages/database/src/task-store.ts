@@ -354,16 +354,16 @@ export function areDependenciesMet(taskId: string): boolean {
   if (!task) {
     return false;
   }
-  const deps = safeParseJsonArray(task.dependsOn);
-  if (deps.length === 0) {
+  const uniqueDeps = [...new Set(safeParseJsonArray(task.dependsOn))];
+  if (uniqueDeps.length === 0) {
     return true;
   }
   const depRows = db
     .select({ id: tasks.id, status: tasks.status })
     .from(tasks)
-    .where(inArray(tasks.id, deps))
+    .where(inArray(tasks.id, uniqueDeps))
     .all();
-  if (depRows.length !== deps.length) {
+  if (depRows.length !== uniqueDeps.length) {
     return false;
   }
   return depRows.every((row) => row.status === TASK_STATUS.COMPLETE);
