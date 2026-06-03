@@ -3,7 +3,7 @@ import { goToSettings } from "./helpers.js";
 
 const test = base.extend<{ mockPage: import("@playwright/test").Page }>({
   mockPage: async ({ page }, use) => {
-    await page.goto("/?mock");
+    await page.goto("/chat?mock");
     await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
       timeout: 10_000,
     });

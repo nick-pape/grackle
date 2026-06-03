@@ -6,9 +6,9 @@ import {
   ThemeProvider,
   SidebarProvider,
   StatusBar,
-  AppNav,
   Sidebar,
   ContextNav,
+  ContextDetailShell,
   CONTEXTS,
   DEFAULT_CONTEXT_ID,
   agentUrl,
@@ -29,6 +29,8 @@ import {
   useAppNavigate,
   type AppTab,
   type ContextItem,
+  type ContextDetailTab,
+  CODE_HEADER_ICON,
 } from "@grackle-ai/web-components";
 import {
   useCallback,
@@ -229,6 +231,30 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   const activeView = getActiveView(location.pathname);
   const activeFleetId = fleetTabs.some((t) => t.view === activeView) ? activeView : undefined;
 
+  // Code context tabs: workbench + global groups, mapped to ContextDetailTab shape.
+  const codeDetailTabs = useMemo<ContextDetailTab[]>(() => {
+    const visible = tabs.filter((t) => ["workbench", "global"].includes(t.group ?? "workbench"));
+    const byOrder = (a: AppTab, b: AppTab): number =>
+      (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER);
+    return visible.sort(byOrder).map((t) => ({
+      id: t.view,
+      label: t.label,
+      icon: t.icon,
+      testId: t.testId,
+      align: t.align,
+    }));
+  }, [tabs]);
+
+  const handleCodeTabSelect = useCallback(
+    (tabId: string) => {
+      const tab = tabs.find((t) => t.view === tabId);
+      if (tab) {
+        navigate(tab.route);
+      }
+    },
+    [tabs, navigate],
+  );
+
   // Derive the active context from the route: `/agents/:id` activates that agent
   // row; fleet pages deselect all contexts; everything else falls back to `Code`.
   // `decodeURIComponent` throws on malformed percent-encoding (e.g. `/agents/%E0`),
@@ -256,7 +282,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
       if (id.startsWith(AGENT_CONTEXT_PREFIX)) {
         navigate(agentUrl(id.slice(AGENT_CONTEXT_PREFIX.length)));
       } else if (id === DEFAULT_CONTEXT_ID) {
-        navigate("/");
+        navigate("/chat");
       }
     },
     [navigate],
@@ -338,7 +364,17 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
         )}
         <div className={styles.contextPane}>
           {!activeFleetId && !hasOwnNav(location.pathname) && (
-            <AppNav tabs={tabs} groups={["workbench", "global"]} />
+            <ContextDetailShell
+              icon={CODE_HEADER_ICON}
+              name="Code"
+              onNavigateBack={() => navigate("/chat")}
+              tabs={codeDetailTabs}
+              activeTab={activeView}
+              onSelectTab={handleCodeTabSelect}
+              ariaLabel="App navigation"
+              headerTestId="code-header"
+              tabBarTestId="sidebar-nav"
+            />
           )}
           <div className={styles.body}>
             {hasSidebar && (
