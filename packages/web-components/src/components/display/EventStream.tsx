@@ -1,13 +1,4 @@
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type JSX,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from "react";
 import { AlertTriangle, ArrowDown, ArrowUp } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Virtuoso } from "react-virtuoso";
@@ -404,20 +395,22 @@ export function EventStream({
     }
   }, [displayEvents.length, isReversed, isAtAnchor, selection.isSelecting]);
 
-  // Custom Scroller that applies padding and data-testid inside Virtuoso's
-  // scroll viewport. Virtuoso manages overflow; we only add visual padding.
-  const scrollerClassName = `${styles.scrollerPadding} ${selection.isSelecting ? styles.selectingPadding : ""}`;
-  const CustomScroller = useMemo(
-    () =>
-      forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => (
-        <div
-          {...props}
-          ref={ref}
-          className={`${props.className ?? ""} ${scrollerClassName}`}
-          data-testid="event-stream-scroll"
-        />
-      )),
-    [scrollerClassName],
+  // Callback ref that stamps the scroller element with data-testid + padding
+  // classes. Avoids creating a custom Scroller component (which would cause
+  // Virtuoso to fully remount whenever the component identity changes).
+  const scrollerRef = useCallback(
+    (el: HTMLElement | Window | null) => {
+      if (el instanceof HTMLElement) {
+        el.setAttribute("data-testid", "event-stream-scroll");
+        el.classList.add(styles.scrollerPadding);
+        if (selection.isSelecting) {
+          el.classList.add(styles.selectingPadding);
+        } else {
+          el.classList.remove(styles.selectingPadding);
+        }
+      }
+    },
+    [selection.isSelecting],
   );
 
   return (
@@ -448,7 +441,8 @@ export function EventStream({
       <Virtuoso
         key={String(isReversed)}
         ref={virtuosoRef}
-        className={styles.scrollContainer}
+        scrollerRef={scrollerRef}
+        style={{ flex: 1, minHeight: 0 }}
         totalCount={displayEvents.length}
         overscan={VIRTUALIZER_OVERSCAN_PX}
         computeItemKey={computeItemKey}
@@ -457,7 +451,6 @@ export function EventStream({
         initialTopMostItemIndex={isReversed ? 0 : Math.max(0, displayEvents.length - 1)}
         atBottomStateChange={handleAtBottomChange}
         atTopStateChange={handleAtTopChange}
-        components={{ Scroller: CustomScroller }}
       />
 
       {/* Floating action bar for multi-select mode */}
