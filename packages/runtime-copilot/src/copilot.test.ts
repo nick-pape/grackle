@@ -172,7 +172,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
       abort: vi.fn(() => {
         /* synchronous, returns undefined (void) */
       }),
-      destroy: vi.fn(() => Promise.resolve()),
+      disconnect: vi.fn(() => Promise.resolve()),
     };
     injectMockCopilotSession(session, mockSdkSession);
 
@@ -188,7 +188,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     const session = new CopilotSession({ id: "s2", prompt: "prompt", model: "model", maxTurns: 0 });
     const mockSdkSession = {
       abort: vi.fn(() => Promise.resolve()),
-      destroy: vi.fn(() => Promise.resolve()),
+      disconnect: vi.fn(() => Promise.resolve()),
     };
     injectMockCopilotSession(session, mockSdkSession);
 
@@ -209,7 +209,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
       abort: vi.fn(() => {
         throw new Error("SDK exploded");
       }),
-      destroy: destroyFn,
+      disconnect: destroyFn,
     };
     injectMockCopilotSession(session, mockSdkSession);
 
@@ -233,7 +233,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     const destroyFn = vi.fn(() => Promise.resolve());
     const mockSdkSession = {
       abort: vi.fn(() => Promise.reject(new Error("async abort failure"))),
-      destroy: destroyFn,
+      disconnect: destroyFn,
     };
     injectMockCopilotSession(session, mockSdkSession);
 
@@ -253,7 +253,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     const session = new CopilotSession({ id: "s4", prompt: "prompt", model: "model", maxTurns: 0 });
     const mockSdkSession = {
       abort: vi.fn(() => Promise.resolve()),
-      destroy: vi.fn(() => Promise.resolve()),
+      disconnect: vi.fn(() => Promise.resolve()),
     };
     injectMockCopilotSession(session, mockSdkSession);
 
@@ -304,7 +304,7 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
       send: vi.fn(async () => {
         setTimeout(() => idleHandlers["session.idle"]?.(), 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
     };
     const mockCopilotClient = {
@@ -324,6 +324,11 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: {
+        forStdio: vi.fn(() => "stdio-conn"),
+        forUri: vi.fn((u: string) => u),
+        forTcp: vi.fn(() => "tcp-conn"),
+      },
     });
   });
 
@@ -389,7 +394,7 @@ describe("CopilotRuntime — usage event emission", () => {
           handlers["session.idle"]?.();
         }, 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
     };
     const mockCopilotClient = {
@@ -409,6 +414,11 @@ describe("CopilotRuntime — usage event emission", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: {
+        forStdio: vi.fn(() => "stdio-conn"),
+        forUri: vi.fn((u: string) => u),
+        forTcp: vi.fn(() => "tcp-conn"),
+      },
     });
   });
 
@@ -472,7 +482,7 @@ describe("CopilotRuntime — tool-call id (AHP HR3)", () => {
           handlers["session.idle"]?.();
         }, 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
     };
     const mockCopilotClient = {
@@ -492,6 +502,11 @@ describe("CopilotRuntime — tool-call id (AHP HR3)", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: {
+        forStdio: vi.fn(() => "stdio-conn"),
+        forUri: vi.fn((u: string) => u),
+        forTcp: vi.fn(() => "tcp-conn"),
+      },
     });
   });
 
@@ -559,7 +574,7 @@ describe("CopilotRuntime — multi-turn", () => {
           handlers["session.idle"]?.();
         }, 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
     };
     mockCopilotClient = {
@@ -579,6 +594,11 @@ describe("CopilotRuntime — multi-turn", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: {
+        forStdio: vi.fn(() => "stdio-conn"),
+        forUri: vi.fn((u: string) => u),
+        forTcp: vi.fn(() => "tcp-conn"),
+      },
     });
   });
 
@@ -656,7 +676,7 @@ describe("CopilotRuntime — multi-turn", () => {
           handlers["session.idle"]?.();
         }, 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
     };
     mockCopilotClient = {
@@ -675,6 +695,11 @@ describe("CopilotRuntime — multi-turn", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: {
+        forStdio: vi.fn(() => "stdio-conn"),
+        forUri: vi.fn((u: string) => u),
+        forTcp: vi.fn(() => "tcp-conn"),
+      },
     });
 
     const { session, nextEvent } = spawnSession();
@@ -726,7 +751,7 @@ describe("CopilotRuntime — multi-turn", () => {
           usageHandlers["session.idle"]?.();
         }, 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
     };
 
@@ -746,6 +771,11 @@ describe("CopilotRuntime — multi-turn", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: {
+        forStdio: vi.fn(() => "stdio-conn"),
+        forUri: vi.fn((u: string) => u),
+        forTcp: vi.fn(() => "tcp-conn"),
+      },
     });
 
     const { session, nextEvent } = spawnSession();

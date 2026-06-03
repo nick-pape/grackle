@@ -606,20 +606,13 @@ class AcpSession extends BaseAgentSession {
     // Set model if specified
     if (this.model) {
       try {
-        await this.connection.unstable_setSessionModel({
+        await this.connection.setSessionConfigOption({
           sessionId: this.acpSessionId,
-          modelId: this.model,
+          configId: "model",
+          value: this.model,
         });
       } catch {
-        try {
-          await this.connection.setSessionConfigOption({
-            sessionId: this.acpSessionId,
-            configId: "model",
-            value: this.model,
-          });
-        } catch {
-          logger.warn({ model: this.model }, "Failed to set model via ACP");
-        }
+        logger.warn({ model: this.model }, "Failed to set model via ACP");
       }
     }
   }

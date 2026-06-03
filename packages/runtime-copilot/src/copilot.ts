@@ -34,6 +34,13 @@ interface CopilotSdkModule {
   /** Pre-built permission handler that approves all tool invocations. */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   approveAll: any;
+  /** Factory for creating transport connections (stdio, TCP, URI). SDK 1.0+. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  RuntimeConnection: {
+    forStdio: (opts?: Record<string, unknown>) => any;
+    forUri: (url: string) => any;
+    forTcp: (opts?: Record<string, unknown>) => any;
+  };
 }
 
 /** Promise for the one-time SDK import, cached to avoid race conditions. */
@@ -64,6 +71,7 @@ function getCopilotSdk(): Promise<CopilotSdkModule> {
           CopilotClient: mod.CopilotClient as CopilotSdkModule["CopilotClient"],
           defineTool: mod.defineTool as CopilotSdkModule["defineTool"],
           approveAll: mod.approveAll,
+          RuntimeConnection: mod.RuntimeConnection as CopilotSdkModule["RuntimeConnection"],
         };
       } catch (err: unknown) {
         // Reset so the next attempt retries the import
@@ -152,25 +160,24 @@ export class CopilotSession extends BaseAgentSession {
     const workingDirectory = await this.resolveWorkDir();
 
     // ── Create CopilotClient ──
-    const clientOptions: Record<string, unknown> = {
-      autoStart: false,
-      useStdio: true,
-    };
+    // SDK 1.0: transport is configured via RuntimeConnection, not flat options.
+    const clientOptions: Record<string, unknown> = {};
 
     const cliUrl = process.env[ENV_COPILOT_CLI_URL];
-    if (cliUrl) {
-      clientOptions.cliUrl = cliUrl;
-      clientOptions.useStdio = false;
-    }
-
     const cliPath = process.env[ENV_COPILOT_CLI_PATH];
-    if (cliPath && !cliUrl) {
-      clientOptions.cliPath = cliPath;
+    if (cliUrl) {
+      clientOptions.connection = copilotSdk.RuntimeConnection.forUri(cliUrl);
+    } else {
+      const stdioOpts: Record<string, unknown> = { args: ["--yolo"] };
+      if (cliPath) {
+        stdioOpts.path = cliPath;
+      }
+      clientOptions.connection = copilotSdk.RuntimeConnection.forStdio(stdioOpts);
     }
 
     const githubToken = resolveGithubToken();
     if (githubToken) {
-      clientOptions.githubToken = githubToken;
+      clientOptions.gitHubToken = githubToken;
       clientOptions.useLoggedInUser = false;
     } else {
       clientOptions.useLoggedInUser = true;
@@ -178,7 +185,6 @@ export class CopilotSession extends BaseAgentSession {
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.copilotClient = new copilotSdk.CopilotClient(clientOptions);
-    await this.copilotClient.start();
 
     this.emit({
       type: "system",
@@ -188,7 +194,6 @@ export class CopilotSession extends BaseAgentSession {
     });
 
     // ── Build session config ──
-    // onPermissionRequest is REQUIRED by the SDK — use approveAll for headless operation
     const sessionConfig: Record<string, unknown> = {
       model: this.model,
       streaming: true,
@@ -412,7 +417,7 @@ export class CopilotSession extends BaseAgentSession {
   private async cleanup(): Promise<void> {
     try {
       if (this.copilotSession) {
-        await this.copilotSession.destroy();
+        await this.copilotSession.disconnect();
       }
     } catch {
       /* best-effort */
