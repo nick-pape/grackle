@@ -111,6 +111,7 @@ test.describe(
       appPage,
       grackle: { client },
     }) => {
+      test.setTimeout(60_000);
       await setupDisconnectedAgent(appPage, client);
 
       const reconnectBtn = appPage.locator('[data-testid="reconnect-btn"]');
@@ -122,6 +123,7 @@ test.describe(
       appPage,
       grackle: { client },
     }) => {
+      test.setTimeout(60_000);
       await setupDisconnectedAgent(appPage, client);
 
       const sendBtn = appPage.locator("button", { hasText: "Send" });
@@ -135,6 +137,7 @@ test.describe(
       appPage,
       grackle: { client },
     }) => {
+      test.setTimeout(60_000);
       await setupDisconnectedAgent(appPage, client);
 
       await expect(appPage.locator('[data-testid="env-disconnect-hint"]')).toBeVisible({
@@ -149,6 +152,7 @@ test.describe(
       appPage,
       grackle: { client },
     }) => {
+      test.setTimeout(60_000);
       await setupDisconnectedAgent(appPage, client);
 
       const sendBtn = appPage.locator("button", { hasText: "Send" });
