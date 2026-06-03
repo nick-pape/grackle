@@ -1339,7 +1339,7 @@ export const MOCK_EVENTS: SessionEvent[] = [
     eventType: "text",
     timestamp: "2026-02-27T06:00:24Z",
     content:
-      "Found a **hardcoded secret** in production code:\n\n- `.env.example` matches are safe (placeholder values)\n- `config/stripe.ts:14` contains a **live Stripe secret key** (`sk_test_...`)\n\nThis is a **critical finding**. Let me read the file to confirm.",
+      "Found a **hardcoded secret** in production code:\n\n- `.env.example` matches are safe (placeholder values)\n- `config/stripe.ts:14` contains a **hardcoded Stripe API key** (`sk_test_...`)\n\nThis is a **critical finding**. Let me read the file to confirm.",
   },
   {
     sessionId: "sa-sess-active",
@@ -1364,7 +1364,7 @@ export const MOCK_EVENTS: SessionEvent[] = [
     eventType: "text",
     timestamp: "2026-02-27T06:00:32Z",
     content:
-      "## Daily Audit Summary\n\n### Critical\n| # | Finding | File | Recommendation |\n|---|---------|------|----------------|\n| 1 | Hardcoded Stripe live secret key | `config/stripe.ts:4` | Move to `STRIPE_SECRET_KEY` env var, rotate the exposed key immediately |\n\n### High\n| # | Finding | Package | Recommendation |\n|---|---------|---------|----------------|\n| 2 | Prototype Pollution | `lodash@4.17.20` | Upgrade to `>=4.17.21` |\n\n### Moderate\n| # | Finding | Package | Recommendation |\n|---|---------|---------|----------------|\n| 3 | ReDoS | `semver@7.5.2` | Upgrade to `>=7.5.4` |\n| 4 | XSS via data URIs | `sanitize-html@2.10.0` | Upgrade to `>=2.12.1` |\n\n**Action required:** Finding #1 is a credential leak — the Stripe key should be rotated and moved to an environment variable before the next deploy.",
+      "## Daily Audit Summary\n\n### Critical\n| # | Finding | File | Recommendation |\n|---|---------|------|----------------|\n| 1 | Hardcoded Stripe API key | `config/stripe.ts:14` | Move to `STRIPE_SECRET_KEY` env var, rotate the exposed key immediately |\n\n### High\n| # | Finding | Package | Recommendation |\n|---|---------|---------|----------------|\n| 2 | Prototype Pollution | `lodash@4.17.20` | Upgrade to `>=4.17.21` |\n\n### Moderate\n| # | Finding | Package | Recommendation |\n|---|---------|---------|----------------|\n| 3 | ReDoS | `semver@7.5.2` | Upgrade to `>=7.5.4` |\n| 4 | XSS via data URIs | `sanitize-html@2.10.0` | Upgrade to `>=2.12.1` |\n\n**Action required:** Finding #1 is a hardcoded credential — the Stripe key should be moved to an environment variable before the next deploy.",
   },
   {
     sessionId: "sa-sess-active",
@@ -2172,7 +2172,7 @@ export const MOCK_AGENTS: AgentData[] = [
   {
     id: "security-auditor",
     name: "Security Auditor",
-    avatar: "\u{1F6E1}️",
+    avatar: "\u{1F6E1}\u{FE0F}",
     primaryPersonaId: "persona-arch",
     environmentId: "env-docker-01",
     heartbeat: {
