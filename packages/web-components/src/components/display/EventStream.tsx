@@ -335,14 +335,17 @@ export function EventStream({
         </Tooltip>
       </div>
 
-      {/* Scroll container */}
+      {/* Non-scrollable content above the virtual list — kept outside the
+          scroll container so the virtualizer's scroll offset starts at 0. */}
+      {events.length === 0 && emptyState}
+      <EventOverflowBanner eventsDropped={eventsDropped} />
+
+      {/* Scroll container — only the VirtualList lives here */}
       <div
         ref={scrollRef}
         className={`${styles.scrollContainer} ${selection.isSelecting ? styles.selectingPadding : ""}`}
         data-testid="event-stream-scroll"
       >
-        {events.length === 0 && emptyState}
-        <EventOverflowBanner eventsDropped={eventsDropped} />
         <VirtualList
           items={displayEvents}
           scrollRef={scrollRef}
