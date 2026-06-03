@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { useEnvironments } from "./useEnvironments.js";
@@ -209,5 +209,51 @@ describe("useEnvironments — operationError", () => {
     });
 
     expect(result.current.operationError).toBe("");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: onDisconnect clears provision-status timers
+// ---------------------------------------------------------------------------
+
+describe("useEnvironments — onDisconnect clears provision timers", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+    mockClient.listEnvironments.mockResolvedValue({ environments: [] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("cancels pending provision-clear timers so status persists after disconnect", () => {
+    const { result } = renderHook(() => useEnvironments());
+
+    act(() => {
+      result.current.handleEvent({
+        id: "evt-1",
+        timestamp: "2026-01-01T00:00:00Z",
+        type: "environment.provision_progress",
+        payload: {
+          environmentId: "env-1",
+          stage: "ready",
+          message: "done",
+          progress: 100,
+        },
+      });
+    });
+
+    expect(result.current.provisionStatus["env-1"]).toBeDefined();
+
+    act(() => {
+      result.current.domainHook.onDisconnect();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(6_000);
+    });
+
+    expect(result.current.provisionStatus["env-1"]).toBeDefined();
   });
 });

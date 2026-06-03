@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import { warnBadPayload } from "@grackle-ai/web-components";
 import type {
@@ -41,6 +41,8 @@ export function useEnvironments(): UseEnvironmentsResult {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const { loading: environmentsLoading, track: trackEnvironments } = useLoadingState();
   const [provisionStatus, setProvisionStatus] = useState<Record<string, ProvisionStatus>>({});
+  /** Per-environment timers that clear provision status after a delay. */
+  const provisionClearTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [operationError, setOperationError] = useState("");
 
   const clearOperationError = useCallback(() => {
@@ -99,7 +101,9 @@ export function useEnvironments(): UseEnvironmentsResult {
           }));
           if (pp.stage === "ready") {
             const envId = pp.environmentId as string;
-            setTimeout(() => {
+            clearTimeout(provisionClearTimersRef.current[envId]);
+            provisionClearTimersRef.current[envId] = setTimeout(() => {
+              delete provisionClearTimersRef.current[envId];
               setProvisionStatus((prev) => {
                 const next = { ...prev };
                 delete next[envId];
@@ -190,7 +194,9 @@ export function useEnvironments(): UseEnvironmentsResult {
           },
         }));
         if (event.stage === "ready") {
-          setTimeout(() => {
+          clearTimeout(provisionClearTimersRef.current[environmentId]);
+          provisionClearTimersRef.current[environmentId] = setTimeout(() => {
+            delete provisionClearTimersRef.current[environmentId];
             setProvisionStatus((prev) => {
               const next = { ...prev };
               delete next[environmentId];
@@ -227,10 +233,23 @@ export function useEnvironments(): UseEnvironmentsResult {
     }
   }, []);
 
+  useEffect(() => {
+    return () => {
+      for (const t of Object.values(provisionClearTimersRef.current)) {
+        clearTimeout(t);
+      }
+    };
+  }, []);
+
   const domainHook: DomainHook = useMemo(
     () => ({
       onConnect: () => loadEnvironments(),
-      onDisconnect: () => {},
+      onDisconnect: () => {
+        for (const t of Object.values(provisionClearTimersRef.current)) {
+          clearTimeout(t);
+        }
+        provisionClearTimersRef.current = {};
+      },
       handleEvent,
     }),
     [loadEnvironments, handleEvent],
