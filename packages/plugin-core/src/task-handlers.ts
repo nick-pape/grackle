@@ -185,6 +185,12 @@ export async function createTask(req: grackle.CreateTaskRequest): Promise<grackl
     throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
   }
 
+  for (const depId of req.dependsOn) {
+    if (!taskStore.getTask(depId)) {
+      throw new ConnectError(`Dependency task not found: ${depId}`, Code.NotFound);
+    }
+  }
+
   const id = uuid().slice(0, 8);
   taskStore.createTask(
     id,
@@ -237,6 +243,24 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
       throw new ConnectError(`Unknown task status enum value: ${req.status}`, Code.InvalidArgument);
     }
     reqStatus = converted;
+  }
+
+  if (req.dependsOn.length > 0) {
+    if (req.dependsOn.includes(req.id)) {
+      throw new ConnectError(`Task ${req.id} cannot depend on itself`, Code.InvalidArgument);
+    }
+    for (const depId of req.dependsOn) {
+      if (!taskStore.getTask(depId)) {
+        throw new ConnectError(`Dependency task not found: ${depId}`, Code.NotFound);
+      }
+    }
+    const cycle = taskStore.detectDependencyCycle(req.id, [...req.dependsOn]);
+    if (cycle) {
+      throw new ConnectError(
+        `Circular dependency detected: ${req.id} → ${cycle.join(" → ")} → ${req.id}`,
+        Code.InvalidArgument,
+      );
+    }
   }
 
   taskStore.updateTask(

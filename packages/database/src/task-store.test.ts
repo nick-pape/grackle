@@ -664,4 +664,50 @@ describe("task-store tree operations", () => {
       expect(after >= before).toBe(true);
     });
   });
+
+  describe("detectDependencyCycle", () => {
+    it("detects self-dependency", () => {
+      taskStore.createTask("t1", "test-proj", "Task A", "desc", [], "proj");
+      const result = taskStore.detectDependencyCycle("t1", ["t1"]);
+      expect(result).toEqual(["t1"]);
+    });
+
+    it("detects direct cycle (A->B, B->A)", () => {
+      taskStore.createTask("t1", "test-proj", "Task A", "desc", [], "proj");
+      taskStore.createTask("t2", "test-proj", "Task B", "desc", ["t1"], "proj");
+      const result = taskStore.detectDependencyCycle("t1", ["t2"]);
+      expect(result).toEqual(["t2"]);
+    });
+
+    it("detects transitive cycle (A->B->C->A)", () => {
+      taskStore.createTask("t1", "test-proj", "Task A", "desc", [], "proj");
+      taskStore.createTask("t2", "test-proj", "Task B", "desc", ["t1"], "proj");
+      taskStore.createTask("t3", "test-proj", "Task C", "desc", ["t2"], "proj");
+      const result = taskStore.detectDependencyCycle("t1", ["t3"]);
+      expect(result).toEqual(["t3", "t2"]);
+    });
+
+    it("returns null for valid dependencies (no cycle)", () => {
+      taskStore.createTask("t1", "test-proj", "Task A", "desc", [], "proj");
+      taskStore.createTask("t2", "test-proj", "Task B", "desc", [], "proj");
+      taskStore.createTask("t3", "test-proj", "Task C", "desc", ["t1"], "proj");
+      const result = taskStore.detectDependencyCycle("t3", ["t2"]);
+      expect(result).toBeNull();
+    });
+
+    it("returns null for diamond dependency (no cycle)", () => {
+      taskStore.createTask("t1", "test-proj", "Task D", "desc", [], "proj");
+      taskStore.createTask("t2", "test-proj", "Task B", "desc", ["t1"], "proj");
+      taskStore.createTask("t3", "test-proj", "Task C", "desc", ["t1"], "proj");
+      taskStore.createTask("t4", "test-proj", "Task A", "desc", ["t2", "t3"], "proj");
+      const result = taskStore.detectDependencyCycle("t4", ["t2", "t3"]);
+      expect(result).toBeNull();
+    });
+
+    it("handles nonexistent dependency gracefully", () => {
+      taskStore.createTask("t1", "test-proj", "Task A", "desc", [], "proj");
+      const result = taskStore.detectDependencyCycle("t1", ["nonexistent"]);
+      expect(result).toBeNull();
+    });
+  });
 });
