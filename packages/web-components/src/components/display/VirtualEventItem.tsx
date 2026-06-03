@@ -14,6 +14,7 @@ function buildCheckboxLabel(event: SessionEvent): string {
     case "output":
       return `Select message from assistant at ${time}`;
     case "user_input":
+    case "turn_started":
       return `Select message from user at ${time}`;
     case "tool_result":
     case "tool_use":
