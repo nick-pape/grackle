@@ -1,6 +1,21 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Tue, 02 Jun 2026 23:47:41 GMT and should not be manually modified.
+This log was last generated on Wed, 03 Jun 2026 03:46:30 GMT and should not be manually modified.
+
+## 0.154.0
+Wed, 03 Jun 2026 03:46:30 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Fix `grackle token set` and `grackle attach` hanging in non-TTY contexts (CI, pipes, redirects). `token set` now reads the value from stdin when not a TTY (e.g. `echo $SECRET | grackle token set foo`); `attach` skips the readline and streams events, printing a one-shot send-input hint when the session requests input.
+- Support GRACKLE_API_KEY env var on the server for injecting API keys from a secrets manager
 
 ## 0.153.0
 Tue, 02 Jun 2026 23:47:41 GMT

@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { ConnectError, Code } from "@connectrpc/connect";
 import type { TaskData, GrackleEvent, WsMessage, UseTasksResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
@@ -130,6 +130,18 @@ export function useTasks(): UseTasksResult {
 
   const onDisconnect = useCallback(() => {
     setTaskStartingId(undefined);
+    for (const t of Object.values(debounceTimersRef.current)) {
+      clearTimeout(t);
+    }
+    debounceTimersRef.current = {};
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      for (const t of Object.values(debounceTimersRef.current)) {
+        clearTimeout(t);
+      }
+    };
   }, []);
 
   const handleLegacyMessage = useCallback((msg: WsMessage): boolean => {

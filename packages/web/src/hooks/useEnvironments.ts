@@ -42,6 +42,7 @@ export function useEnvironments(): UseEnvironmentsResult {
   const { loading: environmentsLoading, track: trackEnvironments } = useLoadingState();
   const [provisionStatus, setProvisionStatus] = useState<Record<string, ProvisionStatus>>({});
   const [operationError, setOperationError] = useState("");
+  /** Per-environment timers that clear provision status after a delay. */
   const provisionClearTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const clearOperationError = useCallback(() => {
