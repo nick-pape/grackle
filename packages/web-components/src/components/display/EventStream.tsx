@@ -364,7 +364,7 @@ export function EventStream({
   const computeItemKey = useCallback(
     (displayIndex: number): string => {
       const event = displayEvents[displayIndex];
-      return `${event.sessionId}-${event.timestamp}`;
+      return `${event.sessionId}-${event.timestamp}-${event.eventType}`;
     },
     [displayEvents],
   );

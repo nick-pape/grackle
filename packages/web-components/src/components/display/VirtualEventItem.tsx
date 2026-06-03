@@ -52,6 +52,17 @@ export interface VirtualEventItemProps {
 }
 
 /** Custom equality check for React.memo — avoids re-rendering unchanged items. */
+/** Compare toolUseCtx by fields (pairToolEvents recreates these objects each render). */
+function toolCtxEqual(a: DisplayEvent["toolUseCtx"], b: DisplayEvent["toolUseCtx"]): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  return a.tool === b.tool && a.detailedResult === b.detailedResult && a.args === b.args;
+}
+
 /** Compare events by identity — reference first, then stable fields as fallback. */
 function eventsEqual(a: DisplayEvent, b: DisplayEvent): boolean {
   if (a === b) {
@@ -62,7 +73,7 @@ function eventsEqual(a: DisplayEvent, b: DisplayEvent): boolean {
     a.timestamp === b.timestamp &&
     a.eventType === b.eventType &&
     a.content === b.content &&
-    a.toolUseCtx === b.toolUseCtx &&
+    toolCtxEqual(a.toolUseCtx, b.toolUseCtx) &&
     a.settled === b.settled
   );
 }
