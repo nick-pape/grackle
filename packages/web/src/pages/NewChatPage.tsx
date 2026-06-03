@@ -2,8 +2,8 @@ import { type JSX } from "react";
 import { useSearchParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import {
-  Breadcrumbs,
   ChatInput,
+  PageHeader,
   buildNewChatBreadcrumbs,
   useToast,
 } from "@grackle-ai/web-components";
@@ -24,7 +24,7 @@ export function NewChatPage(): JSX.Element {
 
   return (
     <div className={styles.panelContainer}>
-      <Breadcrumbs segments={breadcrumbs} />
+      <PageHeader segments={breadcrumbs} />
       <div className={styles.emptyState}>Enter a prompt below to start a new session</div>
       <ChatInput
         mode="spawn"

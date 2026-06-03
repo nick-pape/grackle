@@ -9,10 +9,11 @@
 
 import { useCallback, useEffect, type JSX } from "react";
 import {
-  Breadcrumbs,
+  HOME_URL,
   KNOWLEDGE_URL,
   KnowledgeDetailPanel,
   KnowledgeGraph,
+  PageHeader,
 } from "@grackle-ai/web-components";
 import { useGrackle } from "../context/GrackleContext.js";
 import styles from "./KnowledgePage.module.scss";
@@ -67,7 +68,7 @@ export function KnowledgePage(): JSX.Element {
 
   return (
     <div className={styles.layout} data-testid="knowledge-page">
-      <Breadcrumbs segments={breadcrumbs} />
+      <PageHeader segments={breadcrumbs} backUrl={HOME_URL} />
 
       <div className={styles.graphArea}>
         {showError ? (

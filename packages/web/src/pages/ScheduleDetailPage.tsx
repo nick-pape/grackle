@@ -2,7 +2,6 @@ import { useState, useEffect, type JSX, type FormEvent } from "react";
 import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import {
-  Breadcrumbs,
   Button,
   ConfirmDialog,
   EditableSelect,
@@ -14,12 +13,7 @@ import {
   formatRelativeTime,
   formatCountdown,
 } from "@grackle-ai/web-components";
-import type {
-  BreadcrumbSegment,
-  ScheduleData,
-  ScheduleUpdate,
-  SelectOption,
-} from "@grackle-ai/web-components";
+import type { ScheduleData, ScheduleUpdate, SelectOption } from "@grackle-ai/web-components";
 import styles from "./ScheduleDetail.module.scss";
 
 /** ScheduleDetailPage handles both create (/schedules/new) and edit (/schedules/:scheduleId). */
@@ -43,14 +37,8 @@ export function ScheduleDetailPage(): JSX.Element {
     return <Navigate to={SCHEDULES_URL} replace />;
   }
 
-  const breadcrumbs: BreadcrumbSegment[] = [
-    { label: "Schedules", url: SCHEDULES_URL },
-    { label: isNew ? "New Schedule" : (existing?.title ?? "Schedule"), url: undefined },
-  ];
-
   return (
     <div className={styles.container}>
-      <Breadcrumbs segments={breadcrumbs} />
       <ScheduleForm
         existing={existing}
         isNew={isNew}

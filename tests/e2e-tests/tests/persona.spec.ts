@@ -23,12 +23,12 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     // Navigate to persona management view via the personas button in status bar
     await page.locator('[data-testid="sidebar-tab-personas"]').click();
 
-    // Verify the persona management view is shown with our persona
-    await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Security Reviewer")).toBeVisible({
+    // Verify the persona nav sidebar is shown with our persona
+    const nav = page.getByTestId("persona-nav");
+    await expect(nav).toBeVisible({ timeout: 5_000 });
+    await expect(nav.getByText("Security Reviewer")).toBeVisible({
       timeout: 5_000,
     });
-    await expect(page.getByText("Reviews code for vulnerabilities")).toBeVisible();
   });
 
   test("created persona appears in management view with all details", async ({
@@ -47,11 +47,11 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
 
     // Navigate to persona management view
     await page.locator('[data-testid="sidebar-tab-personas"]').click();
-    await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Detailed Persona")).toBeVisible({
+    const nav = page.getByTestId("persona-nav");
+    await expect(nav).toBeVisible({ timeout: 5_000 });
+    await expect(nav.getByText("Detailed Persona")).toBeVisible({
       timeout: 5_000,
     });
-    await expect(page.getByText("A persona with full details")).toBeVisible();
   });
 
   test("delete persona removes it from management view", async ({
@@ -68,8 +68,9 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
 
     // Navigate to management view and verify it appears
     await page.locator('[data-testid="sidebar-tab-personas"]').click();
-    await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Soon Deleted")).toBeVisible({
+    const nav = page.getByTestId("persona-nav");
+    await expect(nav).toBeVisible({ timeout: 5_000 });
+    await expect(nav.getByText("Soon Deleted")).toBeVisible({
       timeout: 5_000,
     });
 
@@ -81,7 +82,7 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     await client.orchestration.deletePersona({ id: toDelete!.id });
 
     // The management view should no longer show the persona
-    await expect(page.getByText("Soon Deleted")).not.toBeVisible({
+    await expect(nav.getByText("Soon Deleted")).not.toBeVisible({
       timeout: 5_000,
     });
   });
@@ -102,10 +103,11 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
       allowedMcpTools: [...WORKER_MCP_TOOLS],
     });
 
-    // Navigate to the persona detail page
+    // Navigate to the persona detail page via sidebar nav
     await page.locator('[data-testid="sidebar-tab-personas"]').click();
-    await expect(page.getByText("Worker Agent")).toBeVisible({ timeout: 5_000 });
-    await page.getByTestId(`persona-card-${persona.id}`).click();
+    const nav = page.getByTestId("persona-nav");
+    await expect(nav.getByText("Worker Agent")).toBeVisible({ timeout: 5_000 });
+    await nav.getByText("Worker Agent").click();
     await page.waitForURL(`**/personas/${persona.id}`, { timeout: 5_000 });
 
     // Verify the MCP tool selector is visible with the correct count
@@ -135,10 +137,11 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
       model: "sonnet",
     });
 
-    // Navigate to persona detail
+    // Navigate to persona detail via sidebar nav
     await page.locator('[data-testid="sidebar-tab-personas"]').click();
-    await expect(page.getByText("Unscoped Tester")).toBeVisible({ timeout: 5_000 });
-    await page.getByTestId(`persona-card-${persona.id}`).click();
+    const nav = page.getByTestId("persona-nav");
+    await expect(nav.getByText("Unscoped Tester")).toBeVisible({ timeout: 5_000 });
+    await nav.getByText("Unscoped Tester").click();
     await page.waitForURL(`**/personas/${persona.id}`, { timeout: 5_000 });
 
     // Verify it shows "Using default" message
@@ -160,10 +163,11 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
       model: "sonnet",
     });
 
-    // Navigate to persona detail
+    // Navigate to persona detail via sidebar nav
     await page.locator('[data-testid="sidebar-tab-personas"]').click();
-    await expect(page.getByText("Preset Test Agent")).toBeVisible({ timeout: 5_000 });
-    await page.getByTestId(`persona-card-${persona.id}`).click();
+    const nav = page.getByTestId("persona-nav");
+    await expect(nav.getByText("Preset Test Agent")).toBeVisible({ timeout: 5_000 });
+    await nav.getByText("Preset Test Agent").click();
     await page.waitForURL(`**/personas/${persona.id}`, { timeout: 5_000 });
 
     // Click "Worker" preset
@@ -201,7 +205,9 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     const page = appPage;
 
     await page.locator('[data-testid="sidebar-tab-personas"]').click();
-    await page.getByTestId("persona-new-button").click();
+    const nav = page.getByTestId("persona-nav");
+    await expect(nav).toBeVisible({ timeout: 5_000 });
+    await page.getByTestId("persona-nav-add").click();
 
     await page.waitForURL("**/personas/new", { timeout: 5_000 });
     // Personas is a fleet-rail item (#1419), not an AppNav tab.
@@ -244,12 +250,12 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
 
     await page.getByTestId("persona-detail-cancel").click();
     await expect(page).toHaveURL(/\/personas$/, { timeout: 5_000 });
-    await expect(page.getByTestId(`persona-card-${createdPersona!.id}`)).toContainText(
-      "Route Created Persona",
-      { timeout: 5_000 },
-    );
+    await expect(nav.getByText("Route Created Persona")).toBeVisible({
+      timeout: 5_000,
+    });
 
-    await page.getByTestId(`persona-card-${createdPersona!.id}`).click();
+    // Click the persona in the sidebar nav to navigate to its detail page
+    await nav.getByText("Route Created Persona").click();
     await page.waitForURL(`**/personas/${createdPersona!.id}`, { timeout: 5_000 });
     // Personas is a fleet-rail item (#1419), not an AppNav tab.
     await expect(page.locator('[data-testid="sidebar-tab-personas"]')).toHaveAttribute(
@@ -285,12 +291,12 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
       .toBeDefined();
 
     await expect(page).toHaveURL(/\/personas$/, { timeout: 5_000 });
-    await expect(page.getByTestId(`persona-card-${updatedPersona!.id}`)).toContainText(
-      "Route Updated Persona",
-      { timeout: 5_000 },
-    );
+    await expect(nav.getByText("Route Updated Persona")).toBeVisible({
+      timeout: 5_000,
+    });
 
-    await page.getByTestId(`persona-card-${updatedPersona!.id}`).click();
+    // Click the updated persona in the sidebar nav to navigate to its detail page
+    await nav.getByText("Route Updated Persona").click();
     await page.waitForURL(`**/personas/${updatedPersona!.id}`, { timeout: 5_000 });
     await page.getByTestId("persona-detail-delete").click();
 
@@ -299,6 +305,6 @@ test.describe("Persona Management — UI", { tag: ["@persona"] }, () => {
     await dialog.getByRole("button", { name: "Delete" }).click();
 
     await expect(page).toHaveURL(/\/personas$/, { timeout: 5_000 });
-    await expect(page.getByTestId(`persona-card-${updatedPersona!.id}`)).toHaveCount(0);
+    await expect(nav.getByText("Route Updated Persona")).not.toBeVisible({ timeout: 5_000 });
   });
 });

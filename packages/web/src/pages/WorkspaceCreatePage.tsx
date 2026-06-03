@@ -2,11 +2,11 @@ import { useEffect, useState, type JSX } from "react";
 import { useSearchParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import {
-  Breadcrumbs,
   HOME_URL,
   Spinner,
   WorkspaceFormFields,
   defaultFormValues,
+  PageHeader,
   environmentUrl,
   useAppNavigate,
   useToast,
@@ -112,29 +112,29 @@ export function WorkspaceCreatePage(): JSX.Element {
   return (
     <div className={styles.container}>
       {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerTitle}>
-          <Breadcrumbs segments={breadcrumbs} />
-        </div>
-        <div className={styles.headerActions}>
-          <button
-            className={styles.btnGhost}
-            onClick={handleCancel}
-            disabled={workspaceCreating}
-            data-testid="workspace-create-cancel"
-          >
-            Cancel
-          </button>
-          <button
-            className={styles.btnPrimary}
-            onClick={handleSave}
-            disabled={workspaceCreating || !values.name.trim() || !values.environmentId}
-            data-testid="workspace-create-save"
-          >
-            {workspaceCreating ? <Spinner size="sm" label="Creating" /> : "Create Workspace"}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        segments={breadcrumbs}
+        actions={
+          <>
+            <button
+              className={styles.btnGhost}
+              onClick={handleCancel}
+              disabled={workspaceCreating}
+              data-testid="workspace-create-cancel"
+            >
+              Cancel
+            </button>
+            <button
+              className={styles.btnPrimary}
+              onClick={handleSave}
+              disabled={workspaceCreating || !values.name.trim() || !values.environmentId}
+              data-testid="workspace-create-save"
+            >
+              {workspaceCreating ? <Spinner size="sm" label="Creating" /> : "Create Workspace"}
+            </button>
+          </>
+        }
+      />
 
       {/* Form body */}
       <div className={styles.body}>

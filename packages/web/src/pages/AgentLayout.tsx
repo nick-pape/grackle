@@ -11,6 +11,8 @@ import { useGrackle } from "../context/GrackleContext.js";
 import {
   AgentHeader,
   AgentTabBar,
+  PageHeader,
+  buildAgentBreadcrumbs,
   useAppNavigate,
   type AgentTab,
   type AgentData,
@@ -72,6 +74,7 @@ export function AgentLayout(): JSX.Element {
 
   return (
     <div className={styles.container} data-testid="agent-layout">
+      <PageHeader segments={buildAgentBreadcrumbs(agent.name)} />
       <AgentHeader
         name={agent.name}
         avatar={agent.avatar}

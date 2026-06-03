@@ -3,9 +3,9 @@ import { useParams, Link } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useSandboxProxyUrl } from "../context/ManifestContext.js";
 import {
-  Breadcrumbs,
   ChatInput,
   EventStream,
+  PageHeader,
   SplitButton,
   buildSessionBreadcrumbs,
   formatCost,
@@ -145,7 +145,7 @@ export function SessionPage(): JSX.Element {
 
   return (
     <div className={styles.panelContainer}>
-      <Breadcrumbs segments={breadcrumbs} />
+      <PageHeader segments={breadcrumbs} />
       <SessionHeader
         sessionId={sessionId!}
         session={session}

@@ -86,6 +86,7 @@ export {
   AppNav,
   Sidebar,
   BottomStatusBar,
+  PageHeader,
   TABS,
   getActiveView,
   ContextNav,
@@ -99,10 +100,11 @@ export type {
   NavGroup,
   ContextItem,
   ContextNavProps,
+  PageHeaderProps,
 } from "./components/layout/index.js";
 
 // Lists
-export { EnvironmentNav } from "./components/lists/index.js";
+export { EnvironmentNav, PersonaNav, ScheduleNav } from "./components/lists/index.js";
 export { TaskList } from "./components/lists/TaskList.js";
 export {
   HighlightedText,
@@ -353,6 +355,12 @@ export {
   buildNewTaskBreadcrumbs,
   buildPersonaLibraryBreadcrumbs,
   buildPersonaDetailBreadcrumbs,
+  buildCoordinationBreadcrumbs,
+  buildSchedulesBreadcrumbs,
+  buildScheduleDetailBreadcrumbs,
+  buildSessionsListBreadcrumbs,
+  buildAgentBreadcrumbs,
+  buildAgentCreateBreadcrumbs,
 } from "./utils/breadcrumbs.js";
 
 export { groupConsecutiveTextEvents, pairToolEvents } from "./utils/sessionEvents.js";

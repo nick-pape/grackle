@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "UX consistency: sidebar nav for Personas/Schedules/Coordination, PageHeader with breadcrumbs and back-navigation on all pages",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
