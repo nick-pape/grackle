@@ -154,17 +154,20 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       window.__GRACKLE_API_KEY__ = ${JSON.stringify(workerServer.apiKey)};
     `);
 
-    await page.goto("/chat");
+    await page.goto("/");
     // Wait for the WebSocket to connect and initial data to load.
     // "Connected" appears in the StatusBar; the env count appears once
-    // ListEnvironments completes via ConnectRPC. Starting at /chat
-    // (Code context) so workbench tabs are visible for tests that need them.
+    // ListEnvironments completes via ConnectRPC.
     await page.waitForFunction(
       () =>
         document.body.innerText.includes("Connected") &&
         /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
+    // Enter the Code context so workbench tabs are visible. Dashboard
+    // is now a fleet page (no Code tab bar).
+    await page.locator('[data-testid="context-code"]').click();
+    await page.waitForURL(/\/chat/);
     await use(page);
   },
 

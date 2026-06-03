@@ -277,7 +277,6 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
     appPage,
     grackle: { client },
   }) => {
-    test.setTimeout(60_000);
     const page = appPage;
     const wsId = await createWorkspace(client, "component-notify-e2e-proj");
     await createTaskDirect(client, wsId, "notify on promote", {
@@ -288,7 +287,7 @@ test.describe("Component registry (#1269)", { tag: ["@persona"] }, () => {
     await patchWsForStubMcpRuntime(page);
     await page.getByTestId("task-header-start").click();
 
-    await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("text=Stub runtime initialized")).toBeVisible({ timeout: 15_000 });
     // The conformant client promoted NotifyChild, received the server-pushed
     // tools/list_changed, re-listed, and saw render_NotifyChild — the success marker
     // is emitted only on that path.
