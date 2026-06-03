@@ -155,6 +155,7 @@ export class CopilotSession extends BaseAgentSession {
     const clientOptions: Record<string, unknown> = {
       autoStart: false,
       useStdio: true,
+      cliArgs: ["--yolo"],
     };
 
     const cliUrl = process.env[ENV_COPILOT_CLI_URL];
@@ -188,11 +189,14 @@ export class CopilotSession extends BaseAgentSession {
     });
 
     // ── Build session config ──
-    // onPermissionRequest is REQUIRED by the SDK — use approveAll for headless operation
+    // onPermissionRequest is REQUIRED by the SDK. The SDK's built-in approveAll
+    // returns { kind: "approved" }, but the CLI's permission prompt handler expects
+    // { kind: "approve-once" }. Using a custom handler that returns the format the
+    // CLI expects avoids the "unexpected user permission response" error.
     const sessionConfig: Record<string, unknown> = {
       model: this.model,
       streaming: true,
-      onPermissionRequest: copilotSdk.approveAll,
+      onPermissionRequest: () => ({ kind: "approve-once" }),
     };
 
     // Inject system context via SDK-native systemMessage

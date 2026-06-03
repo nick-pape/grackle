@@ -361,6 +361,79 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
   });
 });
 
+describe("CopilotRuntime — CopilotClient options", () => {
+  afterEach(() => {
+    _setCopilotSdkForTesting(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  it("passes --yolo in cliArgs and V1-format permission handler", async () => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+
+    const capturedClientOpts: Record<string, unknown>[] = [];
+    const capturedSessionConfigs: Record<string, unknown>[] = [];
+    const idleHandlers: Record<string, () => void> = {};
+    const mockCopilotSession = {
+      sessionId: "copilot-opts-session",
+      on: vi.fn((event: string, fn: () => void) => {
+        idleHandlers[event] = fn;
+      }),
+      send: vi.fn(async () => {
+        setTimeout(() => idleHandlers["session.idle"]?.(), 0);
+      }),
+      destroy: vi.fn(async () => {}),
+      abort: vi.fn(),
+    };
+
+    _setCopilotSdkForTesting({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      CopilotClient: class {
+        constructor(opts?: Record<string, unknown>) {
+          capturedClientOpts.push(opts ?? {});
+          return {
+            start: vi.fn(async () => {}),
+            stop: vi.fn(async () => []),
+            createSession: vi.fn(async (config: Record<string, unknown>) => {
+              capturedSessionConfigs.push(config);
+              return mockCopilotSession;
+            }),
+            resumeSession: vi.fn(async () => mockCopilotSession),
+          };
+        }
+      } as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      defineTool: vi.fn() as any,
+      approveAll: vi.fn(),
+    });
+
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "cop-opts-test",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+
+    for await (const event of session.stream()) {
+      if (
+        event.type === "status" &&
+        (event.content === "waiting_input" || event.content === "failed")
+      ) {
+        session.kill();
+        break;
+      }
+    }
+
+    expect(capturedClientOpts).toHaveLength(1);
+    expect(capturedClientOpts[0]!.cliArgs).toEqual(["--yolo"]);
+
+    expect(capturedSessionConfigs).toHaveLength(1);
+    const permHandler = capturedSessionConfigs[0]!.onPermissionRequest;
+    expect(permHandler).toBeTypeOf("function");
+    expect((permHandler as () => unknown)()).toEqual({ kind: "approve-once" });
+  });
+});
+
 describe("CopilotRuntime — usage event emission", () => {
   beforeEach(() => {
     vi.stubEnv("GRACKLE_MCP_CONFIG", "");
