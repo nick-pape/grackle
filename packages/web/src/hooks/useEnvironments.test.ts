@@ -289,9 +289,12 @@ describe("useEnvironments — provision-clear timer cleanup", () => {
     act(() => {
       result.current.handleEvent(readyEvent("env-1"));
     });
+    expect(vi.getTimerCount()).toBe(1);
+
     act(() => {
       result.current.handleEvent(readyEvent("env-1"));
     });
+    expect(vi.getTimerCount()).toBe(1);
 
     act(() => {
       vi.advanceTimersByTime(5_000);
@@ -311,6 +314,7 @@ describe("useEnvironments — provision-clear timer cleanup", () => {
       result.current.handleEvent(readyEvent("env-1"));
     });
     expect(result.current.provisionStatus["env-1"]).toBeDefined();
+    expect(vi.getTimerCount()).toBe(1);
 
     act(() => {
       result.current.handleEvent({
@@ -320,8 +324,8 @@ describe("useEnvironments — provision-clear timer cleanup", () => {
         payload: { environmentId: "env-1" },
       });
     });
-    // Removed clears status immediately
     expect(result.current.provisionStatus["env-1"]).toBeUndefined();
+    expect(vi.getTimerCount()).toBe(0);
 
     act(() => {
       vi.advanceTimersByTime(5_000);
