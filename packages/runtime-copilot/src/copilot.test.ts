@@ -86,6 +86,67 @@ describe("resolveProviderConfig", () => {
   });
 });
 
+describe("getCopilotSdk — RuntimeConnection validation", () => {
+  afterEach(() => {
+    _setCopilotSdkForTesting(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  it("rejects SDK missing RuntimeConnection", async () => {
+    // Reset cache so getCopilotSdk() re-runs the import path with validation
+    _setCopilotSdkForTesting(undefined);
+    const { importFromRuntime } = await import("@grackle-ai/runtime-sdk");
+    vi.mocked(importFromRuntime).mockResolvedValueOnce({
+      CopilotClient: class {},
+      defineTool: vi.fn(),
+      approveAll: vi.fn(),
+    } as unknown as Record<string, unknown>);
+
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "rc-1",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    const events: AgentEvent[] = [];
+    for await (const e of session.stream()) {
+      events.push(e);
+      if (e.type === "status" && (e.content === "failed" || e.content === "waiting_input")) break;
+    }
+    expect(events.some((e) => e.type === "error" && e.content.includes("RuntimeConnection"))).toBe(
+      true,
+    );
+  });
+
+  it("rejects SDK with RuntimeConnection missing forUri", async () => {
+    _setCopilotSdkForTesting(undefined);
+    const { importFromRuntime } = await import("@grackle-ai/runtime-sdk");
+    vi.mocked(importFromRuntime).mockResolvedValueOnce({
+      CopilotClient: class {},
+      defineTool: vi.fn(),
+      approveAll: vi.fn(),
+      RuntimeConnection: { forStdio: vi.fn() },
+    } as unknown as Record<string, unknown>);
+
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "rc-2",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    const events: AgentEvent[] = [];
+    for await (const e of session.stream()) {
+      events.push(e);
+      if (e.type === "status" && (e.content === "failed" || e.content === "waiting_input")) break;
+    }
+    expect(events.some((e) => e.type === "error" && e.content.includes("RuntimeConnection"))).toBe(
+      true,
+    );
+  });
+});
+
 describe("CopilotRuntime structural", () => {
   it("has name 'copilot'", () => {
     const runtime = new CopilotRuntime();
