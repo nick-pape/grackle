@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { tasks, schedules, type TaskRow } from "./schema.js";
-import { eq, and, or, sql, asc, type SQL } from "drizzle-orm";
+import { eq, and, or, sql, asc, inArray, type SQL } from "drizzle-orm";
 import { TASK_STATUS, taskStatusToEnum, taskStatusToString } from "@grackle-ai/common";
 import type { TaskStatus } from "@grackle-ai/common";
 import { MAX_TASK_DEPTH } from "@grackle-ai/common";
@@ -330,6 +330,7 @@ export function deleteTask(id: string): number {
 /** Return all not_started tasks whose dependencies are fully met. */
 export function getUnblockedTasks(workspaceId?: string): TaskRow[] {
   const all = listTasks(workspaceId);
+  const byId = new Map<string, TaskRow>(all.map((t) => [t.id, t]));
   return all.filter((task) => {
     if (task.status !== TASK_STATUS.NOT_STARTED) {
       return false;
@@ -338,10 +339,7 @@ export function getUnblockedTasks(workspaceId?: string): TaskRow[] {
     if (deps.length === 0) {
       return true;
     }
-    return deps.every((depId) => {
-      const dep = all.find((t) => t.id === depId);
-      return dep?.status === TASK_STATUS.COMPLETE;
-    });
+    return deps.every((depId) => byId.get(depId)?.status === TASK_STATUS.COMPLETE);
   });
 }
 
@@ -356,14 +354,19 @@ export function areDependenciesMet(taskId: string): boolean {
   if (!task) {
     return false;
   }
-  const deps = safeParseJsonArray(task.dependsOn);
-  if (deps.length === 0) {
+  const uniqueDeps = [...new Set(safeParseJsonArray(task.dependsOn))];
+  if (uniqueDeps.length === 0) {
     return true;
   }
-  return deps.every((depId) => {
-    const dep = getTask(depId);
-    return dep?.status === TASK_STATUS.COMPLETE;
-  });
+  const depRows = db
+    .select({ id: tasks.id, status: tasks.status })
+    .from(tasks)
+    .where(inArray(tasks.id, uniqueDeps))
+    .all();
+  if (depRows.length !== uniqueDeps.length) {
+    return false;
+  }
+  return depRows.every((row) => row.status === TASK_STATUS.COMPLETE);
 }
 
 /**
@@ -471,10 +474,18 @@ export function getDescendants(taskId: string): TaskRow[] {
 
 /** Get ancestor chain from task up to root, ordered root-first. */
 export function getAncestors(taskId: string): TaskRow[] {
+  const task = getTask(taskId);
+  if (!task || !task.parentTaskId) {
+    return [];
+  }
+
+  const allRows = listTasks(task.workspaceId || undefined);
+  const byId = new Map<string, TaskRow>(allRows.map((r) => [r.id, r]));
+
   const ancestors: TaskRow[] = [];
-  let current = getTask(taskId);
+  let current: TaskRow | undefined = task;
   while (current?.parentTaskId) {
-    const parent = getTask(current.parentTaskId);
+    const parent = byId.get(current.parentTaskId);
     if (!parent) {
       break;
     }
@@ -527,16 +538,17 @@ export function reparentTask(taskId: string, newParentTaskId: string): void {
     .where(eq(tasks.id, taskId))
     .run();
 
-  // Recalculate depth for all descendants
+  // Batch-update depth for all descendants in a single query
   if (depthDelta !== 0) {
     const descendants = getDescendants(taskId);
-    for (const desc of descendants) {
+    if (descendants.length > 0) {
+      const descendantIds = descendants.map((d) => d.id);
       db.update(tasks)
         .set({
-          depth: desc.depth + depthDelta,
+          depth: sql`${tasks.depth} + ${depthDelta}`,
           updatedAt: sql`datetime('now')`,
         })
-        .where(eq(tasks.id, desc.id))
+        .where(inArray(tasks.id, descendantIds))
         .run();
     }
   }
