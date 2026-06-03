@@ -9,6 +9,7 @@
 import { useCallback, useMemo, useRef, type JSX, type KeyboardEvent, type ReactNode } from "react";
 import { Activity, ArrowLeft, CalendarClock, Code2, MessageSquare, Settings } from "lucide-react";
 import { Tooltip } from "../display/Tooltip.js";
+import type { AgentTab } from "../../utils/navigation.js";
 import navStyles from "./AppNav.module.scss";
 import styles from "./ContextDetailShell.module.scss";
 
@@ -188,7 +189,7 @@ const TAB_ICON_SIZE: number = 18;
 export const CODE_HEADER_ICON: JSX.Element = <Code2 size={24} />;
 
 /** Tab definitions for the Agent detail view, with Settings right-aligned. */
-export const AGENT_DETAIL_TABS: ContextDetailTab[] = [
+export const AGENT_DETAIL_TABS: (ContextDetailTab & { id: AgentTab })[] = [
   {
     id: "chat",
     label: "Chat",
