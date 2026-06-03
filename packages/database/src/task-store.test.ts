@@ -221,6 +221,106 @@ describe("task-store tree operations", () => {
     });
   });
 
+  describe("areDependenciesMet", () => {
+    it("returns true when task has no dependencies", () => {
+      taskStore.createTask("t1", "test-proj", "Task", "desc", [], "proj");
+      expect(taskStore.areDependenciesMet("t1")).toBe(true);
+    });
+
+    it("returns true when all dependencies are complete", () => {
+      taskStore.createTask("a", "test-proj", "Dep A", "desc", [], "proj");
+      taskStore.createTask("b", "test-proj", "Dep B", "desc", [], "proj");
+      taskStore.createTask("c", "test-proj", "Task", "desc", ["a", "b"], "proj");
+      taskStore.markTaskComplete("a");
+      taskStore.markTaskComplete("b");
+      expect(taskStore.areDependenciesMet("c")).toBe(true);
+    });
+
+    it("returns false when some dependencies are not complete", () => {
+      taskStore.createTask("a", "test-proj", "Dep A", "desc", [], "proj");
+      taskStore.createTask("b", "test-proj", "Dep B", "desc", [], "proj");
+      taskStore.createTask("c", "test-proj", "Task", "desc", ["a", "b"], "proj");
+      taskStore.markTaskComplete("a");
+      expect(taskStore.areDependenciesMet("c")).toBe(false);
+    });
+
+    it("returns false when a dependency does not exist", () => {
+      taskStore.createTask("c", "test-proj", "Task", "desc", ["nonexistent"], "proj");
+      expect(taskStore.areDependenciesMet("c")).toBe(false);
+    });
+
+    it("returns false when task itself does not exist", () => {
+      expect(taskStore.areDependenciesMet("nonexistent")).toBe(false);
+    });
+
+    it("returns false when dependency is in working status", () => {
+      taskStore.createTask("a", "test-proj", "Dep A", "desc", [], "proj");
+      taskStore.createTask("b", "test-proj", "Task", "desc", ["a"], "proj");
+      taskStore.updateTaskStatus("a", "working");
+      expect(taskStore.areDependenciesMet("b")).toBe(false);
+    });
+  });
+
+  describe("getUnblockedTasks", () => {
+    it("returns not_started tasks with no dependencies", () => {
+      taskStore.createTask("t1", "test-proj", "Task A", "desc", [], "proj");
+      taskStore.createTask("t2", "test-proj", "Task B", "desc", [], "proj");
+      taskStore.updateTaskStatus("t2", "working");
+
+      const unblocked = taskStore.getUnblockedTasks("test-proj");
+      expect(unblocked).toHaveLength(1);
+      expect(unblocked[0].id).toBe("t1");
+    });
+
+    it("returns tasks whose deps are all complete", () => {
+      taskStore.createTask("a", "test-proj", "Dep A", "desc", [], "proj");
+      taskStore.createTask("b", "test-proj", "Task B", "desc", ["a"], "proj");
+      taskStore.markTaskComplete("a");
+
+      const unblocked = taskStore.getUnblockedTasks("test-proj");
+      expect(unblocked.map((t) => t.id)).toContain("b");
+    });
+
+    it("excludes tasks with incomplete deps", () => {
+      taskStore.createTask("a", "test-proj", "Dep A", "desc", [], "proj");
+      taskStore.createTask("b", "test-proj", "Task B", "desc", ["a"], "proj");
+      taskStore.updateTaskStatus("a", "working");
+
+      const unblocked = taskStore.getUnblockedTasks("test-proj");
+      expect(unblocked.find((t) => t.id === "b")).toBeUndefined();
+    });
+
+    it("excludes tasks not in not_started status", () => {
+      taskStore.createTask("a", "test-proj", "Dep A", "desc", [], "proj");
+      taskStore.createTask("b", "test-proj", "Task B", "desc", ["a"], "proj");
+      taskStore.markTaskComplete("a");
+      taskStore.updateTaskStatus("b", "working");
+
+      const unblocked = taskStore.getUnblockedTasks("test-proj");
+      expect(unblocked.find((t) => t.id === "b")).toBeUndefined();
+    });
+
+    it("handles mixed deps — some complete, some not", () => {
+      taskStore.createTask("a", "test-proj", "Dep A", "desc", [], "proj");
+      taskStore.createTask("c", "test-proj", "Dep C", "desc", [], "proj");
+      taskStore.createTask("b", "test-proj", "Task B", "desc", ["a", "c"], "proj");
+      taskStore.markTaskComplete("a");
+
+      const unblocked = taskStore.getUnblockedTasks("test-proj");
+      expect(unblocked.find((t) => t.id === "b")).toBeUndefined();
+    });
+
+    it("scopes to workspaceId when provided", () => {
+      workspaceStore.createWorkspace("ws-2", "Second", "", "", "");
+      taskStore.createTask("t1", "test-proj", "Task 1", "desc", [], "proj");
+      taskStore.createTask("t2", "ws-2", "Task 2", "desc", [], "proj");
+
+      const unblocked = taskStore.getUnblockedTasks("test-proj");
+      expect(unblocked).toHaveLength(1);
+      expect(unblocked[0].id).toBe("t1");
+    });
+  });
+
   describe("getChildStatusCounts", () => {
     it("returns correct counts by status", () => {
       taskStore.createTask("t1", "test-proj", "Parent", "desc", [], "proj", "", true);
