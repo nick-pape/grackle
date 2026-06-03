@@ -132,7 +132,7 @@ grackle env list
 
 #### Injecting the key from a secrets manager
 
-Both the **server** and the **CLI** respect the `GRACKLE_API_KEY` environment variable. When the server sees it, it skips the on-disk read/generate entirely and uses the env value as the API key. This lets you source a stable key from a secrets manager (Vault, bao, AWS Secrets Manager, etc.) instead of relying on the auto-generated file:
+Both the **server** and the **CLI** respect the `GRACKLE_API_KEY` environment variable. When set to a non-empty value, the server skips the on-disk read/generate entirely and uses the env value as the API key (leading/trailing whitespace is trimmed). This lets you source a stable key from a secrets manager (Vault, bao, AWS Secrets Manager, etc.) instead of relying on the auto-generated file:
 
 ```bash
 # Docker / systemd example — inject from your secrets backend
@@ -140,7 +140,7 @@ export GRACKLE_API_KEY="$(vault kv get -field=api_key secret/grackle)"
 grackle serve
 ```
 
-If `GRACKLE_API_KEY` is unset, the server falls back to the original behavior: read `~/.grackle/api-key`, or generate one on first run.
+If `GRACKLE_API_KEY` is unset or empty, the server falls back to the original behavior: read `~/.grackle/api-key`, or generate one on first run.
 
 ### Pairing code → session cookie (web)
 
