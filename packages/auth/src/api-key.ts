@@ -38,13 +38,22 @@ function createApiKey(homePath: string, keyPath: string): string {
 }
 
 /**
- * Load or create the API key. On first run, a random 256-bit key is
- * generated and written to `<homePath>/api-key` with 0600 permissions.
+ * Load or create the API key. If `GRACKLE_API_KEY` is set in the environment,
+ * it takes precedence over the on-disk key. Otherwise, on first run a random
+ * 256-bit key is generated and written to `<homePath>/api-key` with 0600
+ * permissions.
  *
  * @param homePath - The Grackle home directory (e.g., `~/.grackle`).
  */
 export function loadOrCreateApiKey(homePath: string): string {
   if (cachedKey) {
+    return cachedKey;
+  }
+
+  const envKey = process.env.GRACKLE_API_KEY?.trim();
+  if (envKey && envKey.length > 0) {
+    cachedKey = envKey;
+    getAuthLogger().info({}, "Using API key from GRACKLE_API_KEY environment variable");
     return cachedKey;
   }
 
