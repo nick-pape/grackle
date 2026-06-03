@@ -14,7 +14,7 @@ import {
   isDevMode,
   bootstrapPowerLine,
   startRemotePowerLine,
-  findFreePort,
+  withFreePort,
   remoteStop,
   remoteDestroy,
   exec as defaultExec,
@@ -499,7 +499,6 @@ export class DockerAdapter implements EnvironmentAdapter {
 
     const image = cfg.image || DEFAULT_IMAGE;
     const containerName = cfg.containerName || `grackle-${environmentId}`;
-    const localPort = cfg.localPort || (await findFreePort());
 
     // Build or pull the base image
     const isDefault = image === DEFAULT_IMAGE;
@@ -514,9 +513,16 @@ export class DockerAdapter implements EnvironmentAdapter {
 
     yield { stage: "creating", message: `Creating container ${containerName}...`, progress: 0.1 };
 
-    const runArgs = this.buildRunArgs(containerName, localPort, image, cfg, powerlineToken);
+    // Create or start the container (retry with a fresh port on TOCTOU conflict, #1486)
+    const createContainer = async (port: number): Promise<{ port: number; isNew: boolean }> => {
+      const runArgs = this.buildRunArgs(containerName, port, image, cfg, powerlineToken);
+      const created = await createOrStartContainer(this.execFn, containerName, runArgs);
+      return { port, isNew: created };
+    };
 
-    const isNew = await createOrStartContainer(this.execFn, containerName, runArgs);
+    const { port: localPort, isNew } = cfg.localPort
+      ? await createContainer(cfg.localPort)
+      : await withFreePort(createContainer);
     let actualPort = localPort;
     if (!isNew) {
       yield { stage: "starting", message: "Container exists, starting...", progress: 0.12 };
@@ -664,10 +670,13 @@ export class DockerAdapter implements EnvironmentAdapter {
 
     const network = (await inspectContainerNetwork(this.execFn, target)) || "bridge";
     const sidecarName = `${ATTACH_SIDECAR_PREFIX}${environmentId}`;
-    const hostPort = await findFreePort();
     // Clear any stale sidecar from a previous attach before starting a fresh one.
     await removeSidecar(this.execFn, sidecarName, this.logger);
-    await startSocatSidecar(this.execFn, sidecarName, network, ip, hostPort);
+    // Retry with a fresh port on TOCTOU conflict (#1486)
+    const hostPort = await withFreePort(async (port) => {
+      await startSocatSidecar(this.execFn, sidecarName, network, ip, port);
+      return port;
+    });
     this.logger.info(
       { environmentId, target, network, hostPort },
       "Started socat sidecar for attach connectivity",

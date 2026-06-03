@@ -37,6 +37,50 @@ export function findFreePort(): Promise<number> {
   });
 }
 
+/** Maximum number of port-discovery attempts before giving up. */
+const MAX_PORT_ATTEMPTS: number = 3;
+
+/** Port-conflict error strings emitted by Docker, SSH, and Node. */
+const PORT_CONFLICT_PATTERNS: string[] = ["address already in use", "port is already allocated"];
+
+/**
+ * Return true if an error indicates a port-binding conflict (EADDRINUSE or
+ * equivalent messages from Docker / SSH / gh CLI).
+ */
+export function isPortConflictError(err: unknown): boolean {
+  if (err instanceof Error) {
+    if ("code" in err && (err as NodeJS.ErrnoException).code === "EADDRINUSE") {
+      return true;
+    }
+    const message = err.message.toLowerCase();
+    return PORT_CONFLICT_PATTERNS.some((pattern) => message.includes(pattern));
+  }
+  return false;
+}
+
+/**
+ * Discover a free port and pass it to `action`. If the action throws a
+ * port-conflict error, retry with a freshly discovered port up to
+ * `maxAttempts` times (default 3). When the caller already has a
+ * preferred port, call the action directly instead of using this wrapper.
+ */
+export async function withFreePort<T>(
+  action: (port: number) => Promise<T>,
+  maxAttempts: number = MAX_PORT_ATTEMPTS,
+): Promise<T> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const port = await findFreePort();
+    try {
+      return await action(port);
+    } catch (err) {
+      if (attempt === maxAttempts || !isPortConflictError(err)) {
+        throw err;
+      }
+    }
+  }
+  throw new Error("withFreePort: exhausted all attempts");
+}
+
 /**
  * Check if we are running from a monorepo source checkout.
  * We detect this by checking for `rush.json` at the repo root,
