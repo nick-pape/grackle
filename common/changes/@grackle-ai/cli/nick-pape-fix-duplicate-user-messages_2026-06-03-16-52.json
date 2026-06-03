@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix duplicate user messages in chat by rendering turn_started as the canonical user input instead of emitting a separate USER_INPUT event",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

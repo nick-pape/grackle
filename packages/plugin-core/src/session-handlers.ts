@@ -359,22 +359,12 @@ export async function sendInput(req: grackle.InputMessage): Promise<grackle.Empt
     );
   }
 
-  // Persist and publish user input event so subscribers see the text in the event stream
-  const userInputEvent = create(grackle.SessionEventSchema, {
-    sessionId: req.sessionId,
-    type: grackle.EventType.USER_INPUT,
-    timestamp: new Date().toISOString(),
-    content: req.text,
-    raw: "",
-  });
-  if (session.logPath) {
-    await logWriter.writeEvent(session.logPath, userInputEvent);
-  }
-  streamHub.publish(userInputEvent);
-
   logger.debug({ sessionId: req.sessionId }, "User input received");
 
-  // Route through stdin stream — the async listener delivers to PowerLine
+  // Route through stdin stream — the async listener delivers to PowerLine.
+  // The runtime emits a turn_started event with the user's text (AHP HR2),
+  // which the UI renders as the user message — no separate USER_INPUT event
+  // needed here.
   publishToStdin(req.sessionId, req.text);
 
   return create(grackle.EmptySchema, {});
