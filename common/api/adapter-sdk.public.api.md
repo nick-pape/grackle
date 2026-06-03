@@ -228,6 +228,9 @@ export interface IHostTransport {
 // @public
 export function isDevMode(): boolean;
 
+// @public
+export function isPortConflictError(err: unknown): boolean;
+
 export { JsonRpcErrorCodes }
 
 // @public
@@ -408,6 +411,9 @@ export interface WaitForLocalPortOptions {
     portProber?: PortProber;
     sleep?: (ms: number) => Promise<void>;
 }
+
+// @public
+export function withFreePort<T>(action: (port: number) => Promise<T>, maxAttempts?: number): Promise<T>;
 
 // @public
 export function writeRemoteEnvFile(executor: RemoteExecutor, powerlineToken: string, extraEnv?: Record<string, string>, logger?: AdapterLogger): Promise<void>;

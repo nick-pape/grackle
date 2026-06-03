@@ -57,6 +57,8 @@ export type { ExecFunction, AdapterDependencies } from "./adapter-dependencies.j
 export {
   sleep,
   findFreePort,
+  isPortConflictError,
+  withFreePort,
   isDevMode,
   getPackageVersion,
   shellEscape,

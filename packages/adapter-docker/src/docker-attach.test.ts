@@ -381,3 +381,59 @@ describe("DockerAdapter attach mode — reconnect", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("DockerAdapter attach mode — socat sidecar retry cleanup (#1486)", () => {
+  it("removes the sidecar on port-conflict failure before withFreePort retries", async () => {
+    let runCallCount = 0;
+    const execFn = vi.fn(async (command: string, args: string[]) => {
+      if (command === "docker" && args[0] === "inspect") {
+        const fmtIdx = args.indexOf("-f");
+        const fmt = fmtIdx >= 0 ? (args[fmtIdx + 1] ?? "") : "";
+        if (fmt.includes("State.Running")) {
+          return { stdout: "true", stderr: "" };
+        }
+        if (fmt.includes("IPAddress")) {
+          return { stdout: "172.18.0.7", stderr: "" };
+        }
+        if (fmt.includes("NetworkSettings.Networks")) {
+          return { stdout: "bridge", stderr: "" };
+        }
+      }
+      if (command === "docker" && args[0] === "run") {
+        runCallCount++;
+        if (runCallCount === 1) {
+          throw new Error("port is already allocated");
+        }
+        return { stdout: "", stderr: "" };
+      }
+      if (command === "docker" && args[0] === "rm") {
+        return { stdout: "", stderr: "" };
+      }
+      return { stdout: "", stderr: "" };
+    });
+
+    pingMock.mockRejectedValue(new Error("unreachable"));
+    const adapter = new DockerAdapter({ exec: execFn, logger: mockLogger });
+
+    await drain(
+      adapter.provision(
+        "env-retry",
+        { attach: ATTACH } as unknown as Record<string, unknown>,
+        TOKEN,
+      ),
+    );
+
+    // sidecar should have been attempted twice (first failed, second succeeded)
+    expect(runCallCount).toBe(2);
+
+    // The sidecar should have been removed after the first failure
+    const rmCalls = execFn.mock.calls.filter(
+      ([cmd, args]: [string, string[]]) =>
+        cmd === "docker" &&
+        args[0] === "rm" &&
+        args.some((a: string) => a.includes("grackle-attach")),
+    );
+    // At least 2 rm calls: one before first attempt (stale cleanup) + one after failure
+    expect(rmCalls.length).toBeGreaterThanOrEqual(2);
+  });
+});
