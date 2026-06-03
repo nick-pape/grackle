@@ -29,9 +29,9 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
 
     await page.locator('[data-testid="sidebar-tab-schedules"]').click();
 
-    await expect(page.getByRole("heading", { name: "Schedules" })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("Nightly Review")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("0 21 * * *")).toBeVisible({ timeout: 5_000 });
+    const nav = page.getByTestId("schedule-nav");
+    await expect(nav).toBeVisible({ timeout: 5_000 });
+    await expect(nav.getByText("Nightly Review")).toBeVisible({ timeout: 5_000 });
   });
 
   test("empty state is shown when no schedules exist", async ({ appPage }) => {
@@ -39,7 +39,10 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
 
     await page.locator('[data-testid="sidebar-tab-schedules"]').click();
 
-    await expect(page.getByTestId("schedule-empty-state")).toBeVisible({ timeout: 5_000 });
+    // With sidebar nav, empty state text shows in the main content area
+    await expect(page.getByText("Select a schedule to view or edit it")).toBeVisible({
+      timeout: 5_000,
+    });
   });
 
   test("delete schedule removes it from management view", async ({
@@ -61,7 +64,8 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     });
 
     await page.locator('[data-testid="sidebar-tab-schedules"]').click();
-    await expect(page.getByText("Soon Deleted Schedule")).toBeVisible({ timeout: 5_000 });
+    const nav = page.getByTestId("schedule-nav");
+    await expect(nav.getByText("Soon Deleted Schedule")).toBeVisible({ timeout: 5_000 });
 
     // Delete via RPC
     const list = await client.scheduling.listSchedules({});
@@ -69,7 +73,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     expect(toDelete).toBeDefined();
     await client.scheduling.deleteSchedule({ id: toDelete!.id });
 
-    await expect(page.getByText("Soon Deleted Schedule")).not.toBeVisible({ timeout: 5_000 });
+    await expect(nav.getByText("Soon Deleted Schedule")).not.toBeVisible({ timeout: 5_000 });
   });
 
   test("create, edit, and delete schedule via UI", async ({ appPage, grackle: { client } }) => {
@@ -83,10 +87,11 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     });
 
     await page.locator('[data-testid="sidebar-tab-schedules"]').click();
-    await expect(page.getByRole("heading", { name: "Schedules" })).toBeVisible({ timeout: 5_000 });
+    const nav = page.getByTestId("schedule-nav");
+    await expect(nav).toBeVisible({ timeout: 5_000 });
 
-    // Open the create form
-    await page.getByTestId("schedule-new-button").click();
+    // Open the create form via sidebar button
+    await page.getByTestId("schedule-nav-add").click();
     await page.waitForURL("**/schedules/new", { timeout: 5_000 });
     // Schedules is a fleet surface (#1416): its entry lives in the context rail
     // (#1415) and marks the active route via aria-current rather than a tab's
@@ -125,10 +130,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     await page.getByTestId("schedule-detail-title-input").fill("UI Updated Schedule");
     await page.getByTestId("schedule-detail-title-input").press("Enter");
 
-    // Go back to list and verify updated title appears
-    await page.getByTestId("schedule-detail-cancel").click();
-    await expect(page).toHaveURL(/\/schedules$/, { timeout: 5_000 });
-
+    // Verify updated title appears in the sidebar nav
     let updatedSchedule: { id: string; title: string } | undefined;
     await expect
       .poll(
@@ -141,13 +143,10 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
       )
       .toBeDefined();
 
-    await expect(page.getByTestId(`schedule-card-${updatedSchedule!.id}`)).toContainText(
-      "UI Updated Schedule",
-      { timeout: 5_000 },
-    );
+    await expect(nav.getByText("UI Updated Schedule")).toBeVisible({ timeout: 5_000 });
 
-    // Delete via UI
-    await page.getByTestId(`schedule-card-${updatedSchedule!.id}`).click();
+    // Navigate to the schedule detail via sidebar and delete
+    await nav.getByText("UI Updated Schedule").click();
     await page.waitForURL(`**/schedules/${updatedSchedule!.id}`, { timeout: 5_000 });
     await page.getByTestId("schedule-detail-delete").click();
 
@@ -156,7 +155,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     await dialog.getByRole("button", { name: "Delete" }).click();
 
     await expect(page).toHaveURL(/\/schedules$/, { timeout: 5_000 });
-    await expect(page.getByTestId(`schedule-card-${updatedSchedule!.id}`)).toHaveCount(0);
+    await expect(nav.getByText("UI Updated Schedule")).not.toBeVisible({ timeout: 5_000 });
   });
 
   test("legacy /settings/schedules* URLs redirect to /schedules*", async ({
@@ -171,7 +170,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     // List: /settings/schedules -> /schedules
     await page.goto("/settings/schedules");
     await expect(page).toHaveURL(/\/schedules$/, { timeout: 5_000 });
-    await expect(page.getByRole("heading", { name: "Schedules" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId("schedule-nav")).toBeVisible({ timeout: 5_000 });
 
     // Create form: /settings/schedules/new -> /schedules/new
     await page.goto("/settings/schedules/new");
