@@ -67,6 +67,12 @@ function getCopilotSdk(): Promise<CopilotSdkModule> {
         if (typeof mod.CopilotClient !== "function") {
           throw new Error("CopilotClient not found in @github/copilot-sdk");
         }
+        if (
+          !mod.RuntimeConnection ||
+          typeof (mod.RuntimeConnection as Record<string, unknown>).forStdio !== "function"
+        ) {
+          throw new Error("RuntimeConnection not found in @github/copilot-sdk — SDK 1.0+ required");
+        }
         return {
           CopilotClient: mod.CopilotClient as CopilotSdkModule["CopilotClient"],
           defineTool: mod.defineTool as CopilotSdkModule["defineTool"],
@@ -185,13 +191,6 @@ export class CopilotSession extends BaseAgentSession {
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.copilotClient = new copilotSdk.CopilotClient(clientOptions);
-
-    this.emit({
-      type: "system",
-      timestamp: ts(),
-      content: "Copilot CLI server connected",
-      diagnostic: true,
-    });
 
     // ── Build session config ──
     const sessionConfig: Record<string, unknown> = {

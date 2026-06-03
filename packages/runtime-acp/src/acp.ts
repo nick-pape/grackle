@@ -611,8 +611,8 @@ class AcpSession extends BaseAgentSession {
           configId: "model",
           value: this.model,
         });
-      } catch {
-        logger.warn({ model: this.model }, "Failed to set model via ACP");
+      } catch (err: unknown) {
+        logger.warn({ err, model: this.model }, "Failed to set model via ACP");
       }
     }
   }
