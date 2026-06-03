@@ -146,13 +146,14 @@ export function EventStream({
     return [...events].reverse();
   }, [events, isReversed]);
 
-  // Stable key function for the virtual list
+  // Stable key using monotonic index so keys survive MAX_EVENTS trimming
   const getItemKey = useCallback(
     (displayIndex: number, event: DisplayEvent): string => {
       const originalIndex = isReversed ? events.length - 1 - displayIndex : displayIndex;
-      return `${event.sessionId}-${event.timestamp}-${originalIndex}`;
+      const monotonicIndex = eventsDropped + originalIndex;
+      return `${event.sessionId}-${event.timestamp}-${monotonicIndex}`;
     },
-    [events.length, isReversed],
+    [events.length, isReversed, eventsDropped],
   );
 
   // Determine which events are "new" (appended since last render) for entry animation.
@@ -289,24 +290,26 @@ export function EventStream({
     setPendingForward(undefined);
   }, []);
 
-  // Stabilized callbacks for VirtualEventItem (avoids breaking memo)
-  const handleEnterSelection = useCallback(
-    (originalIndex: number) => {
-      selection.enterSelectionMode(originalIndex);
-    },
-    [selection.enterSelectionMode],
-  );
+  // Stabilized callbacks for VirtualEventItem via refs so identity never
+  // changes, even though the underlying selection methods recreate on every
+  // events change. Without this, every new event defeats React.memo.
+  const enterSelectionRef = useRef(selection.enterSelectionMode);
+  enterSelectionRef.current = selection.enterSelectionMode;
+  const handleEnterSelection = useCallback((originalIndex: number) => {
+    enterSelectionRef.current(originalIndex);
+  }, []);
 
-  const handleToggleEvent = useCallback(
-    (originalIndex: number, shiftKey: boolean) => {
-      selection.toggleEvent(originalIndex, shiftKey);
-    },
-    [selection.toggleEvent],
-  );
+  const toggleEventRef = useRef(selection.toggleEvent);
+  toggleEventRef.current = selection.toggleEvent;
+  const handleToggleEvent = useCallback((originalIndex: number, shiftKey: boolean) => {
+    toggleEventRef.current(originalIndex, shiftKey);
+  }, []);
 
+  const onShowToastRef = useRef(onShowToast);
+  onShowToastRef.current = onShowToast;
   const handleItemCopied = useCallback(() => {
-    onShowToast?.("Copied to clipboard", "success");
-  }, [onShowToast]);
+    onShowToastRef.current?.("Copied to clipboard", "success");
+  }, []);
 
   const largeMessageSizeKb = pendingForward
     ? Math.round(new TextEncoder().encode(pendingForward.text).length / 1024)
