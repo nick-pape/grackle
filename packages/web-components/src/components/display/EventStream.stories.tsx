@@ -248,6 +248,13 @@ export const ForwardOpensSessionPicker: Story = {
 
 /** Large event list to verify virtualization (only visible rows render). */
 export const LargeEventList: Story = {
+  decorators: [
+    (Story) => (
+      <div style={{ height: "400px", display: "flex", flexDirection: "column" }}>
+        <Story />
+      </div>
+    ),
+  ],
   args: {
     events: Array.from({ length: 500 }, (_, i) =>
       makeEvent({
