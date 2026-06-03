@@ -170,6 +170,25 @@ export function EventStream({
     paused: selection.isSelecting,
   });
 
+  // The virtualizer needs a frame after mount to render items and compute
+  // scrollHeight. useSmartScroll's initial scroll fires too early (before
+  // items exist). This deferred scroll ensures the anchor is correct after
+  // the virtualizer's first paint.
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (!el) {
+        return;
+      }
+      el.scrollTop = isReversed ? 0 : el.scrollHeight;
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+    // Only on mount — subsequent scrolls are handled by useSmartScroll
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleToggleDirection = (): void => {
     const next = !isReversed;
     setIsReversed(next);
