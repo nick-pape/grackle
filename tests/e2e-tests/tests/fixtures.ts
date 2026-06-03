@@ -154,7 +154,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       window.__GRACKLE_API_KEY__ = ${JSON.stringify(workerServer.apiKey)};
     `);
 
-    await page.goto("/");
+    await page.goto("/chat");
     // Wait for the WebSocket to connect and initial data to load.
     // "Connected" appears when WS connects; the env count appears once
     // ListEnvironments completes via ConnectRPC.

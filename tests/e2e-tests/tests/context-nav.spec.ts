@@ -14,7 +14,7 @@ async function waitForConnected(page: Page): Promise<void> {
 test.describe("Context nav (context axis)", { tag: ["@webui", "@smoke"] }, () => {
   test("Code rail renders with the workbench views and global cluster", async ({ appPage }) => {
     const page = appPage;
-    await page.goto("/");
+    await page.goto("/chat");
     await waitForConnected(page);
 
     // Context axis: the Code rail is the outermost-left navigation.
@@ -25,9 +25,12 @@ test.describe("Context nav (context axis)", { tag: ["@webui", "@smoke"] }, () =>
     await expect(page.getByTestId("sidebar-tab-chat")).toBeVisible();
     await expect(page.getByTestId("sidebar-tab-sessions")).toBeVisible();
 
-    // Global cluster: Environments + Settings remain reachable (end-aligned).
-    await expect(page.getByTestId("sidebar-tab-environments")).toBeVisible();
+    // Settings is end-aligned in the Code tab bar.
     await expect(page.getByTestId("sidebar-tab-settings")).toBeVisible();
+    // Environments is a fleet surface in the context rail.
+    await expect(
+      page.getByTestId("context-nav").getByTestId("sidebar-tab-environments"),
+    ).toBeVisible();
   });
 
   test("Coordination lives at the fleet altitude (context rail), not the view bar", async ({
@@ -68,16 +71,16 @@ test.describe("Context nav (context axis)", { tag: ["@webui", "@smoke"] }, () =>
 
   test("workbench views remain reachable through the view tabs", async ({ appPage }) => {
     const page = appPage;
-    await page.goto("/");
+    await page.goto("/chat");
     await waitForConnected(page);
 
-    // Chat is a core workbench view, always present.
-    await page.getByTestId("sidebar-tab-chat").click();
+    // Chat is the default Code context view, always present.
+    await expect(page.getByTestId("sidebar-tab-chat")).toBeVisible();
     await expect(page).toHaveURL(/\/chat$/);
 
-    // Environments (now in the global cluster) still navigates correctly.
-    await page.getByTestId("sidebar-tab-environments").click();
-    await expect(page).toHaveURL(/\/environments/);
+    // Sessions is a workbench view in the Code tab bar.
+    await page.getByTestId("sidebar-tab-sessions").click();
+    await expect(page).toHaveURL(/\/sessions/);
   });
 
   test("collapse toggle hides the Code label on desktop", async ({ appPage }) => {
@@ -100,30 +103,30 @@ test.describe("Context nav (context axis)", { tag: ["@webui", "@smoke"] }, () =>
     await expect(rail).toHaveAttribute("data-collapsed", "false");
   });
 
-  test("AppNav is hidden on fleet pages", async ({ appPage }) => {
+  test("Code tab bar is hidden on fleet pages", async ({ appPage }) => {
     const page = appPage;
-    await page.goto("/");
+    await page.goto("/chat");
     await waitForConnected(page);
 
-    // View bar is visible on workbench pages.
+    // Tab bar is visible on Code (workbench) pages.
     await expect(page.getByTestId("sidebar-nav")).toBeVisible();
 
-    // Navigate to a fleet page — the view bar should disappear.
+    // Navigate to a fleet page — the tab bar should disappear.
     await page.getByTestId("context-nav").getByTestId("sidebar-tab-coordination").click();
     await expect(page).toHaveURL(/\/coordination/);
     await expect(page.getByTestId("sidebar-nav")).toHaveCount(0);
   });
 
-  test("clicking Code from a fleet page navigates back to the workbench", async ({ appPage }) => {
+  test("clicking Code from a fleet page navigates to the Code context", async ({ appPage }) => {
     const page = appPage;
     await page.goto("/coordination");
     await waitForConnected(page);
 
     await expect(page.getByTestId("coordination-page")).toBeVisible();
 
-    // Clicking the Code context should navigate home.
+    // Clicking the Code context should navigate to /chat (first Code tab).
     await page.getByTestId("context-code").click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/chat/);
     await expect(page.getByTestId("sidebar-nav")).toBeVisible();
   });
 });

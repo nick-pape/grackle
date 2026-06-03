@@ -95,9 +95,9 @@ test.describe("Agent View — tab navigation", { tag: ["@agent", "@webui"] }, ()
 
     // Navigate back to Code context
     await page.locator('[data-testid="context-code"]').click();
-    await expect(page).toHaveURL(/\/$/, { timeout: 5_000 });
+    await expect(page).toHaveURL(/\/chat/, { timeout: 5_000 });
 
-    // AppNav should be visible again
+    // Code tab bar should be visible again
     await expect(page.locator('[data-testid="sidebar-nav"]')).toBeVisible({ timeout: 5_000 });
   });
 
