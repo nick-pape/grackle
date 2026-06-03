@@ -155,6 +155,7 @@ export class CopilotSession extends BaseAgentSession {
     const clientOptions: Record<string, unknown> = {
       autoStart: false,
       useStdio: true,
+      cliArgs: ["--yolo"],
     };
 
     const cliUrl = process.env[ENV_COPILOT_CLI_URL];
