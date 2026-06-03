@@ -387,8 +387,8 @@ export function detectDependencyCycle(
     const current = queue.shift()!;
     if (current === taskId) {
       const path: string[] = [];
-      let node = current;
-      while (node !== taskId || path.length === 0) {
+      let node = parent.get(current)!;
+      while (node !== taskId) {
         path.unshift(node);
         node = parent.get(node)!;
       }

@@ -676,8 +676,7 @@ describe("task-store tree operations", () => {
       taskStore.createTask("t1", "test-proj", "Task A", "desc", [], "proj");
       taskStore.createTask("t2", "test-proj", "Task B", "desc", ["t1"], "proj");
       const result = taskStore.detectDependencyCycle("t1", ["t2"]);
-      expect(result).not.toBeNull();
-      expect(result).toContain("t1");
+      expect(result).toEqual(["t2"]);
     });
 
     it("detects transitive cycle (A->B->C->A)", () => {
@@ -685,8 +684,7 @@ describe("task-store tree operations", () => {
       taskStore.createTask("t2", "test-proj", "Task B", "desc", ["t1"], "proj");
       taskStore.createTask("t3", "test-proj", "Task C", "desc", ["t2"], "proj");
       const result = taskStore.detectDependencyCycle("t1", ["t3"]);
-      expect(result).not.toBeNull();
-      expect(result).toContain("t1");
+      expect(result).toEqual(["t3", "t2"]);
     });
 
     it("returns null for valid dependencies (no cycle)", () => {
