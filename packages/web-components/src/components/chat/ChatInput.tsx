@@ -63,7 +63,7 @@ interface ComposerTextAreaProps {
   value: string;
   /** Called on every keystroke with the new value. */
   onChange: (value: string) => void;
-  /** Called when the user submits via Ctrl/Cmd+Enter. */
+  /** Called when the user submits via Enter (Shift+Enter inserts a newline). */
   onSubmit: () => void;
   /** Placeholder text shown when empty. */
   placeholder: string;
@@ -78,7 +78,7 @@ interface ComposerTextAreaProps {
 /**
  * Auto-resizing multiline chat composer.
  *
- * Enter inserts a newline; Ctrl/Cmd+Enter submits (the Send button submits too).
+ * Enter submits; Shift+Enter inserts a newline (the Send button submits too).
  * The textarea grows with its content up to {@link MAX_COMPOSER_HEIGHT_PX}, then
  * scrolls internally.
  */
@@ -104,9 +104,9 @@ function ComposerTextArea({
   }, [value]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): void => {
-    // Ctrl/Cmd+Enter submits; plain Enter falls through to insert a newline.
+    // Enter submits; Shift+Enter falls through to insert a newline.
     // The isComposing guard avoids submitting mid-IME composition (e.g. CJK input).
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !e.nativeEvent.isComposing) {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       onSubmit();
     }
@@ -178,7 +178,7 @@ export function ChatInput({
 
   const envDisconnected = isEnvDisconnected(environmentId, environments);
 
-  /** Performs the mode-specific submit action. Called by the form and Ctrl/Cmd+Enter. */
+  /** Performs the mode-specific submit action. Called by the form and Enter key. */
   const submit = (): void => {
     if (!text.trim()) {
       return;
