@@ -266,11 +266,9 @@ export const LargeEventList: Story = {
   },
   play: async ({ canvas }) => {
     // Wait for the virtualizer to render its first batch of rows
-    const firstRow = await canvas.findByTestId("event-hover-row");
-    await expect(firstRow).toBeInTheDocument();
+    const rows = await canvas.findAllByTestId("event-hover-row");
 
     // Virtualization: DOM should have far fewer rows than the 500 events
-    const rows = canvas.getAllByTestId("event-hover-row");
     await expect(rows.length).toBeLessThan(50);
     await expect(rows.length).toBeGreaterThan(0);
   },
