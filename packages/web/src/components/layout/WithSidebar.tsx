@@ -12,7 +12,7 @@ import {
   CoordinationList,
   useThemeContext,
 } from "@grackle-ai/web-components";
-import type { StreamData, StreamMessageData } from "@grackle-ai/web-components";
+import type { StreamData } from "@grackle-ai/web-components";
 
 /** Layout route wrapper that shows the TaskList in the sidebar. */
 export function WithTaskSidebar(): JSX.Element {
@@ -141,8 +141,6 @@ export interface CoordinationOutletContext {
   setSelectedStreamId: (id: string | undefined) => void;
   /** Whether a transcript is currently loading. */
   transcriptLoading: boolean;
-  /** Live messages keyed by stream ID. */
-  liveMessages: Record<string, StreamMessageData[]>;
   /** Resolved theme ID for graph rendering. */
   resolvedThemeId: string;
 }
@@ -156,7 +154,6 @@ export function WithCoordinationSidebar(): JSX.Element {
       streamsLoadedOnce,
       streamsLoadError,
       loadStreams,
-      liveMessages,
       loadTranscript,
     },
     sessions: { sessions },
@@ -244,10 +241,9 @@ export function WithCoordinationSidebar(): JSX.Element {
       selectedStreamId,
       setSelectedStreamId,
       transcriptLoading,
-      liveMessages,
       resolvedThemeId,
     }),
-    [selectedStream, selectedStreamId, transcriptLoading, liveMessages, resolvedThemeId],
+    [selectedStream, selectedStreamId, transcriptLoading, resolvedThemeId],
   );
 
   return <Outlet context={outletContext} />;

@@ -34,7 +34,7 @@ export function PageHeader({
   onNavigateBack,
   actions,
 }: PageHeaderProps): JSX.Element {
-  const showBack = Boolean(backLabel || backUrl || onNavigateBack);
+  const showBack = Boolean(backUrl || onNavigateBack);
 
   return (
     <header className={styles.pageHeader} data-testid="page-header">
