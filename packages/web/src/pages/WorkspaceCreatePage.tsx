@@ -2,11 +2,11 @@ import { useEffect, useState, type JSX } from "react";
 import { useSearchParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import {
-  Breadcrumbs,
   HOME_URL,
   Spinner,
   WorkspaceFormFields,
   defaultFormValues,
+  PageHeader,
   environmentUrl,
   useAppNavigate,
   useToast,
@@ -114,7 +114,7 @@ export function WorkspaceCreatePage(): JSX.Element {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerTitle}>
-          <Breadcrumbs segments={breadcrumbs} />
+          <PageHeader segments={breadcrumbs} />
         </div>
         <div className={styles.headerActions}>
           <button

@@ -4,12 +4,12 @@ import { ConnectError } from "@connectrpc/connect";
 import { useGrackle } from "../context/GrackleContext.js";
 import { useSandboxProxyUrl } from "../context/ManifestContext.js";
 import {
-  Breadcrumbs,
   ChatInput,
   ConfirmDialog,
   EventStream,
   SessionAttemptSelector,
   TaskActionButtons,
+  PageHeader,
   TaskEditPanel,
   TaskOverviewPanel,
   buildTaskBreadcrumbs,
@@ -272,7 +272,7 @@ export function TaskPage(): JSX.Element {
 
   return (
     <div className={styles.panelContainer}>
-      <Breadcrumbs segments={breadcrumbs} />
+      <PageHeader segments={breadcrumbs} />
       {/* Task header */}
       <div className={styles.header}>
         <span className={styles.headerTitle}>

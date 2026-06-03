@@ -9,3 +9,5 @@ export { ContextNav, CONTEXTS, DEFAULT_CONTEXT_ID } from "./ContextNav.js";
 export type { ContextItem, ContextNavProps } from "./ContextNav.js";
 export { Sidebar } from "./Sidebar.js";
 export { BottomStatusBar } from "./BottomStatusBar.js";
+export { PageHeader } from "./PageHeader.js";
+export type { PageHeaderProps } from "./PageHeader.js";

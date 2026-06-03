@@ -2,8 +2,6 @@ import { useState, useEffect, type JSX, type FormEvent } from "react";
 import { useParams, Navigate } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import {
-  Breadcrumbs,
-  buildPersonaDetailBreadcrumbs,
   Button,
   ConfirmDialog,
   EditableSelect,
@@ -54,13 +52,8 @@ export function PersonaDetailPage(): JSX.Element {
     return <Navigate to={PERSONAS_URL} replace />;
   }
 
-  const breadcrumbs = buildPersonaDetailBreadcrumbs(
-    isNew ? "New Persona" : (existing?.name ?? "Persona"),
-  );
-
   return (
     <div className={styles.container}>
-      <Breadcrumbs segments={breadcrumbs} />
       <PersonaForm
         existing={existing}
         isNew={isNew}

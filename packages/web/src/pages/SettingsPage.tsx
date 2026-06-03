@@ -1,6 +1,6 @@
 import { type JSX } from "react";
 import { Outlet, useLocation } from "react-router";
-import { Breadcrumbs, buildSettingsBreadcrumbs } from "@grackle-ai/web-components";
+import { PageHeader, buildSettingsBreadcrumbs } from "@grackle-ai/web-components";
 import styles from "./SettingsPage.module.scss";
 
 /** Maps settings URL path segments to display labels. */
@@ -22,7 +22,7 @@ export function SettingsPage(): JSX.Element {
 
   return (
     <div className={styles.layout}>
-      <Breadcrumbs segments={breadcrumbs} />
+      <PageHeader segments={breadcrumbs} />
       <div className={styles.content}>
         <div key={tabSegment} className={styles.tabPanel}>
           <Outlet />

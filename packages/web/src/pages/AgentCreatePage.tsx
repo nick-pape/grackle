@@ -6,7 +6,15 @@
  */
 
 import { useGrackle } from "../context/GrackleContext.js";
-import { AgentManager, agentUrl, useAppNavigate, useToast } from "@grackle-ai/web-components";
+import {
+  AgentManager,
+  PageHeader,
+  buildAgentCreateBreadcrumbs,
+  agentUrl,
+  HOME_URL,
+  useAppNavigate,
+  useToast,
+} from "@grackle-ai/web-components";
 import type { JSX } from "react";
 
 export function AgentCreatePage(): JSX.Element {
@@ -35,14 +43,17 @@ export function AgentCreatePage(): JSX.Element {
   };
 
   return (
-    <AgentManager
-      agents={agents}
-      personas={personas}
-      environments={environments}
-      agentsLoading={agentsLoading}
-      onCreate={handleCreate}
-      onDelete={() => {}}
-      onNavigateBack={() => navigate("/")}
-    />
+    <>
+      <PageHeader segments={buildAgentCreateBreadcrumbs()} backUrl={HOME_URL} />
+      <AgentManager
+        agents={agents}
+        personas={personas}
+        environments={environments}
+        agentsLoading={agentsLoading}
+        onCreate={handleCreate}
+        onDelete={() => {}}
+        onNavigateBack={() => navigate("/")}
+      />
+    </>
   );
 }

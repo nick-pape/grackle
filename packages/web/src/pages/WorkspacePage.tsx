@@ -2,13 +2,13 @@ import { useEffect, useRef, useState, type JSX } from "react";
 import { useParams } from "react-router";
 import { useGrackle } from "../context/GrackleContext.js";
 import {
-  Breadcrumbs,
   ConfirmDialog,
   DagView,
   EditableCheckbox,
   EditableSelect,
   EditableTextArea,
   EditableTextField,
+  PageHeader,
   WorkspaceBoard,
   buildWorkspaceBreadcrumbs,
   formatCost,
@@ -139,7 +139,7 @@ export function WorkspacePage(): JSX.Element {
 
   return (
     <div className={styles.panelContainer}>
-      <Breadcrumbs segments={breadcrumbs} />
+      <PageHeader segments={breadcrumbs} />
 
       {/* Workspace header */}
       <div className={styles.workspaceHeader}>

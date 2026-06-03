@@ -56,7 +56,13 @@ import {
   useLocation,
   useParams,
 } from "react-router";
-import { EmptyPage, TasksEmptyPage, EnvironmentsEmptyPage } from "./pages/EmptyPage.js";
+import {
+  EmptyPage,
+  TasksEmptyPage,
+  EnvironmentsEmptyPage,
+  PersonasEmptyPage,
+  SchedulesEmptyPage,
+} from "./pages/EmptyPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
 import { CoordinationPage } from "./pages/CoordinationPage.js";
 import { NewChatPage } from "./pages/NewChatPage.js";
@@ -72,16 +78,16 @@ import { EnvironmentDetailPage } from "./pages/EnvironmentDetailPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { SettingsCredentialsTab } from "./pages/settings/SettingsCredentialsTab.js";
 import { SettingsGitHubAccountsTab } from "./pages/settings/SettingsGitHubAccountsTab.js";
-import { PersonaLibraryPage } from "./pages/PersonaLibraryPage.js";
 import { PersonaDetailPage } from "./pages/PersonaDetailPage.js";
+import { PersonasHubPage } from "./pages/PersonasHubPage.js";
 import { AgentCreatePage } from "./pages/AgentCreatePage.js";
 import { AgentLayout } from "./pages/AgentLayout.js";
 import { AgentChatTab } from "./pages/agent-tabs/AgentChatTab.js";
 import { AgentSessionsTab } from "./pages/agent-tabs/AgentSessionsTab.js";
 import { AgentSchedulesTab } from "./pages/agent-tabs/AgentSchedulesTab.js";
 import { AgentSettingsTab } from "./pages/agent-tabs/AgentSettingsTab.js";
-import { SchedulesPage } from "./pages/SchedulesPage.js";
 import { ScheduleDetailPage } from "./pages/ScheduleDetailPage.js";
+import { SchedulesHubPage } from "./pages/SchedulesHubPage.js";
 import { SettingsAppearanceTab } from "./pages/settings/SettingsAppearanceTab.js";
 import { SettingsAboutTab } from "./pages/settings/SettingsAboutTab.js";
 import { SettingsShortcutsTab } from "./pages/settings/SettingsShortcutsTab.js";
@@ -92,6 +98,9 @@ import {
   WithEnvironmentSidebar,
   WithSettingsSidebar,
   WithKnowledgeSidebar,
+  WithPersonaSidebar,
+  WithScheduleSidebar,
+  WithCoordinationSidebar,
 } from "./components/layout/WithSidebar.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
 import styles from "./App.module.scss";
@@ -516,8 +525,10 @@ function AppRoutes(): JSX.Element {
         {/* Legacy per-stream chat URLs now live on Coordination */}
         <Route path="chat/:streamId" element={<Navigate to="/coordination" replace />} />
 
-        {/* Coordination: read-only IPC stream inventory (no sidebar) */}
-        <Route path="coordination" element={<CoordinationPage />} />
+        {/* Coordination: IPC stream inventory (list in sidebar, graph in main) */}
+        <Route element={<WithCoordinationSidebar />}>
+          <Route path="coordination" element={<CoordinationPage />} />
+        </Route>
 
         <Route
           path="sessions"
@@ -553,10 +564,14 @@ function AppRoutes(): JSX.Element {
               <Route path="tasks/:taskId/edit" element={<TaskPage />} />
               <Route path="tasks/:taskId/stream" element={<TaskPage />} />
             </Route>
-            {/* Persona Library — top-level surface (no sidebar), like /chat and /coordination */}
-            <Route path="personas" element={<PersonaLibraryPage />} />
-            <Route path="personas/new" element={<PersonaDetailPage />} />
-            <Route path="personas/:personaId" element={<PersonaDetailPage />} />
+            {/* Persona Library — sidebar nav + detail in main area */}
+            <Route element={<WithPersonaSidebar />}>
+              <Route path="personas" element={<PersonasHubPage />}>
+                <Route index element={<PersonasEmptyPage />} />
+                <Route path="new" element={<PersonaDetailPage />} />
+                <Route path=":personaId" element={<PersonaDetailPage />} />
+              </Route>
+            </Route>
             {/* Agent create form (no tabs, standalone) */}
             <Route path="agents/new" element={<AgentCreatePage />} />
             {/* Agent detail — nested layout with tabs (#1419) */}
@@ -569,14 +584,15 @@ function AppRoutes(): JSX.Element {
           </>
         )}
 
-        {/* Schedules — top-level surface (no sidebar), relocated out of Settings (#1416).
-            A holding home at the fleet altitude until per-agent ownership (#1418). */}
+        {/* Schedules — sidebar nav + detail in main area (#1416) */}
         {hasScheduling && (
-          <>
-            <Route path="schedules" element={<SchedulesPage />} />
-            <Route path="schedules/new" element={<ScheduleDetailPage />} />
-            <Route path="schedules/:scheduleId" element={<ScheduleDetailPage />} />
-          </>
+          <Route element={<WithScheduleSidebar />}>
+            <Route path="schedules" element={<SchedulesHubPage />}>
+              <Route index element={<SchedulesEmptyPage />} />
+              <Route path="new" element={<ScheduleDetailPage />} />
+              <Route path=":scheduleId" element={<ScheduleDetailPage />} />
+            </Route>
+          </Route>
         )}
 
         {/* Environments sidebar */}

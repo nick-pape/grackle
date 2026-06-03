@@ -10,6 +10,8 @@
 import { useMemo, type JSX } from "react";
 import {
   SessionsTable,
+  PageHeader,
+  buildSessionsListBreadcrumbs,
   isActiveSession,
   sessionUrl,
   taskUrl,
@@ -49,6 +51,7 @@ export function SessionsListPage(): JSX.Element {
 
   return (
     <div className={styles.page} data-testid="sessions-page">
+      <PageHeader segments={buildSessionsListBreadcrumbs()} />
       <header className={styles.header}>
         <h1 className={styles.title}>Sessions</h1>
         <p className={styles.subtitle} data-testid="sessions-summary">

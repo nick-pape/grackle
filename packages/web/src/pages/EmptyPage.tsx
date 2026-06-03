@@ -18,6 +18,24 @@ export function EnvironmentsEmptyPage(): JSX.Element {
   );
 }
 
+/** Empty page shown at /personas when no persona is selected. */
+export function PersonasEmptyPage(): JSX.Element {
+  return (
+    <div className={styles.emptyState}>
+      Select a persona to view or edit it, or create a new one.
+    </div>
+  );
+}
+
+/** Empty page shown at /schedules when no schedule is selected. */
+export function SchedulesEmptyPage(): JSX.Element {
+  return (
+    <div className={styles.emptyState}>
+      Select a schedule to view or edit it, or create a new one.
+    </div>
+  );
+}
+
 /** Home page — shows the operations dashboard when workspaces exist, or the welcome CTA for first-time users. */
 export function EmptyPage(): JSX.Element {
   const {
