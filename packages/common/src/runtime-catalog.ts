@@ -66,7 +66,7 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
     description: "GitHub Copilot via the Copilot SDK.",
     models: [{ id: "gpt-4o", name: "GPT-4o", provider: "copilot" }],
     install: {
-      packages: { "@github/copilot-sdk": "^0.1.29", "@github/copilot": "^1.0.43" },
+      packages: { "@github/copilot-sdk": "^1.0.0", "@github/copilot": "^1.0.59" },
       needsJsonRpcHook: true,
     },
   },
@@ -94,7 +94,7 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
     displayName: "Copilot (ACP)",
     description: "GitHub Copilot via the Agent Client Protocol (experimental).",
     models: [],
-    install: { packages: { "@agentclientprotocol/sdk": "^0.16.1", "@github/copilot": "^1.0.43" } },
+    install: { packages: { "@agentclientprotocol/sdk": "^0.16.1", "@github/copilot": "^1.0.59" } },
   },
   "claude-code-acp": {
     displayName: "Claude Code (ACP)",
