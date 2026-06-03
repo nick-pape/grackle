@@ -39,7 +39,8 @@ import { taskStore, sessionStore } from "@grackle-ai/database";
 import { readLastTextEntry, deliverSignalToTask } from "@grackle-ai/core";
 import { createSigchldSubscriber } from "./sigchld.js";
 import type { GrackleEvent } from "@grackle-ai/core";
-import type { Disposable, PluginContext } from "../subscriber-types.js";
+import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
+import { createMockPluginContext } from "../test-utils/mock-plugin-context.js";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -114,13 +115,12 @@ describe("createSigchldSubscriber", () => {
     vi.clearAllMocks();
 
     unsubscribeFn = vi.fn();
-    ctx = {
+    ctx = createMockPluginContext({
       subscribe: vi.fn((fn: (event: GrackleEvent) => void) => {
         capturedHandler = fn;
         return unsubscribeFn;
       }),
-      emit: vi.fn(),
-    };
+    });
 
     disposable = createSigchldSubscriber(ctx);
   });
@@ -396,13 +396,12 @@ describe("createSigchldSubscriber", () => {
     // Create a second subscriber with its own context
     const unsub2 = vi.fn();
     let handler2: (event: GrackleEvent) => void;
-    const ctx2: PluginContext = {
+    const ctx2: PluginContext = createMockPluginContext({
       subscribe: vi.fn((fn: (event: GrackleEvent) => void) => {
         handler2 = fn;
         return unsub2;
       }),
-      emit: vi.fn(),
-    };
+    });
     const disposable2 = createSigchldSubscriber(ctx2);
 
     vi.spyOn(taskStore, "getTask").mockReturnValue(

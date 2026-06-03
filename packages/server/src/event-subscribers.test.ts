@@ -1,12 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { PluginContext } from "@grackle-ai/plugin-sdk";
 
 // ── Mock dependencies before importing ──────────────
 
-const mockDisposable = { dispose: vi.fn() };
-
 vi.mock("@grackle-ai/core", () => ({
-  subscribe: vi.fn(() => vi.fn()),
-  emit: vi.fn(),
   computeTaskStatus: vi.fn(),
   findFirstConnectedEnvironment: vi.fn(),
   startTaskSession: vi.fn(),
@@ -15,7 +12,7 @@ vi.mock("@grackle-ai/core", () => ({
 
 vi.mock("@grackle-ai/plugin-core", () => ({
   createLifecycleSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
-  createRootTaskBootSubscriber: vi.fn(() => mockDisposable),
+  createRootTaskBootSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
   createAgentRootTaskSubscriber: vi.fn(() => ({ dispose: vi.fn() })),
 }));
 
@@ -30,17 +27,40 @@ vi.mock("@grackle-ai/database", () => ({
   settingsStore: { getSetting: vi.fn() },
 }));
 
-import { wireEventSubscribers } from "./event-subscribers.js";
+import { createEventSubscribers } from "./event-subscribers.js";
 import { createLifecycleSubscriber } from "@grackle-ai/plugin-core";
+
+/** Create a mock PluginContext for testing. */
+function createMockContext(overrides?: Partial<PluginContext["config"]>): PluginContext {
+  return {
+    subscribe: vi.fn(() => vi.fn()),
+    emit: vi.fn() as PluginContext["emit"],
+    logger: {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as PluginContext["logger"],
+    config: {
+      grpcPort: 0,
+      webPort: 0,
+      mcpPort: 0,
+      powerlinePort: 0,
+      host: "127.0.0.1",
+      grackleHome: "/tmp/test",
+      apiKey: "test-key",
+      ...overrides,
+    },
+  };
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockDisposable.dispose.mockClear();
 });
 
-describe("wireEventSubscribers (core-only)", () => {
+describe("createEventSubscribers", () => {
   it("calls createLifecycleSubscriber with PluginContext", () => {
-    wireEventSubscribers({ skipRootAutostart: true });
+    createEventSubscribers(createMockContext({ skipRootAutostart: true }));
     expect(createLifecycleSubscriber).toHaveBeenCalledOnce();
     expect(createLifecycleSubscriber).toHaveBeenCalledWith(
       expect.objectContaining({ subscribe: expect.any(Function), emit: expect.any(Function) }),
@@ -48,17 +68,13 @@ describe("wireEventSubscribers (core-only)", () => {
   });
 
   it("returns lifecycle + agent-root subscribers when skipRootAutostart is true", () => {
-    // #1418: the agent-root-task subscriber runs regardless of the system
-    // root-task autostart flag (those are independent concerns), so we get
-    // 2 disposables here: lifecycle + agent-root.
-    const disposables = wireEventSubscribers({ skipRootAutostart: true });
+    const disposables = createEventSubscribers(createMockContext({ skipRootAutostart: true }));
     expect(disposables).toHaveLength(2);
     expect(disposables[0]).toHaveProperty("dispose");
   });
 
   it("includes root task boot when skipRootAutostart is false", () => {
-    // 3 disposables: lifecycle + system-root-boot + agent-root.
-    const disposables = wireEventSubscribers({ skipRootAutostart: false });
+    const disposables = createEventSubscribers(createMockContext({ skipRootAutostart: false }));
     expect(disposables).toHaveLength(3);
   });
 });

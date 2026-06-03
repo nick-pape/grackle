@@ -20,7 +20,7 @@ import type { TaskRow, SessionRow, EnvironmentRow } from "@grackle-ai/database";
 import type { GrackleEvent } from "@grackle-ai/core";
 import type { TaskStatusResult } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
-import type { Disposable, PluginContext } from "@grackle-ai/core";
+import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
 
 // ─── Constants ──────────────────────────────────────────────
 

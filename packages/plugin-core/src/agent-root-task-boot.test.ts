@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { AgentRow, TaskRow } from "@grackle-ai/database";
-import type { GrackleEvent, PluginContext } from "@grackle-ai/core";
+import type { GrackleEvent, PluginContext } from "@grackle-ai/plugin-sdk";
+import { createMockPluginContext } from "./test-utils/mock-plugin-context.js";
 import {
   handleAgentCreated,
   createAgentRootTaskSubscriber,
@@ -149,13 +150,12 @@ describe("createAgentRootTaskSubscriber", () => {
 
     // Capture the subscriber callback by spying on ctx.subscribe.
     let captured: ((event: GrackleEvent) => void) | undefined;
-    const ctx: PluginContext = {
+    const ctx: PluginContext = createMockPluginContext({
       subscribe: vi.fn((cb) => {
         captured = cb;
         return () => {};
       }),
-      emit: vi.fn(),
-    };
+    });
 
     const disposable = createAgentRootTaskSubscriber(ctx, deps);
     expect(ctx.subscribe).toHaveBeenCalledTimes(1);
@@ -183,13 +183,12 @@ describe("createAgentRootTaskSubscriber", () => {
     const deps = buildDeps(state);
 
     let captured: ((event: GrackleEvent) => void) | undefined;
-    const ctx: PluginContext = {
+    const ctx: PluginContext = createMockPluginContext({
       subscribe: vi.fn((cb) => {
         captured = cb;
         return () => {};
       }),
-      emit: vi.fn(),
-    };
+    });
 
     createAgentRootTaskSubscriber(ctx, deps);
 
@@ -212,13 +211,12 @@ describe("createAgentRootTaskSubscriber", () => {
     const deps = buildDeps(state);
 
     let captured: ((event: GrackleEvent) => void) | undefined;
-    const ctx: PluginContext = {
+    const ctx: PluginContext = createMockPluginContext({
       subscribe: vi.fn((cb) => {
         captured = cb;
         return () => {};
       }),
-      emit: vi.fn(),
-    };
+    });
 
     createAgentRootTaskSubscriber(ctx, deps);
 

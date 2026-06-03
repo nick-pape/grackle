@@ -4,7 +4,7 @@ import { taskStore, sessionStore } from "@grackle-ai/database";
 import { readLastTextEntry } from "@grackle-ai/core";
 import { deliverSignalToTask } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
-import type { Disposable, PluginContext } from "@grackle-ai/core";
+import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
 
 /** Maximum length for the child's last text message in the notification. */
 const MAX_LAST_MESSAGE_LENGTH: number = 2000;

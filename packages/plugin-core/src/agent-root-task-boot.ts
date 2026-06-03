@@ -13,7 +13,7 @@
  */
 
 import type { AgentRow, TaskRow } from "@grackle-ai/database";
-import type { Disposable, GrackleEvent, PluginContext } from "@grackle-ai/core";
+import type { Disposable, GrackleEvent, PluginContext } from "@grackle-ai/plugin-sdk";
 import { logger } from "@grackle-ai/core";
 
 /** Dependencies injected for testability. */

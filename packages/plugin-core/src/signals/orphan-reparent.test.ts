@@ -35,7 +35,8 @@ import { deliverSignalToTask } from "@grackle-ai/core";
 import { streamRegistry, ensureAsyncDeliveryListener } from "@grackle-ai/core";
 import { createOrphanReparentSubscriber } from "./orphan-reparent.js";
 import type { GrackleEvent } from "@grackle-ai/core";
-import type { Disposable, PluginContext } from "../subscriber-types.js";
+import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
+import { createMockPluginContext } from "../test-utils/mock-plugin-context.js";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -98,13 +99,12 @@ describe("createOrphanReparentSubscriber", () => {
     vi.clearAllMocks();
 
     unsubscribeFn = vi.fn();
-    ctx = {
+    ctx = createMockPluginContext({
       subscribe: vi.fn((fn: (event: GrackleEvent) => void) => {
         capturedHandler = fn;
         return unsubscribeFn;
       }),
-      emit: vi.fn(),
-    };
+    });
 
     disposable = createOrphanReparentSubscriber(ctx);
   });
