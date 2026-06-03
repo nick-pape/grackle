@@ -155,86 +155,73 @@ describe("resolveAncestorEnvironmentId", () => {
   });
 
   it("returns environmentId when the parent has a session", () => {
-    vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(makeSession("env-1"));
+    vi.mocked(taskStore.getAncestors).mockReturnValue([]);
+    vi.mocked(sessionStore.getLatestSessionsByTaskIds).mockReturnValue(
+      new Map([["parent-1", makeSession("env-1")]]),
+    );
 
     expect(resolveAncestorEnvironmentId("parent-1")).toBe("env-1");
-    expect(sessionStore.getLatestSessionForTask).toHaveBeenCalledWith("parent-1");
+    expect(sessionStore.getLatestSessionsByTaskIds).toHaveBeenCalledWith(["parent-1"]);
   });
 
   it("walks up multiple levels to find an ancestor with a session", () => {
-    // parent-1 has no session, grandparent-1 does
-    vi.mocked(sessionStore.getLatestSessionForTask).mockImplementation((taskId) => {
-      if (taskId === "grandparent-1") {
-        return makeSession("env-gp");
-      }
-      return undefined;
-    });
-    vi.mocked(taskStore.getTask).mockImplementation((taskId) => {
-      if (taskId === "parent-1") {
-        return makeTask("parent-1", "grandparent-1");
-      }
-      return undefined;
-    });
+    // getAncestors returns root-first: [grandparent, parent-of-parentTaskId]
+    // but parentTaskId="parent-1" so ancestors are OF parent-1
+    vi.mocked(taskStore.getAncestors).mockReturnValue([makeTask("grandparent-1", "")]);
+    // Only grandparent has a session
+    vi.mocked(sessionStore.getLatestSessionsByTaskIds).mockReturnValue(
+      new Map([["grandparent-1", makeSession("env-gp")]]),
+    );
 
     expect(resolveAncestorEnvironmentId("parent-1")).toBe("env-gp");
   });
 
   it("returns empty string when no ancestor has a session", () => {
-    // Chain of 3 tasks, none have sessions
-    vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(undefined);
-    vi.mocked(taskStore.getTask).mockImplementation((taskId) => {
-      if (taskId === "task-1") {
-        return makeTask("task-1", "task-2");
-      }
-      if (taskId === "task-2") {
-        return makeTask("task-2", "task-3");
-      }
-      if (taskId === "task-3") {
-        return makeTask("task-3", "");
-      }
-      return undefined;
-    });
+    vi.mocked(taskStore.getAncestors).mockReturnValue([
+      makeTask("task-3", ""),
+      makeTask("task-2", "task-3"),
+    ]);
+    vi.mocked(sessionStore.getLatestSessionsByTaskIds).mockReturnValue(new Map());
 
     expect(resolveAncestorEnvironmentId("task-1")).toBe("");
   });
 
   it("returns empty string when parentTaskId is empty", () => {
     expect(resolveAncestorEnvironmentId("")).toBe("");
-    expect(sessionStore.getLatestSessionForTask).not.toHaveBeenCalled();
+    expect(sessionStore.getLatestSessionsByTaskIds).not.toHaveBeenCalled();
   });
 
-  it("stops at MAX_TASK_DEPTH and returns empty string", () => {
-    // Chain of 9 tasks (indices 0–8), only task-9 has a session
-    vi.mocked(sessionStore.getLatestSessionForTask).mockImplementation((taskId) => {
-      if (taskId === "task-9") {
-        return makeSession("env-deep");
-      }
-      return undefined;
-    });
-    vi.mocked(taskStore.getTask).mockImplementation((taskId) => {
-      const match = taskId.match(/^task-(\d+)$/);
-      if (match) {
-        const n = parseInt(match[1], 10);
-        return makeTask(`task-${n}`, `task-${n + 1}`);
-      }
-      return undefined;
-    });
+  it("prefers nearest ancestor when multiple have sessions", () => {
+    vi.mocked(taskStore.getAncestors).mockReturnValue([
+      makeTask("root", ""),
+      makeTask("mid", "root"),
+    ]);
+    vi.mocked(sessionStore.getLatestSessionsByTaskIds).mockReturnValue(
+      new Map([
+        ["parent-1", makeSession("env-nearest")],
+        ["root", makeSession("env-root")],
+      ]),
+    );
 
-    // Starting at task-1, chain is task-1 → task-2 → ... → task-8 → task-9
-    // MAX_TASK_DEPTH is 8, so it checks task-1 through task-8 but never reaches task-9
-    expect(resolveAncestorEnvironmentId("task-1")).toBe("");
+    expect(resolveAncestorEnvironmentId("parent-1")).toBe("env-nearest");
   });
 
-  it("returns empty string when a task is not found mid-chain", () => {
-    vi.mocked(sessionStore.getLatestSessionForTask).mockReturnValue(undefined);
-    vi.mocked(taskStore.getTask).mockImplementation((taskId) => {
-      if (taskId === "task-1") {
-        return makeTask("task-1", "task-missing");
-      }
-      // task-missing not found — should break the chain
-      return undefined;
-    });
+  it("returns empty string when getAncestors returns empty and parent has no session", () => {
+    vi.mocked(taskStore.getAncestors).mockReturnValue([]);
+    vi.mocked(sessionStore.getLatestSessionsByTaskIds).mockReturnValue(new Map());
 
-    expect(resolveAncestorEnvironmentId("task-1")).toBe("");
+    expect(resolveAncestorEnvironmentId("orphan-task")).toBe("");
+  });
+
+  it("skips sessions without environmentId", () => {
+    vi.mocked(taskStore.getAncestors).mockReturnValue([makeTask("grandparent", "")]);
+    vi.mocked(sessionStore.getLatestSessionsByTaskIds).mockReturnValue(
+      new Map([
+        ["parent-1", makeSession("")],
+        ["grandparent", makeSession("env-gp")],
+      ]),
+    );
+
+    expect(resolveAncestorEnvironmentId("parent-1")).toBe("env-gp");
   });
 });
