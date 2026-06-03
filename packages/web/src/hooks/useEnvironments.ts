@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ConnectError } from "@connectrpc/connect";
 import { warnBadPayload } from "@grackle-ai/web-components";
 import type {
@@ -42,9 +42,23 @@ export function useEnvironments(): UseEnvironmentsResult {
   const { loading: environmentsLoading, track: trackEnvironments } = useLoadingState();
   const [provisionStatus, setProvisionStatus] = useState<Record<string, ProvisionStatus>>({});
   const [operationError, setOperationError] = useState("");
+  const provisionClearTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const clearOperationError = useCallback(() => {
     setOperationError("");
+  }, []);
+
+  /** Schedule (or reschedule) a timer to clear provision status for an environment. */
+  const scheduleProvisionClear = useCallback((environmentId: string) => {
+    clearTimeout(provisionClearTimersRef.current[environmentId]);
+    provisionClearTimersRef.current[environmentId] = setTimeout(() => {
+      delete provisionClearTimersRef.current[environmentId];
+      setProvisionStatus((prev) => {
+        const next = { ...prev };
+        delete next[environmentId];
+        return next;
+      });
+    }, PROVISION_STATUS_CLEAR_DELAY_MS);
   }, []);
 
   const loadEnvironments = useCallback(async () => {
@@ -65,6 +79,8 @@ export function useEnvironments(): UseEnvironmentsResult {
         case "environment.removed": {
           const removedId = event.payload.environmentId as string | undefined;
           if (removedId) {
+            clearTimeout(provisionClearTimersRef.current[removedId]);
+            delete provisionClearTimersRef.current[removedId];
             setEnvironments((prev) => prev.filter((e) => e.id !== removedId));
             setProvisionStatus((prev) => {
               const next = { ...prev };
@@ -98,14 +114,7 @@ export function useEnvironments(): UseEnvironmentsResult {
             },
           }));
           if (pp.stage === "ready") {
-            const envId = pp.environmentId as string;
-            setTimeout(() => {
-              setProvisionStatus((prev) => {
-                const next = { ...prev };
-                delete next[envId];
-                return next;
-              });
-            }, PROVISION_STATUS_CLEAR_DELAY_MS);
+            scheduleProvisionClear(pp.environmentId as string);
           }
           return true;
         }
@@ -113,7 +122,7 @@ export function useEnvironments(): UseEnvironmentsResult {
           return false;
       }
     },
-    [loadEnvironments],
+    [loadEnvironments, scheduleProvisionClear],
   );
 
   const handleLegacyMessage = useCallback((msg: WsMessage): boolean => {
@@ -173,41 +182,38 @@ export function useEnvironments(): UseEnvironmentsResult {
     [],
   );
 
-  const provisionEnvironment = useCallback(async (environmentId: string, force?: boolean) => {
-    setOperationError("");
-    try {
-      const stream = grackleClient.provisionEnvironment({
-        id: environmentId,
-        force: force ?? false,
-      });
-      for await (const event of stream) {
-        setProvisionStatus((prev) => ({
-          ...prev,
-          [environmentId]: {
-            stage: event.stage,
-            message: event.message,
-            progress: event.progress,
-          },
-        }));
-        if (event.stage === "ready") {
-          setTimeout(() => {
-            setProvisionStatus((prev) => {
-              const next = { ...prev };
-              delete next[environmentId];
-              return next;
-            });
-          }, PROVISION_STATUS_CLEAR_DELAY_MS);
+  const provisionEnvironment = useCallback(
+    async (environmentId: string, force?: boolean) => {
+      setOperationError("");
+      try {
+        const stream = grackleClient.provisionEnvironment({
+          id: environmentId,
+          force: force ?? false,
+        });
+        for await (const event of stream) {
+          setProvisionStatus((prev) => ({
+            ...prev,
+            [environmentId]: {
+              stage: event.stage,
+              message: event.message,
+              progress: event.progress,
+            },
+          }));
+          if (event.stage === "ready") {
+            scheduleProvisionClear(environmentId);
+          }
         }
+      } catch (err) {
+        setProvisionStatus((prev) => {
+          const next = { ...prev };
+          delete next[environmentId];
+          return next;
+        });
+        setOperationError(extractErrorMessage(err));
       }
-    } catch (err) {
-      setProvisionStatus((prev) => {
-        const next = { ...prev };
-        delete next[environmentId];
-        return next;
-      });
-      setOperationError(extractErrorMessage(err));
-    }
-  }, []);
+    },
+    [scheduleProvisionClear],
+  );
 
   const stopEnvironment = useCallback(async (environmentId: string) => {
     setOperationError("");
@@ -227,13 +233,29 @@ export function useEnvironments(): UseEnvironmentsResult {
     }
   }, []);
 
+  const onDisconnect = useCallback(() => {
+    for (const timerId of Object.values(provisionClearTimersRef.current)) {
+      clearTimeout(timerId);
+    }
+    provisionClearTimersRef.current = {};
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      for (const timerId of Object.values(provisionClearTimersRef.current)) {
+        clearTimeout(timerId);
+      }
+      provisionClearTimersRef.current = {};
+    };
+  }, []);
+
   const domainHook: DomainHook = useMemo(
     () => ({
       onConnect: () => loadEnvironments(),
-      onDisconnect: () => {},
+      onDisconnect,
       handleEvent,
     }),
-    [loadEnvironments, handleEvent],
+    [loadEnvironments, onDisconnect, handleEvent],
   );
 
   return {

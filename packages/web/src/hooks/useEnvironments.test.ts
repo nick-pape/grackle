@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { useEnvironments } from "./useEnvironments.js";
@@ -209,5 +209,130 @@ describe("useEnvironments — operationError", () => {
     });
 
     expect(result.current.operationError).toBe("");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: provision-clear timer lifecycle (#1481)
+// ---------------------------------------------------------------------------
+
+describe("useEnvironments — provision-clear timer cleanup", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.resetAllMocks();
+    mockClient.listEnvironments.mockResolvedValue({ environments: [] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function readyEvent(environmentId: string): {
+    id: string;
+    type: "environment.provision_progress";
+    timestamp: string;
+    payload: Record<string, unknown>;
+  } {
+    return {
+      id: "evt-1",
+      type: "environment.provision_progress",
+      timestamp: "2026-01-01T00:00:00Z",
+      payload: { environmentId, stage: "ready", message: "done", progress: 100 },
+    };
+  }
+
+  it("clears provision status after the delay", () => {
+    const { result } = renderHook(() => useEnvironments());
+
+    act(() => {
+      result.current.handleEvent(readyEvent("env-1"));
+    });
+    expect(result.current.provisionStatus["env-1"]).toBeDefined();
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(result.current.provisionStatus["env-1"]).toBeUndefined();
+  });
+
+  it("cancels the timer on unmount", () => {
+    const { result, unmount } = renderHook(() => useEnvironments());
+
+    act(() => {
+      result.current.handleEvent(readyEvent("env-1"));
+    });
+
+    unmount();
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    // No error — setProvisionStatus was not called on unmounted component
+  });
+
+  it("cancels the timer on onDisconnect", () => {
+    const { result } = renderHook(() => useEnvironments());
+
+    act(() => {
+      result.current.handleEvent(readyEvent("env-1"));
+    });
+    expect(result.current.provisionStatus["env-1"]).toBeDefined();
+
+    act(() => {
+      result.current.domainHook.onDisconnect();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    // Status was set by the event but not cleared by the cancelled timer
+    expect(result.current.provisionStatus["env-1"]).toBeDefined();
+  });
+
+  it("deduplicates timers for the same environment", () => {
+    const { result } = renderHook(() => useEnvironments());
+
+    act(() => {
+      result.current.handleEvent(readyEvent("env-1"));
+    });
+    act(() => {
+      result.current.handleEvent(readyEvent("env-1"));
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(result.current.provisionStatus["env-1"]).toBeUndefined();
+
+    // Advancing again should not cause issues (only one timer was active)
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+  });
+
+  it("cancels the timer when environment.removed fires", () => {
+    const { result } = renderHook(() => useEnvironments());
+
+    act(() => {
+      result.current.handleEvent(readyEvent("env-1"));
+    });
+    expect(result.current.provisionStatus["env-1"]).toBeDefined();
+
+    act(() => {
+      result.current.handleEvent({
+        id: "evt-2",
+        type: "environment.removed",
+        timestamp: "2026-01-01T00:00:01Z",
+        payload: { environmentId: "env-1" },
+      });
+    });
+    // Removed clears status immediately
+    expect(result.current.provisionStatus["env-1"]).toBeUndefined();
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    // Timer was cancelled, no spurious state update
+    expect(result.current.provisionStatus["env-1"]).toBeUndefined();
   });
 });
