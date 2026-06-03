@@ -25,7 +25,7 @@ import {
   cleanupLifecycleStream,
   ensureLifecycleStream,
 } from "@grackle-ai/core";
-import type { Disposable, PluginContext } from "@grackle-ai/core";
+import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
 
 // Re-export lifecycle stream utilities so existing plugin-core consumers
 // can continue to import from this module.

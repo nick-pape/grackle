@@ -22,7 +22,8 @@ import { taskStore, sessionStore, escalationStore } from "@grackle-ai/database";
 import { readLastTextEntry, routeEscalation } from "@grackle-ai/core";
 import { createEscalationAutoSubscriber } from "./escalation-auto.js";
 import type { GrackleEvent } from "@grackle-ai/core";
-import type { Disposable, PluginContext } from "../subscriber-types.js";
+import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
+import { createMockPluginContext } from "../test-utils/mock-plugin-context.js";
 
 // ── Helpers ─────────────────────────────────────────────────
 
@@ -86,13 +87,12 @@ describe("createEscalationAutoSubscriber", () => {
     vi.clearAllMocks();
 
     unsubscribeFn = vi.fn();
-    ctx = {
+    ctx = createMockPluginContext({
       subscribe: vi.fn((fn: (event: GrackleEvent) => void) => {
         capturedHandler = fn;
         return unsubscribeFn;
       }),
-      emit: vi.fn(),
-    };
+    });
 
     disposable = createEscalationAutoSubscriber(ctx);
   });

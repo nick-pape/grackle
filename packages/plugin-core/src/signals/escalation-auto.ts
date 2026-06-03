@@ -14,7 +14,7 @@ import { readLastTextEntry } from "@grackle-ai/core";
 import { routeEscalation } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { ulid } from "ulid";
-import type { Disposable, PluginContext } from "@grackle-ai/core";
+import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
 
 /** How long (ms) to remember a delivered notification before allowing re-delivery. */
 const DEDUP_TTL_MS: number = 3_600_000; // 1 hour

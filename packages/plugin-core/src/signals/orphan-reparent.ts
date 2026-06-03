@@ -14,7 +14,7 @@ import { streamRegistry } from "@grackle-ai/core";
 import { ensureAsyncDeliveryListener } from "@grackle-ai/core";
 import { deliverSignalToTask } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
-import type { Disposable, PluginContext } from "@grackle-ai/core";
+import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
 
 /** Terminal task statuses that trigger orphan reparenting. */
 const TERMINAL_TASK_STATUSES: ReadonlySet<string> = new Set([

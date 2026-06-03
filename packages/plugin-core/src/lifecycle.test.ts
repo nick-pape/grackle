@@ -24,7 +24,8 @@ import {
   cleanupLifecycleStream,
   ensureLifecycleStream,
 } from "./lifecycle.js";
-import type { Disposable, PluginContext } from "./subscriber-types.js";
+import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
+import { createMockPluginContext } from "./test-utils/mock-plugin-context.js";
 
 /** Apply minimal schema. */
 function applySchema(): void {
@@ -71,10 +72,7 @@ function applySchema(): void {
 
 /** Create a mock PluginContext for lifecycle subscriber. */
 function createMockContext(): PluginContext {
-  return {
-    subscribe: vi.fn(() => vi.fn()),
-    emit: vi.fn(),
-  };
+  return createMockPluginContext();
 }
 
 describe("lifecycle manager", () => {
