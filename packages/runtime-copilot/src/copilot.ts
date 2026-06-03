@@ -190,10 +190,9 @@ export class CopilotSession extends BaseAgentSession {
 
     // ── Build session config ──
     // onPermissionRequest is REQUIRED by the SDK. The SDK's built-in approveAll
-    // returns { kind: "approved" } (V2 protocol), but the CLI's permission prompt
-    // handler expects { kind: "approve-once" } (V1 protocol). Using a custom
-    // handler that returns the V1 format avoids the "unexpected user permission
-    // response" error from the CLI's gY() switch.
+    // returns { kind: "approved" }, but the CLI's permission prompt handler expects
+    // { kind: "approve-once" }. Using a custom handler that returns the format the
+    // CLI expects avoids the "unexpected user permission response" error.
     const sessionConfig: Record<string, unknown> = {
       model: this.model,
       streaming: true,
