@@ -114,6 +114,23 @@ describe("ProcessTunnel", () => {
       // Process should have been cleaned up
       expect(tunnel.isAlive()).toBe(false);
     });
+
+    it("surfaces stderr when the process exits before the port becomes ready", async () => {
+      const proc = createMockProcess();
+      factory = createMockProcessFactory(proc);
+      // Make waitForPort hang until the process exits
+      (probe.waitForPort as ReturnType<typeof vi.fn>).mockImplementation(
+        () => new Promise(() => {}),
+      );
+      tunnel = new TestTunnel(9999, "ssh", ["-N"], factory, probe);
+
+      const openPromise = tunnel.open();
+      // Simulate stderr output followed by early exit (e.g. port conflict)
+      proc.stderr!.emit("data", Buffer.from("bind: Address already in use\n"));
+      proc.emit("close", 255);
+
+      await expect(openPromise).rejects.toThrow("bind: Address already in use");
+    });
   });
 
   describe("close()", () => {

@@ -513,11 +513,18 @@ export class DockerAdapter implements EnvironmentAdapter {
 
     yield { stage: "creating", message: `Creating container ${containerName}...`, progress: 0.1 };
 
-    // Create or start the container (retry with a fresh port on TOCTOU conflict, #1486)
+    // Create or start the container (retry with a fresh port on TOCTOU conflict, #1486).
+    // On port-conflict failure, remove the partially-created container so the
+    // next attempt can recreate it with a fresh port mapping.
     const createContainer = async (port: number): Promise<{ port: number; isNew: boolean }> => {
       const runArgs = this.buildRunArgs(containerName, port, image, cfg, powerlineToken);
-      const created = await createOrStartContainer(this.execFn, containerName, runArgs);
-      return { port, isNew: created };
+      try {
+        const created = await createOrStartContainer(this.execFn, containerName, runArgs);
+        return { port, isNew: created };
+      } catch (err) {
+        await this.execFn("docker", ["rm", "-f", containerName]).catch(() => {});
+        throw err;
+      }
     };
 
     const { port: localPort, isNew } = cfg.localPort
@@ -672,9 +679,16 @@ export class DockerAdapter implements EnvironmentAdapter {
     const sidecarName = `${ATTACH_SIDECAR_PREFIX}${environmentId}`;
     // Clear any stale sidecar from a previous attach before starting a fresh one.
     await removeSidecar(this.execFn, sidecarName, this.logger);
-    // Retry with a fresh port on TOCTOU conflict (#1486)
+    // Retry with a fresh port on TOCTOU conflict (#1486).
+    // Remove the partially-created sidecar on failure so the next attempt
+    // can recreate it with a fresh port mapping.
     const hostPort = await withFreePort(async (port) => {
-      await startSocatSidecar(this.execFn, sidecarName, network, ip, port);
+      try {
+        await startSocatSidecar(this.execFn, sidecarName, network, ip, port);
+      } catch (err) {
+        await removeSidecar(this.execFn, sidecarName, this.logger);
+        throw err;
+      }
       return port;
     });
     this.logger.info(

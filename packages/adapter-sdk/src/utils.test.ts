@@ -77,4 +77,12 @@ describe("withFreePort", () => {
     await expect(withFreePort(action)).rejects.toThrow("timeout");
     expect(action).toHaveBeenCalledOnce();
   });
+
+  it("rejects invalid maxAttempts values", async () => {
+    const action = vi.fn();
+    await expect(withFreePort(action, 0)).rejects.toThrow(RangeError);
+    await expect(withFreePort(action, -1)).rejects.toThrow(RangeError);
+    await expect(withFreePort(action, 1.5)).rejects.toThrow(RangeError);
+    expect(action).not.toHaveBeenCalled();
+  });
 });

@@ -68,6 +68,11 @@ export async function withFreePort<T>(
   action: (port: number) => Promise<T>,
   maxAttempts: number = MAX_PORT_ATTEMPTS,
 ): Promise<T> {
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
+    throw new RangeError(
+      `withFreePort: maxAttempts must be a positive integer, got ${maxAttempts}`,
+    );
+  }
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const port = await findFreePort();
     try {

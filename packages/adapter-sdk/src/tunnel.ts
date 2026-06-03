@@ -95,13 +95,28 @@ export abstract class ProcessTunnel implements RemoteTunnel {
       this.logger.error({ err }, "Tunnel process error");
     });
 
+    // Capture stderr so early-exit errors (e.g. port conflicts) propagate
+    // with enough detail for isPortConflictError to match.
+    const stderrChunks: string[] = [];
     this.process.stderr?.on("data", (data: Buffer) => {
-      this.logger.debug({ stderr: data.toString() }, "Tunnel stderr");
+      const text = data.toString();
+      stderrChunks.push(text);
+      this.logger.debug({ stderr: text }, "Tunnel stderr");
     });
 
-    // Wait for the tunnel to become ready. Kill the process if it fails.
+    // Race the readiness probe against early process exit so port-conflict
+    // errors from SSH/gh surface immediately instead of timing out.
+    const earlyExit = new Promise<never>((_resolve, reject) => {
+      this.process!.on("close", (code) => {
+        const stderr = stderrChunks.join("").trim();
+        reject(new Error(`Tunnel process exited with code ${code}${stderr ? `: ${stderr}` : ""}`));
+      });
+    });
+    // Prevent unhandled rejection if the process exits after open() succeeds.
+    earlyExit.catch(() => {});
+
     try {
-      await this.waitForReady();
+      await Promise.race([this.waitForReady(), earlyExit]);
     } catch (err) {
       await this.close();
       throw err;
