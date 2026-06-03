@@ -159,7 +159,7 @@ export function AgentLayout(): JSX.Element {
       <ContextDetailShell
         icon={<AgentAvatar name={agent.name} avatar={agent.avatar} />}
         name={agent.name}
-        onNavigateBack={() => navigate("/")}
+        onNavigateBack={() => navigate("/chat")}
         statusContent={
           agent.heartbeat ? <HeartbeatStatus heartbeat={agent.heartbeat} /> : undefined
         }
