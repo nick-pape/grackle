@@ -165,9 +165,18 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       { timeout: 10_000 },
     );
     // Enter the Code context so workbench tabs are visible. Dashboard
-    // is now a fleet page (no Code tab bar).
-    await page.locator('[data-testid="context-code"]').click();
-    await page.waitForURL(/\/chat/);
+    // is now a fleet page (no Code tab bar). On mobile viewports the
+    // context rail is hidden, so use direct navigation instead of clicking.
+    const codeBtn = page.locator('[data-testid="context-code"]');
+    if (await codeBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await codeBtn.click();
+      await page.waitForURL(/\/chat/);
+    } else {
+      await page.goto("/chat");
+      await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+        timeout: 5_000,
+      });
+    }
     await use(page);
   },
 
