@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add rich mock data for Refactor Bot and Security Auditor agents in demo mode",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
