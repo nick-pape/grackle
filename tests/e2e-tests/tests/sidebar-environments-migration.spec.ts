@@ -102,7 +102,7 @@ test.describe("Environments Page", { tag: ["@environment"] }, () => {
 });
 
 test.describe("Navigation Between Settings and Environments", { tag: ["@environment"] }, () => {
-  test("clicking Grackle brand from Settings returns to Chat", async ({ appPage }) => {
+  test("clicking Grackle brand from Settings returns to Dashboard", async ({ appPage }) => {
     const page = appPage;
 
     // Navigate to Settings
@@ -111,9 +111,8 @@ test.describe("Navigation Between Settings and Environments", { tag: ["@environm
 
     // Click Grackle brand to go home — lands on / (Dashboard, fleet)
     await page.getByTestId("statusbar-brand").click();
-
-    // Should navigate away from settings
-    await expect(page).not.toHaveURL(/\/settings/);
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.locator('[data-testid="dashboard"]')).toBeVisible({ timeout: 5_000 });
   });
 
   test("settings tab returns to Settings from environment view", async ({ appPage }) => {

@@ -87,10 +87,10 @@ export function ContextDetailShell({
         focusedIndex >= 0 ? focusedIndex : orderedTabs.findIndex((t) => t.id === activeTab);
       let nextIndex = currentIndex;
 
-      if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === "j" || e.key === "J") {
+      if (e.key === "ArrowRight" || e.key === "j" || e.key === "J") {
         e.preventDefault();
         nextIndex = (currentIndex + 1) % orderedTabs.length;
-      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp" || e.key === "k" || e.key === "K") {
+      } else if (e.key === "ArrowLeft" || e.key === "k" || e.key === "K") {
         e.preventDefault();
         nextIndex = (currentIndex - 1 + orderedTabs.length) % orderedTabs.length;
       } else if (e.key === "Home") {
