@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix N+1 queries in resolveAncestorEnvironmentId — batch ancestor + session lookups",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "nickpape@outlook.com"
+}
