@@ -123,12 +123,12 @@ export function ContextDetailShell({
         </button>
         <span className={styles.icon}>{icon}</span>
         <div className={styles.info}>
-          <h1
+          <h2
             className={styles.name}
             data-testid={headerTestId ? `${headerTestId}-name` : undefined}
           >
             {name}
-          </h1>
+          </h2>
           {statusContent}
         </div>
       </header>
