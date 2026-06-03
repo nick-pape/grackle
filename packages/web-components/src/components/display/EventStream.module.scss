@@ -14,7 +14,13 @@
 
 .scrollContainer {
   flex: 1;
-  overflow: auto;
+  min-height: 0;
+}
+
+// Padding applied to Virtuoso's internal scroller (via the
+// scrollerRef custom component). Using a class here lets Virtuoso
+// manage overflow while we control the visual padding.
+.scrollerPadding {
   padding: var(--space-md);
   // Extra top padding so the first event's hover action bar (positioned
   // above via top: -28px) is not clipped by the scroll container.

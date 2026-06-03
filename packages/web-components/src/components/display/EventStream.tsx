@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type JSX, type ReactNode } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type JSX,
+  type ReactNode,
+} from "react";
 import { AlertTriangle, ArrowDown, ArrowUp } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { Virtuoso } from "react-virtuoso";
@@ -395,6 +404,22 @@ export function EventStream({
     }
   }, [displayEvents.length, isReversed, isAtAnchor, selection.isSelecting]);
 
+  // Custom Scroller that applies padding and data-testid inside Virtuoso's
+  // scroll viewport. Virtuoso manages overflow; we only add visual padding.
+  const scrollerClassName = `${styles.scrollerPadding} ${selection.isSelecting ? styles.selectingPadding : ""}`;
+  const CustomScroller = useMemo(
+    () =>
+      forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => (
+        <div
+          {...props}
+          ref={ref}
+          className={`${props.className ?? ""} ${scrollerClassName}`}
+          data-testid="event-stream-scroll"
+        />
+      )),
+    [scrollerClassName],
+  );
+
   return (
     <div className={styles.wrapper}>
       {/* Direction toggle */}
@@ -423,8 +448,7 @@ export function EventStream({
       <Virtuoso
         key={String(isReversed)}
         ref={virtuosoRef}
-        data-testid="event-stream-scroll"
-        className={`${styles.scrollContainer} ${selection.isSelecting ? styles.selectingPadding : ""}`}
+        className={styles.scrollContainer}
         totalCount={displayEvents.length}
         overscan={VIRTUALIZER_OVERSCAN}
         computeItemKey={computeItemKey}
@@ -433,6 +457,7 @@ export function EventStream({
         initialTopMostItemIndex={isReversed ? 0 : displayEvents.length - 1}
         atBottomStateChange={handleAtBottomChange}
         atTopStateChange={handleAtTopChange}
+        components={{ Scroller: CustomScroller }}
       />
 
       {/* Floating action bar for multi-select mode */}
