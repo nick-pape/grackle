@@ -367,10 +367,11 @@ describe("CopilotRuntime — CopilotClient options", () => {
     vi.unstubAllEnvs();
   });
 
-  it("passes --yolo in cliArgs to enable headless auto-approval", async () => {
+  it("passes --yolo in cliArgs and V1-format permission handler", async () => {
     vi.stubEnv("GRACKLE_MCP_CONFIG", "");
 
-    const capturedOpts: Record<string, unknown>[] = [];
+    const capturedClientOpts: Record<string, unknown>[] = [];
+    const capturedSessionConfigs: Record<string, unknown>[] = [];
     const idleHandlers: Record<string, () => void> = {};
     const mockCopilotSession = {
       sessionId: "copilot-opts-session",
@@ -388,11 +389,14 @@ describe("CopilotRuntime — CopilotClient options", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       CopilotClient: class {
         constructor(opts?: Record<string, unknown>) {
-          capturedOpts.push(opts ?? {});
+          capturedClientOpts.push(opts ?? {});
           return {
             start: vi.fn(async () => {}),
             stop: vi.fn(async () => []),
-            createSession: vi.fn(async () => mockCopilotSession),
+            createSession: vi.fn(async (config: Record<string, unknown>) => {
+              capturedSessionConfigs.push(config);
+              return mockCopilotSession;
+            }),
             resumeSession: vi.fn(async () => mockCopilotSession),
           };
         }
@@ -420,8 +424,13 @@ describe("CopilotRuntime — CopilotClient options", () => {
       }
     }
 
-    expect(capturedOpts).toHaveLength(1);
-    expect(capturedOpts[0]!.cliArgs).toEqual(["--yolo"]);
+    expect(capturedClientOpts).toHaveLength(1);
+    expect(capturedClientOpts[0]!.cliArgs).toEqual(["--yolo"]);
+
+    expect(capturedSessionConfigs).toHaveLength(1);
+    const permHandler = capturedSessionConfigs[0]!.onPermissionRequest;
+    expect(permHandler).toBeTypeOf("function");
+    expect((permHandler as () => unknown)()).toEqual({ kind: "approve-once" });
   });
 });
 
