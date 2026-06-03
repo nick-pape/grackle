@@ -140,9 +140,9 @@ export const SendModeActive: Story = {
 };
 
 /**
- * The composer is multiline: a plain Enter inserts a newline and does NOT submit.
+ * Shift+Enter inserts a newline without submitting.
  */
-export const ComposerEnterInsertsNewline: Story = {
+export const ComposerShiftEnterInsertsNewline: Story = {
   args: {
     mode: "send",
     sessionId: "sess-1",
@@ -150,16 +150,16 @@ export const ComposerEnterInsertsNewline: Story = {
   },
   play: async ({ canvas, args }) => {
     const input = canvas.getByPlaceholderText("Type a message...");
-    await userEvent.type(input, "line one{Enter}line two");
+    await userEvent.type(input, "line one{Shift>}{Enter}{/Shift}line two");
     await expect(input).toHaveValue("line one\nline two");
     await expect(args.onSendInput).not.toHaveBeenCalled();
   },
 };
 
 /**
- * Ctrl/Cmd+Enter submits the composer (mirrors clicking Send) and clears the box.
+ * Enter submits the composer (mirrors clicking Send) and clears the box.
  */
-export const ComposerCtrlEnterSubmits: Story = {
+export const ComposerEnterSubmits: Story = {
   args: {
     mode: "send",
     sessionId: "sess-1",
@@ -168,7 +168,7 @@ export const ComposerCtrlEnterSubmits: Story = {
   play: async ({ canvas, args }) => {
     const input = canvas.getByPlaceholderText("Type a message...");
     await userEvent.type(input, "hello there");
-    await userEvent.keyboard("{Control>}{Enter}{/Control}");
+    await userEvent.keyboard("{Enter}");
     await expect(args.onSendInput).toHaveBeenCalledWith("sess-1", "hello there");
     await expect(input).toHaveValue("");
   },
