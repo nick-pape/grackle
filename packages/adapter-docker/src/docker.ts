@@ -514,8 +514,8 @@ export class DockerAdapter implements EnvironmentAdapter {
     yield { stage: "creating", message: `Creating container ${containerName}...`, progress: 0.1 };
 
     // Create or start the container (retry with a fresh port on TOCTOU conflict, #1486).
-    // On port-conflict failure, remove the partially-created container so the
-    // next attempt can recreate it with a fresh port mapping.
+    // On any failure, remove the partially-created container so a retry can
+    // recreate it with a fresh port mapping.
     const createContainer = async (port: number): Promise<{ port: number; isNew: boolean }> => {
       const runArgs = this.buildRunArgs(containerName, port, image, cfg, powerlineToken);
       try {
