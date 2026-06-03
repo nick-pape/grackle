@@ -21,7 +21,9 @@ vi.mock("../context/GrackleContext.js", () => ({
 
 vi.mock("@grackle-ai/web-components", () => ({
   KNOWLEDGE_URL: "/knowledge",
-  Breadcrumbs: () => null,
+  HOME_URL: "/",
+  buildHomeBreadcrumbs: () => [{ label: "Home", url: undefined }],
+  PageHeader: () => null,
   KnowledgeGraph: () => null,
   KnowledgeDetailPanel: () => null,
 }));

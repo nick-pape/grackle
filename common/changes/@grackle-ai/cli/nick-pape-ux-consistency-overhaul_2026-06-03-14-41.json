@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Fix AgentChatTab to render ChatInput for suspended sessions so the reconnect button remains reachable",
+      "comment": "UX consistency: sidebar nav for Personas/Schedules/Coordination, PageHeader with breadcrumbs and back-navigation on all pages",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

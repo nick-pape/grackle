@@ -11,3 +11,5 @@ export { ContextDetailShell, CODE_HEADER_ICON, AGENT_DETAIL_TABS } from "./Conte
 export type { ContextDetailShellProps, ContextDetailTab } from "./ContextDetailShell.js";
 export { Sidebar } from "./Sidebar.js";
 export { BottomStatusBar } from "./BottomStatusBar.js";
+export { PageHeader } from "./PageHeader.js";
+export type { PageHeaderProps } from "./PageHeader.js";

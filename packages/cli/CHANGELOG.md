@@ -1,6 +1,48 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 03 Jun 2026 07:01:24 GMT and should not be manually modified.
+This log was last generated on Wed, 03 Jun 2026 08:24:34 GMT and should not be manually modified.
+
+## 0.159.0
+Wed, 03 Jun 2026 08:24:34 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Add rich mock data for Refactor Bot and Security Auditor agents in demo mode
+
+## 0.158.0
+Wed, 03 Jun 2026 08:02:21 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Fix N+1 queries in resolveAncestorEnvironmentId — batch ancestor + session lookups
+
+## 0.157.0
+Wed, 03 Jun 2026 07:32:07 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Fix AgentChatTab to render ChatInput for suspended sessions so the reconnect button remains reachable
 
 ## 0.156.0
 Wed, 03 Jun 2026 07:01:24 GMT

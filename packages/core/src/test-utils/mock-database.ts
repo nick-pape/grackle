@@ -32,6 +32,7 @@ export function createDatabaseMock() {
       listSessionsForTask: vi.fn(() => []),
       listSessionsByTaskIds: vi.fn(() => []),
       getLatestSessionForTask: vi.fn(() => undefined),
+      getLatestSessionsByTaskIds: vi.fn(() => new Map()),
       getActiveForEnv: vi.fn(() => undefined),
       getActiveSessionsForTask: vi.fn(() => []),
       getSuspendedForEnv: vi.fn(() => []),

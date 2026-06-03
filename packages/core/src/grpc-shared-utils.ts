@@ -5,7 +5,6 @@
  */
 
 import { ConnectError, Code } from "@connectrpc/connect";
-import { MAX_TASK_DEPTH } from "@grackle-ai/common";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
@@ -46,19 +45,24 @@ export function toDialableHost(bindHost: string): string {
 /**
  * Walk up the task parent chain and return the environmentId from the first
  * ancestor that has a session. Returns empty string if no ancestor has one.
+ *
+ * Uses batch queries: getAncestors (1 getTask + 1 listTasks) + getLatestSessionsByTaskIds
+ * (1 session query) = 3 total instead of up to 2×MAX_TASK_DEPTH.
  */
 export function resolveAncestorEnvironmentId(parentTaskId: string): string {
-  let currentId = parentTaskId;
-  for (let i = 0; i < MAX_TASK_DEPTH && currentId; i++) {
-    const session = sessionStore.getLatestSessionForTask(currentId);
+  if (!parentTaskId) {
+    return "";
+  }
+  const ancestors = taskStore.getAncestors(parentTaskId);
+  const ancestorIds = [parentTaskId, ...[...ancestors].reverse().map((a) => a.id)];
+
+  const sessionMap = sessionStore.getLatestSessionsByTaskIds(ancestorIds);
+
+  for (const id of ancestorIds) {
+    const session = sessionMap.get(id);
     if (session?.environmentId) {
       return session.environmentId;
     }
-    const parent = taskStore.getTask(currentId);
-    if (!parent) {
-      break;
-    }
-    currentId = parent.parentTaskId;
   }
   return "";
 }

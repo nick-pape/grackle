@@ -306,6 +306,30 @@ export function getLatestSessionForTask(taskId: string): SessionRow | undefined 
     .get();
 }
 
+/**
+ * Batch-fetch the latest real session for each task ID in a single query.
+ * Mirrors {@link getLatestSessionForTask} semantics (excludes subagent children,
+ * orders by startedAt DESC) but batches all IDs to avoid N+1.
+ */
+export function getLatestSessionsByTaskIds(taskIds: string[]): Map<string, SessionRow> {
+  if (taskIds.length === 0) {
+    return new Map();
+  }
+  const rows = db
+    .select()
+    .from(sessions)
+    .where(and(inArray(sessions.taskId, taskIds), ne(sessions.runtime, SUBAGENT_RUNTIME)))
+    .orderBy(desc(sessions.startedAt), desc(sessions.id))
+    .all();
+  const result = new Map<string, SessionRow>();
+  for (const row of rows) {
+    if (!result.has(row.taskId)) {
+      result.set(row.taskId, row);
+    }
+  }
+  return result;
+}
+
 /** Get all active (non-terminal) sessions for a task. */
 export function getActiveSessionsForTask(taskId: string): SessionRow[] {
   return db

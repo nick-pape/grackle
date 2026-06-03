@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/adapter-docker",
-  "version": "0.156.0",
+  "version": "0.159.0",
   "description": "Grackle Docker environment adapter",
   "license": "MIT",
   "repository": {

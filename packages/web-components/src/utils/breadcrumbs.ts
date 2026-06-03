@@ -4,6 +4,7 @@ import {
   environmentUrl,
   HOME_URL,
   PERSONAS_URL,
+  SCHEDULES_URL,
   SETTINGS_URL,
   taskUrl,
   workspaceUrl,
@@ -67,6 +68,9 @@ const ENVIRONMENTS_SEGMENT: BreadcrumbSegment = { label: "Environments", url: EN
 /** Personas breadcrumb segment (links back to the top-level Persona Library). */
 const PERSONAS_SEGMENT: BreadcrumbSegment = { label: "Personas", url: PERSONAS_URL };
 
+/** Schedules breadcrumb segment (links back to the top-level Schedules page). */
+const SCHEDULES_SEGMENT: BreadcrumbSegment = { label: "Schedules", url: SCHEDULES_URL };
+
 /** Build breadcrumbs for the top-level Persona Library page. */
 export function buildPersonaLibraryBreadcrumbs(): BreadcrumbSegment[] {
   return [HOME_SEGMENT, { label: "Personas", url: undefined }];
@@ -75,6 +79,36 @@ export function buildPersonaLibraryBreadcrumbs(): BreadcrumbSegment[] {
 /** Build breadcrumbs for a persona detail (create or edit) page. */
 export function buildPersonaDetailBreadcrumbs(label: string): BreadcrumbSegment[] {
   return [HOME_SEGMENT, PERSONAS_SEGMENT, { label, url: undefined }];
+}
+
+/** Build breadcrumbs for the coordination page. */
+export function buildCoordinationBreadcrumbs(): BreadcrumbSegment[] {
+  return [HOME_SEGMENT, { label: "Coordination", url: undefined }];
+}
+
+/** Build breadcrumbs for the schedules list page. */
+export function buildSchedulesBreadcrumbs(): BreadcrumbSegment[] {
+  return [HOME_SEGMENT, { label: "Schedules", url: undefined }];
+}
+
+/** Build breadcrumbs for a schedule detail (create or edit) page. */
+export function buildScheduleDetailBreadcrumbs(label: string): BreadcrumbSegment[] {
+  return [HOME_SEGMENT, SCHEDULES_SEGMENT, { label, url: undefined }];
+}
+
+/** Build breadcrumbs for the sessions list page. */
+export function buildSessionsListBreadcrumbs(): BreadcrumbSegment[] {
+  return [HOME_SEGMENT, { label: "Sessions", url: undefined }];
+}
+
+/** Build breadcrumbs for an agent detail page. */
+export function buildAgentBreadcrumbs(agentName: string): BreadcrumbSegment[] {
+  return [HOME_SEGMENT, { label: agentName, url: undefined }];
+}
+
+/** Build breadcrumbs for the new agent page. */
+export function buildAgentCreateBreadcrumbs(): BreadcrumbSegment[] {
+  return [HOME_SEGMENT, { label: "New Agent", url: undefined }];
 }
 
 /** Build breadcrumbs for the environments landing page. */

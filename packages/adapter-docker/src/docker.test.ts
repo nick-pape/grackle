@@ -188,3 +188,59 @@ describe("DockerAdapter — DI exec for stop/destroy", () => {
     await expect(adapter.destroy("env-1", { containerName: "test" })).resolves.toBeUndefined();
   });
 });
+
+describe("DockerAdapter — create retry cleanup (#1486)", () => {
+  it("removes the container on port-conflict failure before withFreePort retries", async () => {
+    let runCallCount = 0;
+    let containerCreated = false;
+    const execFn = vi.fn(async (command: string, args: string[]) => {
+      if (command === "docker" && args[0] === "inspect") {
+        if (!containerCreated) {
+          throw new Error("No such object");
+        }
+        const fmtIdx = args.indexOf("-f");
+        const fmt = fmtIdx >= 0 ? (args[fmtIdx + 1] ?? "") : "";
+        if (fmt.includes("State.Running")) {
+          return { stdout: "true", stderr: "" };
+        }
+        if (fmt.includes("State.Status")) {
+          return { stdout: "running", stderr: "" };
+        }
+        return { stdout: "", stderr: "" };
+      }
+      if (command === "docker" && args[0] === "run") {
+        runCallCount++;
+        if (runCallCount === 1) {
+          throw new Error("address already in use");
+        }
+        containerCreated = true;
+        return { stdout: "", stderr: "" };
+      }
+      if (command === "docker" && args[0] === "rm") {
+        containerCreated = false;
+        return { stdout: "", stderr: "" };
+      }
+      return { stdout: "", stderr: "" };
+    });
+
+    const adapter = new DockerAdapter({ exec: execFn, sleep: mockSleep, logger: mockLogger });
+
+    const events: unknown[] = [];
+    for await (const event of adapter.provision(
+      "env-retry",
+      baseCfg() as unknown as Record<string, unknown>,
+      "test-token",
+    )) {
+      events.push(event);
+    }
+
+    // Container create should have been attempted twice
+    expect(runCallCount).toBe(2);
+
+    // The failed container should have been removed (docker rm -f) before retry
+    const rmCalls = execFn.mock.calls.filter(
+      ([cmd, args]: [string, string[]]) => cmd === "docker" && args[0] === "rm" && args[1] === "-f",
+    );
+    expect(rmCalls.length).toBeGreaterThanOrEqual(1);
+  });
+});

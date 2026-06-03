@@ -21,8 +21,8 @@ test.describe(
         "page",
         { timeout: 5_000 },
       );
-      // The PersonaManager renders an h2 with the page title.
-      await expect(page.getByRole("heading", { name: "Personas" })).toBeVisible({ timeout: 5_000 });
+      // The PersonaNav sidebar renders the persona navigation rail.
+      await expect(page.getByTestId("persona-nav")).toBeVisible({ timeout: 5_000 });
     });
 
     test("legacy /settings/personas redirects to /personas", async ({ appPage }) => {

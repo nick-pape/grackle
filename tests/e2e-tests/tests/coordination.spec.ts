@@ -23,29 +23,23 @@ test.describe("Coordination tab", { tag: ["@session"] }, () => {
     await expect(toggle).not.toBeChecked();
   });
 
-  test("List/Graph toggle switches the Coordination view", async ({ appPage }) => {
+  test("Sidebar list and main graph are both visible simultaneously", async ({ appPage }) => {
     const page = appPage;
 
-    await page.getByTestId("sidebar-tab-coordination").click();
+    const coordTab = page.getByTestId("context-nav").getByTestId("sidebar-tab-coordination");
+    await coordTab.click();
     await expect(page.getByTestId("coordination-page")).toBeVisible();
 
-    // Defaults to the list view.
+    // The stream list lives in the sidebar — always visible alongside the page.
     await expect(page.getByTestId("coordination-list")).toBeVisible();
-    await expect(page.getByTestId("coordination-view-graph")).toBeVisible();
 
-    // Switching to Graph hides the list and shows the graph (or its empty state).
-    await page.getByTestId("coordination-view-graph").click();
-    await expect(page.getByTestId("coordination-list")).toHaveCount(0);
+    // The graph (or its empty state) is always in the main content area.
     await expect(
       page.getByTestId("coordination-graph").or(page.getByTestId("coordination-graph-empty")),
     ).toBeVisible();
 
-    // Stream controls are page-level, so they remain available in Graph mode.
+    // Stream controls remain accessible in the sidebar list header.
     await expect(page.getByTestId("coordination-show-internals")).toBeVisible();
-
-    // Switching back restores the list.
-    await page.getByTestId("coordination-view-list").click();
-    await expect(page.getByTestId("coordination-list")).toBeVisible();
   });
 
   test("Chat has no stream inventory (that lives on Coordination)", async ({ appPage }) => {

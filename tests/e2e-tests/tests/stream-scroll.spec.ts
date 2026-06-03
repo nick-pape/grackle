@@ -71,9 +71,11 @@ test.describe("Stream smart scroll", { tag: ["@webui"] }, () => {
     await expect(toggle).toBeVisible();
     await toggle.click();
 
-    // Get text content after toggle — should be different (reversed order)
-    const textAfter = await scrollContainer.innerText();
-    expect(textBefore).not.toEqual(textAfter);
+    // The virtualized list remounts on toggle (key={String(isReversed)}), so
+    // poll until the text content changes — the remount is async.
+    await expect
+      .poll(async () => scrollContainer.innerText(), { timeout: 5_000 })
+      .not.toEqual(textBefore);
   });
 
   test("scroll-to-anchor FAB appears when scrolled away", async ({ stubTask }) => {

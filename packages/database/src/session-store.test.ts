@@ -374,4 +374,75 @@ describe("session-store", () => {
       expect(rows[0].parentSessionId).toBe("parent-1");
     });
   });
+
+  describe("getLatestSessionsByTaskIds", () => {
+    it("returns empty map for empty input", () => {
+      const result = sessionStore.getLatestSessionsByTaskIds([]);
+      expect(result.size).toBe(0);
+    });
+
+    it("returns latest session per task ID", () => {
+      sessionStore.createSession(
+        "s1",
+        "test-env",
+        "claude-code",
+        "prompt",
+        "model",
+        "/log",
+        "task-a",
+      );
+      sessionStore.createSession(
+        "s2",
+        "test-env",
+        "claude-code",
+        "prompt",
+        "model",
+        "/log",
+        "task-a",
+      );
+      sessionStore.createSession(
+        "s3",
+        "test-env",
+        "claude-code",
+        "prompt",
+        "model",
+        "/log",
+        "task-b",
+      );
+
+      const result = sessionStore.getLatestSessionsByTaskIds(["task-a", "task-b"]);
+      expect(result.size).toBe(2);
+      expect(result.get("task-a")!.id).toBe("s2");
+      expect(result.get("task-b")!.id).toBe("s3");
+    });
+
+    it("excludes subagent sessions", () => {
+      sessionStore.createSession(
+        "s1",
+        "test-env",
+        "claude-code",
+        "prompt",
+        "model",
+        "/log",
+        "task-a",
+      );
+      sessionStore.createSession(
+        "sub",
+        "test-env",
+        "subagent",
+        "prompt",
+        "model",
+        "/log",
+        "task-a",
+      );
+
+      const result = sessionStore.getLatestSessionsByTaskIds(["task-a"]);
+      expect(result.get("task-a")!.id).toBe("s1");
+    });
+
+    it("omits task IDs with no sessions", () => {
+      const result = sessionStore.getLatestSessionsByTaskIds(["nonexistent"]);
+      expect(result.size).toBe(0);
+    });
+  });
 });
