@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { loadOrCreateApiKey, verifyApiKey, _resetCachedKeyForTesting } from "./api-key.js";
@@ -18,6 +18,7 @@ describe("api-key", () => {
 
   afterEach(() => {
     _resetCachedKeyForTesting();
+    rmSync(tempDir, { recursive: true, force: true });
     if (savedEnv !== undefined) {
       process.env.GRACKLE_API_KEY = savedEnv;
     } else {
