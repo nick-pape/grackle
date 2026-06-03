@@ -40,6 +40,7 @@ const DEFAULT_MAX_CHUNK_SIZE: number = 4000;
 /** Labels used when rendering events into readable text. */
 const EVENT_LABELS: Record<string, string> = {
   user_input: "User",
+  turn_started: "User",
   text: "Assistant",
   tool_use: "Tool",
   tool_result: "Result",
@@ -126,13 +127,13 @@ function parseJsonl(content: string): LogEntry[] {
   return entries;
 }
 
-/** Group log entries into turns, splitting on `user_input` events. */
+/** Group log entries into turns, splitting on `user_input` or `turn_started` events. */
 function groupByTurn(entries: LogEntry[]): LogEntry[][] {
   const turns: LogEntry[][] = [];
   let current: LogEntry[] = [];
 
   for (const entry of entries) {
-    if (entry.type === "user_input" && current.length > 0) {
+    if ((entry.type === "user_input" || entry.type === "turn_started") && current.length > 0) {
       turns.push(current);
       current = [];
     }

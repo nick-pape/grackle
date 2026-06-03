@@ -1,6 +1,23 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 03 Jun 2026 08:24:34 GMT and should not be manually modified.
+This log was last generated on Wed, 03 Jun 2026 17:21:35 GMT and should not be manually modified.
+
+## 0.160.0
+Wed, 03 Jun 2026 17:21:35 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Fix TOCTOU race in findFreePort by adding withFreePort retry wrapper for port-conflict errors
+- Virtualize EventStream with react-virtuoso to render only visible rows, memoize event items with React.memo, and replace per-item Framer Motion with CSS animations
+- Chat input now submits on Enter and inserts a newline on Shift+Enter
+- UX consistency: sidebar nav for Personas/Schedules/Coordination, PageHeader with breadcrumbs and back-navigation on all pages
 
 ## 0.159.0
 Wed, 03 Jun 2026 08:24:34 GMT

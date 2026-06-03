@@ -473,7 +473,10 @@ export function EventRenderer({
     case "status":
       return <StatusEvent content={event.content} />;
     case "user_input":
+    case "turn_started":
       return <UserInputEvent content={event.content} />;
+    case "turn_complete":
+      return <></>;
     case "signal":
       return <SignalEvent content={event.content} />;
     case "usage":
