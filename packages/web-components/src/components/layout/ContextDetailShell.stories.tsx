@@ -119,6 +119,7 @@ export const KeyboardNavigation: Story = {
     activeTab: "chat",
     headerTestId: "code-header",
     tabBarTestId: "code-tab-bar",
+    onSelectTab: () => {},
   },
   play: async ({ canvas }) => {
     const tabs = canvas.getAllByRole("tab");
