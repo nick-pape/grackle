@@ -366,6 +366,141 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
   });
 });
 
+describe("CopilotRuntime — SDK 1.0 client option wiring", () => {
+  let capturedClientOpts: Record<string, unknown> | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockRuntimeConnection: { forStdio: any; forUri: any; forTcp: any };
+
+  beforeEach(() => {
+    vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+    vi.stubEnv("COPILOT_CLI_URL", "");
+    vi.stubEnv("COPILOT_CLI_PATH", "");
+    vi.stubEnv("COPILOT_GITHUB_TOKEN", "");
+    vi.stubEnv("GH_TOKEN", "");
+    vi.stubEnv("GITHUB_TOKEN", "");
+    capturedClientOpts = undefined;
+
+    const idleHandlers: Record<string, () => void> = {};
+    const mockCopilotSession = {
+      sessionId: "wiring-test",
+      on: vi.fn((event: string, fn: () => void) => {
+        idleHandlers[event] = fn;
+      }),
+      send: vi.fn(async () => {
+        setTimeout(() => idleHandlers["session.idle"]?.(), 0);
+      }),
+      disconnect: vi.fn(async () => {}),
+      abort: vi.fn(),
+    };
+
+    mockRuntimeConnection = {
+      forStdio: vi.fn(() => "stdio-conn"),
+      forUri: vi.fn((u: string) => `uri-conn:${u}`),
+      forTcp: vi.fn(() => "tcp-conn"),
+    };
+
+    _setCopilotSdkForTesting({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      CopilotClient: class {
+        constructor(opts?: Record<string, unknown>) {
+          capturedClientOpts = opts;
+          return {
+            stop: vi.fn(async () => []),
+            createSession: vi.fn(async () => mockCopilotSession),
+            resumeSession: vi.fn(async () => mockCopilotSession),
+          };
+        }
+      } as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      defineTool: vi.fn() as any,
+      approveAll: vi.fn(),
+      RuntimeConnection: mockRuntimeConnection,
+    });
+  });
+
+  afterEach(() => {
+    _setCopilotSdkForTesting(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  it("uses RuntimeConnection.forStdio by default", async () => {
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "wt-1",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    for await (const e of session.stream()) {
+      if (e.type === "status" && (e.content === "waiting_input" || e.content === "failed")) {
+        session.kill();
+        break;
+      }
+    }
+    expect(mockRuntimeConnection.forStdio).toHaveBeenCalledOnce();
+    expect(mockRuntimeConnection.forUri).not.toHaveBeenCalled();
+    expect(capturedClientOpts?.connection).toBe("stdio-conn");
+  });
+
+  it("uses RuntimeConnection.forUri when COPILOT_CLI_URL is set", async () => {
+    vi.stubEnv("COPILOT_CLI_URL", "localhost:4321");
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "wt-2",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    for await (const e of session.stream()) {
+      if (e.type === "status" && (e.content === "waiting_input" || e.content === "failed")) {
+        session.kill();
+        break;
+      }
+    }
+    expect(mockRuntimeConnection.forUri).toHaveBeenCalledWith("localhost:4321");
+    expect(mockRuntimeConnection.forStdio).not.toHaveBeenCalled();
+    expect(capturedClientOpts?.connection).toBe("uri-conn:localhost:4321");
+  });
+
+  it("passes gitHubToken (not githubToken) when a token env var is set", async () => {
+    vi.stubEnv("GH_TOKEN", "test-gh-token");
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "wt-3",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    for await (const e of session.stream()) {
+      if (e.type === "status" && (e.content === "waiting_input" || e.content === "failed")) {
+        session.kill();
+        break;
+      }
+    }
+    expect(capturedClientOpts?.gitHubToken).toBe("test-gh-token");
+    expect(capturedClientOpts?.useLoggedInUser).toBe(false);
+    expect((capturedClientOpts as Record<string, unknown>).githubToken).toBeUndefined();
+  });
+
+  it("sets useLoggedInUser when no token is available", async () => {
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "wt-4",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    for await (const e of session.stream()) {
+      if (e.type === "status" && (e.content === "waiting_input" || e.content === "failed")) {
+        session.kill();
+        break;
+      }
+    }
+    expect(capturedClientOpts?.useLoggedInUser).toBe(true);
+    expect(capturedClientOpts?.gitHubToken).toBeUndefined();
+  });
+});
+
 describe("CopilotRuntime — usage event emission", () => {
   beforeEach(() => {
     vi.stubEnv("GRACKLE_MCP_CONFIG", "");

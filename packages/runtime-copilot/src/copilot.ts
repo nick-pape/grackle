@@ -67,10 +67,8 @@ function getCopilotSdk(): Promise<CopilotSdkModule> {
         if (typeof mod.CopilotClient !== "function") {
           throw new Error("CopilotClient not found in @github/copilot-sdk");
         }
-        if (
-          !mod.RuntimeConnection ||
-          typeof (mod.RuntimeConnection as Record<string, unknown>).forStdio !== "function"
-        ) {
+        const rc = mod.RuntimeConnection as Record<string, unknown> | undefined;
+        if (!rc || typeof rc.forStdio !== "function" || typeof rc.forUri !== "function") {
           throw new Error("RuntimeConnection not found in @github/copilot-sdk — SDK 1.0+ required");
         }
         return {
