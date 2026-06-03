@@ -202,14 +202,14 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
    * UT-3: kill() still completes (and cleanup still runs) when abort() throws
    * synchronously or returns a rejected Promise — no uncaught exception surfaces.
    */
-  it("UT-3: kill() completes and cleanup (destroy) runs even when abort() throws synchronously", async () => {
+  it("UT-3: kill() completes and cleanup (disconnect) runs even when abort() throws synchronously", async () => {
     const session = new CopilotSession({ id: "s3", prompt: "prompt", model: "model", maxTurns: 0 });
-    const destroyFn = vi.fn(() => Promise.resolve());
+    const disconnectFn = vi.fn(() => Promise.resolve());
     const mockSdkSession = {
       abort: vi.fn(() => {
         throw new Error("SDK exploded");
       }),
-      disconnect: destroyFn,
+      disconnect: disconnectFn,
     };
     injectMockCopilotSession(session, mockSdkSession);
 
@@ -218,31 +218,31 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     expect(session.status).toBe("stopped");
 
     // releaseResources() fires cleanup() as a fire-and-forget; drain the microtask
-    // queue so the async cleanup path (destroy()) settles before we assert on it.
+    // queue so the async cleanup path (disconnect()) settles before we assert on it.
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(destroyFn).toHaveBeenCalledOnce();
+    expect(disconnectFn).toHaveBeenCalledOnce();
   });
 
-  it("UT-3b: kill() completes and cleanup (destroy) runs even when abort() returns a rejected Promise", async () => {
+  it("UT-3b: kill() completes and cleanup (disconnect) runs even when abort() returns a rejected Promise", async () => {
     const session = new CopilotSession({
       id: "s3b",
       prompt: "prompt",
       model: "model",
       maxTurns: 0,
     });
-    const destroyFn = vi.fn(() => Promise.resolve());
+    const disconnectFn = vi.fn(() => Promise.resolve());
     const mockSdkSession = {
       abort: vi.fn(() => Promise.reject(new Error("async abort failure"))),
-      disconnect: destroyFn,
+      disconnect: disconnectFn,
     };
     injectMockCopilotSession(session, mockSdkSession);
 
     expect(() => session.kill()).not.toThrow();
     expect(session.status).toBe("stopped");
     // Drain microtasks — the rejection must be swallowed, not unhandled,
-    // and the cleanup (destroy) path must still execute.
+    // and the cleanup (disconnect) path must still execute.
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(destroyFn).toHaveBeenCalledOnce();
+    expect(disconnectFn).toHaveBeenCalledOnce();
   });
 
   /**
