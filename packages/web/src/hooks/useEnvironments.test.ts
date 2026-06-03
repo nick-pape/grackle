@@ -213,13 +213,13 @@ describe("useEnvironments — operationError", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests: onDisconnect clears provision-status timers
+// Tests: provision-clear timer lifecycle (#1481)
 // ---------------------------------------------------------------------------
 
-describe("useEnvironments — onDisconnect clears provision timers", () => {
+describe("useEnvironments — provision-clear timer cleanup", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     mockClient.listEnvironments.mockResolvedValue({ environments: [] });
   });
 
@@ -227,33 +227,110 @@ describe("useEnvironments — onDisconnect clears provision timers", () => {
     vi.useRealTimers();
   });
 
-  it("cancels pending provision-clear timers so status persists after disconnect", () => {
+  function readyEvent(environmentId: string): {
+    id: string;
+    type: "environment.provision_progress";
+    timestamp: string;
+    payload: Record<string, unknown>;
+  } {
+    return {
+      id: "evt-1",
+      type: "environment.provision_progress",
+      timestamp: "2026-01-01T00:00:00Z",
+      payload: { environmentId, stage: "ready", message: "done", progress: 100 },
+    };
+  }
+
+  it("clears provision status after the delay", () => {
     const { result } = renderHook(() => useEnvironments());
 
     act(() => {
-      result.current.handleEvent({
-        id: "evt-1",
-        timestamp: "2026-01-01T00:00:00Z",
-        type: "environment.provision_progress",
-        payload: {
-          environmentId: "env-1",
-          stage: "ready",
-          message: "done",
-          progress: 100,
-        },
-      });
+      result.current.handleEvent(readyEvent("env-1"));
     });
-
     expect(result.current.provisionStatus["env-1"]).toBeDefined();
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(result.current.provisionStatus["env-1"]).toBeUndefined();
+  });
+
+  it("cancels the timer on unmount", () => {
+    const { result, unmount } = renderHook(() => useEnvironments());
+
+    act(() => {
+      result.current.handleEvent(readyEvent("env-1"));
+    });
+    expect(vi.getTimerCount()).toBe(1);
+
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("cancels timers and clears provisionStatus on onDisconnect", () => {
+    const { result } = renderHook(() => useEnvironments());
+
+    act(() => {
+      result.current.handleEvent(readyEvent("env-1"));
+    });
+    expect(result.current.provisionStatus["env-1"]).toBeDefined();
+    expect(vi.getTimerCount()).toBe(1);
 
     act(() => {
       result.current.domainHook.onDisconnect();
     });
+    expect(vi.getTimerCount()).toBe(0);
+    expect(result.current.provisionStatus).toEqual({});
+  });
+
+  it("deduplicates timers for the same environment", () => {
+    const { result } = renderHook(() => useEnvironments());
 
     act(() => {
-      vi.advanceTimersByTime(6_000);
+      result.current.handleEvent(readyEvent("env-1"));
     });
+    expect(vi.getTimerCount()).toBe(1);
 
+    act(() => {
+      result.current.handleEvent(readyEvent("env-1"));
+    });
+    expect(vi.getTimerCount()).toBe(1);
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(result.current.provisionStatus["env-1"]).toBeUndefined();
+
+    // Advancing again should not cause issues (only one timer was active)
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+  });
+
+  it("cancels the timer when environment.removed fires", () => {
+    const { result } = renderHook(() => useEnvironments());
+
+    act(() => {
+      result.current.handleEvent(readyEvent("env-1"));
+    });
     expect(result.current.provisionStatus["env-1"]).toBeDefined();
+    expect(vi.getTimerCount()).toBe(1);
+
+    act(() => {
+      result.current.handleEvent({
+        id: "evt-2",
+        type: "environment.removed",
+        timestamp: "2026-01-01T00:00:01Z",
+        payload: { environmentId: "env-1" },
+      });
+    });
+    expect(result.current.provisionStatus["env-1"]).toBeUndefined();
+    expect(vi.getTimerCount()).toBe(0);
+
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    // Timer was cancelled, no spurious state update
+    expect(result.current.provisionStatus["env-1"]).toBeUndefined();
   });
 });
