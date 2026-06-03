@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix AgentChatTab to render ChatInput for suspended sessions so the reconnect button remains reachable",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
