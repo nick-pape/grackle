@@ -14,8 +14,8 @@ function makePersona(overrides: Partial<PersonaResolveInput> = {}): PersonaResol
     model: "sonnet",
     maxTurns: 10,
     systemPrompt: "You are a helpful engineer.",
-    toolConfig: "{}",
-    mcpServers: "[]",
+    toolConfig: undefined,
+    mcpServers: [],
     type: "agent",
     script: "",
     ...overrides,
@@ -99,8 +99,8 @@ describe("resolvePersona", () => {
       model: "gpt-4.1",
       maxTurns: 5,
       systemPrompt: "Be concise.",
-      toolConfig: '{"allowed":["read"]}',
-      mcpServers: '[{"url":"http://localhost:8080"}]',
+      toolConfig: { allowedTools: ["read"], disallowedTools: [] },
+      mcpServers: [{ name: "local", command: "mcp", args: [], tools: [] }],
     });
 
     const result = resolvePersona("custom", undefined, undefined, undefined, lookupFrom([persona]));
@@ -111,8 +111,8 @@ describe("resolvePersona", () => {
       model: "gpt-4.1",
       maxTurns: 5,
       systemPrompt: "Be concise.",
-      toolConfig: '{"allowed":["read"]}',
-      mcpServers: '[{"url":"http://localhost:8080"}]',
+      toolConfig: { allowedTools: ["read"], disallowedTools: [] },
+      mcpServers: [{ name: "local", command: "mcp", args: [], tools: [] }],
       type: "agent",
       script: "",
     });
