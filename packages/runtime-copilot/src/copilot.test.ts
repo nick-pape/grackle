@@ -86,6 +86,67 @@ describe("resolveProviderConfig", () => {
   });
 });
 
+describe("getCopilotSdk — RuntimeConnection validation", () => {
+  afterEach(() => {
+    _setCopilotSdkForTesting(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  it("rejects SDK missing RuntimeConnection", async () => {
+    // Reset cache so getCopilotSdk() re-runs the import path with validation
+    _setCopilotSdkForTesting(undefined);
+    const { importFromRuntime } = await import("@grackle-ai/runtime-sdk");
+    vi.mocked(importFromRuntime).mockResolvedValueOnce({
+      CopilotClient: class {},
+      defineTool: vi.fn(),
+      approveAll: vi.fn(),
+    } as unknown as Record<string, unknown>);
+
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "rc-1",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    const events: AgentEvent[] = [];
+    for await (const e of session.stream()) {
+      events.push(e);
+      if (e.type === "status" && (e.content === "failed" || e.content === "waiting_input")) break;
+    }
+    expect(events.some((e) => e.type === "error" && e.content.includes("RuntimeConnection"))).toBe(
+      true,
+    );
+  });
+
+  it("rejects SDK with RuntimeConnection missing forUri", async () => {
+    _setCopilotSdkForTesting(undefined);
+    const { importFromRuntime } = await import("@grackle-ai/runtime-sdk");
+    vi.mocked(importFromRuntime).mockResolvedValueOnce({
+      CopilotClient: class {},
+      defineTool: vi.fn(),
+      approveAll: vi.fn(),
+      RuntimeConnection: { forStdio: vi.fn() },
+    } as unknown as Record<string, unknown>);
+
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "rc-2",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    const events: AgentEvent[] = [];
+    for await (const e of session.stream()) {
+      events.push(e);
+      if (e.type === "status" && (e.content === "failed" || e.content === "waiting_input")) break;
+    }
+    expect(events.some((e) => e.type === "error" && e.content.includes("RuntimeConnection"))).toBe(
+      true,
+    );
+  });
+});
+
 describe("CopilotRuntime structural", () => {
   it("has name 'copilot'", () => {
     const runtime = new CopilotRuntime();
@@ -102,7 +163,7 @@ describe("CopilotRuntime structural", () => {
     });
     expect(session.id).toBe("cop-1");
     expect(session.runtimeName).toBe("copilot");
-    expect(session.status).toBe("running");
+    expect(session.status).toBe("pending");
   });
 
   it("resume sets runtimeSessionId from options", () => {
@@ -172,7 +233,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
       abort: vi.fn(() => {
         /* synchronous, returns undefined (void) */
       }),
-      destroy: vi.fn(() => Promise.resolve()),
+      disconnect: vi.fn(() => Promise.resolve()),
     };
     injectMockCopilotSession(session, mockSdkSession);
 
@@ -188,7 +249,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     const session = new CopilotSession({ id: "s2", prompt: "prompt", model: "model", maxTurns: 0 });
     const mockSdkSession = {
       abort: vi.fn(() => Promise.resolve()),
-      destroy: vi.fn(() => Promise.resolve()),
+      disconnect: vi.fn(() => Promise.resolve()),
     };
     injectMockCopilotSession(session, mockSdkSession);
 
@@ -202,14 +263,14 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
    * UT-3: kill() still completes (and cleanup still runs) when abort() throws
    * synchronously or returns a rejected Promise — no uncaught exception surfaces.
    */
-  it("UT-3: kill() completes and cleanup (destroy) runs even when abort() throws synchronously", async () => {
+  it("UT-3: kill() completes and cleanup (disconnect) runs even when abort() throws synchronously", async () => {
     const session = new CopilotSession({ id: "s3", prompt: "prompt", model: "model", maxTurns: 0 });
-    const destroyFn = vi.fn(() => Promise.resolve());
+    const disconnectFn = vi.fn(() => Promise.resolve());
     const mockSdkSession = {
       abort: vi.fn(() => {
         throw new Error("SDK exploded");
       }),
-      destroy: destroyFn,
+      disconnect: disconnectFn,
     };
     injectMockCopilotSession(session, mockSdkSession);
 
@@ -218,31 +279,31 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     expect(session.status).toBe("stopped");
 
     // releaseResources() fires cleanup() as a fire-and-forget; drain the microtask
-    // queue so the async cleanup path (destroy()) settles before we assert on it.
+    // queue so the async cleanup path (disconnect()) settles before we assert on it.
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(destroyFn).toHaveBeenCalledOnce();
+    expect(disconnectFn).toHaveBeenCalledOnce();
   });
 
-  it("UT-3b: kill() completes and cleanup (destroy) runs even when abort() returns a rejected Promise", async () => {
+  it("UT-3b: kill() completes and cleanup (disconnect) runs even when abort() returns a rejected Promise", async () => {
     const session = new CopilotSession({
       id: "s3b",
       prompt: "prompt",
       model: "model",
       maxTurns: 0,
     });
-    const destroyFn = vi.fn(() => Promise.resolve());
+    const disconnectFn = vi.fn(() => Promise.resolve());
     const mockSdkSession = {
       abort: vi.fn(() => Promise.reject(new Error("async abort failure"))),
-      destroy: destroyFn,
+      disconnect: disconnectFn,
     };
     injectMockCopilotSession(session, mockSdkSession);
 
     expect(() => session.kill()).not.toThrow();
     expect(session.status).toBe("stopped");
     // Drain microtasks — the rejection must be swallowed, not unhandled,
-    // and the cleanup (destroy) path must still execute.
+    // and the cleanup (disconnect) path must still execute.
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(destroyFn).toHaveBeenCalledOnce();
+    expect(disconnectFn).toHaveBeenCalledOnce();
   });
 
   /**
@@ -253,7 +314,7 @@ describe("CopilotSession.kill — abort path (UT-1 through UT-4)", () => {
     const session = new CopilotSession({ id: "s4", prompt: "prompt", model: "model", maxTurns: 0 });
     const mockSdkSession = {
       abort: vi.fn(() => Promise.resolve()),
-      destroy: vi.fn(() => Promise.resolve()),
+      disconnect: vi.fn(() => Promise.resolve()),
     };
     injectMockCopilotSession(session, mockSdkSession);
 
@@ -304,7 +365,7 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
       send: vi.fn(async () => {
         setTimeout(() => idleHandlers["session.idle"]?.(), 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
     };
     const mockCopilotClient = {
@@ -324,6 +385,11 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: {
+        forStdio: vi.fn(() => "stdio-conn"),
+        forUri: vi.fn((u: string) => u),
+        forTcp: vi.fn(() => "tcp-conn"),
+      },
     });
   });
 
@@ -361,40 +427,50 @@ describe("CopilotRuntime — runtime_session_id emission", () => {
   });
 });
 
-describe("CopilotRuntime — CopilotClient options", () => {
-  afterEach(() => {
-    _setCopilotSdkForTesting(undefined);
-    vi.unstubAllEnvs();
-  });
+describe("CopilotRuntime — SDK 1.0 client option wiring", () => {
+  let capturedClientOpts: Record<string, unknown> | undefined;
+  let capturedSessionConfig: Record<string, unknown> | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockRuntimeConnection: { forStdio: any; forUri: any; forTcp: any };
 
-  it("passes --yolo in cliArgs and V1-format permission handler", async () => {
+  beforeEach(() => {
     vi.stubEnv("GRACKLE_MCP_CONFIG", "");
+    vi.stubEnv("COPILOT_CLI_URL", "");
+    vi.stubEnv("COPILOT_CLI_PATH", "");
+    vi.stubEnv("COPILOT_GITHUB_TOKEN", "");
+    vi.stubEnv("GH_TOKEN", "");
+    vi.stubEnv("GITHUB_TOKEN", "");
+    capturedClientOpts = undefined;
+    capturedSessionConfig = undefined;
 
-    const capturedClientOpts: Record<string, unknown>[] = [];
-    const capturedSessionConfigs: Record<string, unknown>[] = [];
     const idleHandlers: Record<string, () => void> = {};
     const mockCopilotSession = {
-      sessionId: "copilot-opts-session",
+      sessionId: "wiring-test",
       on: vi.fn((event: string, fn: () => void) => {
         idleHandlers[event] = fn;
       }),
       send: vi.fn(async () => {
         setTimeout(() => idleHandlers["session.idle"]?.(), 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
+    };
+
+    mockRuntimeConnection = {
+      forStdio: vi.fn(() => "stdio-conn"),
+      forUri: vi.fn((u: string) => `uri-conn:${u}`),
+      forTcp: vi.fn(() => "tcp-conn"),
     };
 
     _setCopilotSdkForTesting({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       CopilotClient: class {
         constructor(opts?: Record<string, unknown>) {
-          capturedClientOpts.push(opts ?? {});
+          capturedClientOpts = opts;
           return {
-            start: vi.fn(async () => {}),
             stop: vi.fn(async () => []),
             createSession: vi.fn(async (config: Record<string, unknown>) => {
-              capturedSessionConfigs.push(config);
+              capturedSessionConfig = config;
               return mockCopilotSession;
             }),
             resumeSession: vi.fn(async () => mockCopilotSession),
@@ -404,31 +480,108 @@ describe("CopilotRuntime — CopilotClient options", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: mockRuntimeConnection,
     });
+  });
 
+  afterEach(() => {
+    _setCopilotSdkForTesting(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  it("uses RuntimeConnection.forStdio by default", async () => {
     const runtime = new CopilotRuntime();
     const session = runtime.spawn({
-      sessionId: "cop-opts-test",
+      sessionId: "wt-1",
       prompt: "hi",
       model: "gpt-4o",
       maxTurns: 1,
     });
-
-    for await (const event of session.stream()) {
-      if (
-        event.type === "status" &&
-        (event.content === "waiting_input" || event.content === "failed")
-      ) {
+    for await (const e of session.stream()) {
+      if (e.type === "status" && (e.content === "waiting_input" || e.content === "failed")) {
         session.kill();
         break;
       }
     }
+    expect(mockRuntimeConnection.forStdio).toHaveBeenCalledOnce();
+    expect(mockRuntimeConnection.forUri).not.toHaveBeenCalled();
+    expect(capturedClientOpts?.connection).toBe("stdio-conn");
+  });
 
-    expect(capturedClientOpts).toHaveLength(1);
-    expect(capturedClientOpts[0]!.cliArgs).toEqual(["--yolo"]);
+  it("uses RuntimeConnection.forUri when COPILOT_CLI_URL is set", async () => {
+    vi.stubEnv("COPILOT_CLI_URL", "localhost:4321");
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "wt-2",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    for await (const e of session.stream()) {
+      if (e.type === "status" && (e.content === "waiting_input" || e.content === "failed")) {
+        session.kill();
+        break;
+      }
+    }
+    expect(mockRuntimeConnection.forUri).toHaveBeenCalledWith("localhost:4321");
+    expect(mockRuntimeConnection.forStdio).not.toHaveBeenCalled();
+    expect(capturedClientOpts?.connection).toBe("uri-conn:localhost:4321");
+  });
 
-    expect(capturedSessionConfigs).toHaveLength(1);
-    const permHandler = capturedSessionConfigs[0]!.onPermissionRequest;
+  it("passes gitHubToken (not githubToken) when a token env var is set", async () => {
+    vi.stubEnv("GH_TOKEN", "test-gh-token");
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "wt-3",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    for await (const e of session.stream()) {
+      if (e.type === "status" && (e.content === "waiting_input" || e.content === "failed")) {
+        session.kill();
+        break;
+      }
+    }
+    expect(capturedClientOpts?.gitHubToken).toBe("test-gh-token");
+    expect(capturedClientOpts?.useLoggedInUser).toBe(false);
+    expect((capturedClientOpts as Record<string, unknown>).githubToken).toBeUndefined();
+  });
+
+  it("sets useLoggedInUser when no token is available", async () => {
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "wt-4",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    for await (const e of session.stream()) {
+      if (e.type === "status" && (e.content === "waiting_input" || e.content === "failed")) {
+        session.kill();
+        break;
+      }
+    }
+    expect(capturedClientOpts?.useLoggedInUser).toBe(true);
+    expect(capturedClientOpts?.gitHubToken).toBeUndefined();
+  });
+
+  it("passes approve-once permission handler in session config", async () => {
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "wt-5",
+      prompt: "hi",
+      model: "gpt-4o",
+      maxTurns: 1,
+    });
+    for await (const e of session.stream()) {
+      if (e.type === "status" && (e.content === "waiting_input" || e.content === "failed")) {
+        session.kill();
+        break;
+      }
+    }
+    expect(capturedSessionConfig).toBeDefined();
+    const permHandler = capturedSessionConfig!.onPermissionRequest;
     expect(permHandler).toBeTypeOf("function");
     expect((permHandler as () => unknown)()).toEqual({ kind: "approve-once" });
   });
@@ -462,7 +615,7 @@ describe("CopilotRuntime — usage event emission", () => {
           handlers["session.idle"]?.();
         }, 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
     };
     const mockCopilotClient = {
@@ -482,6 +635,11 @@ describe("CopilotRuntime — usage event emission", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: {
+        forStdio: vi.fn(() => "stdio-conn"),
+        forUri: vi.fn((u: string) => u),
+        forTcp: vi.fn(() => "tcp-conn"),
+      },
     });
   });
 
@@ -545,7 +703,7 @@ describe("CopilotRuntime — tool-call id (AHP HR3)", () => {
           handlers["session.idle"]?.();
         }, 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
     };
     const mockCopilotClient = {
@@ -565,6 +723,11 @@ describe("CopilotRuntime — tool-call id (AHP HR3)", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: {
+        forStdio: vi.fn(() => "stdio-conn"),
+        forUri: vi.fn((u: string) => u),
+        forTcp: vi.fn(() => "tcp-conn"),
+      },
     });
   });
 
@@ -632,7 +795,7 @@ describe("CopilotRuntime — multi-turn", () => {
           handlers["session.idle"]?.();
         }, 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
     };
     mockCopilotClient = {
@@ -652,6 +815,11 @@ describe("CopilotRuntime — multi-turn", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: {
+        forStdio: vi.fn(() => "stdio-conn"),
+        forUri: vi.fn((u: string) => u),
+        forTcp: vi.fn(() => "tcp-conn"),
+      },
     });
   });
 
@@ -729,7 +897,7 @@ describe("CopilotRuntime — multi-turn", () => {
           handlers["session.idle"]?.();
         }, 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
     };
     mockCopilotClient = {
@@ -748,6 +916,11 @@ describe("CopilotRuntime — multi-turn", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: {
+        forStdio: vi.fn(() => "stdio-conn"),
+        forUri: vi.fn((u: string) => u),
+        forTcp: vi.fn(() => "tcp-conn"),
+      },
     });
 
     const { session, nextEvent } = spawnSession();
@@ -799,7 +972,7 @@ describe("CopilotRuntime — multi-turn", () => {
           usageHandlers["session.idle"]?.();
         }, 0);
       }),
-      destroy: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
       abort: vi.fn(),
     };
 
@@ -819,6 +992,11 @@ describe("CopilotRuntime — multi-turn", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       defineTool: vi.fn() as any,
       approveAll: vi.fn(),
+      RuntimeConnection: {
+        forStdio: vi.fn(() => "stdio-conn"),
+        forUri: vi.fn((u: string) => u),
+        forTcp: vi.fn(() => "tcp-conn"),
+      },
     });
 
     const { session, nextEvent } = spawnSession();

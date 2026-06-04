@@ -55,6 +55,7 @@ export function PersonaDetailPage(): JSX.Element {
   return (
     <div className={styles.container}>
       <PersonaForm
+        key={personaId ?? "new"}
         existing={existing}
         isNew={isNew}
         appDefaultPersonaId={appDefaultPersonaId}

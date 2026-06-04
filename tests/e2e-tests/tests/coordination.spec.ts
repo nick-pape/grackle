@@ -1,12 +1,12 @@
 import { test, expect } from "./fixtures.js";
 
 test.describe("Coordination tab", { tag: ["@session"] }, () => {
-  test("nav shows Root + Coordination, and Coordination opens the inventory", async ({
+  test("nav shows Chat + Coordination, and Coordination opens the inventory", async ({
     appPage,
   }) => {
     const page = appPage;
 
-    // Root lives in the view bar; Coordination now lives at the fleet altitude
+    // Chat lives in the view bar; Coordination now lives at the fleet altitude
     // in the context rail (#1415), not the flat tab row.
     await expect(page.getByTestId("sidebar-tab-chat")).toBeVisible();
     const coordTab = page.getByTestId("context-nav").getByTestId("sidebar-tab-coordination");
@@ -42,7 +42,7 @@ test.describe("Coordination tab", { tag: ["@session"] }, () => {
     await expect(page.getByTestId("coordination-show-internals")).toBeVisible();
   });
 
-  test("Root has no stream inventory (that lives on Coordination)", async ({ appPage }) => {
+  test("Chat has no stream inventory (that lives on Coordination)", async ({ appPage }) => {
     const page = appPage;
 
     await page.getByTestId("sidebar-tab-chat").click();

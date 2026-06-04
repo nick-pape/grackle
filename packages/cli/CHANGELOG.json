@@ -2,6 +2,58 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.165.0",
+      "tag": "@grackle-ai/cli_v0.165.0",
+      "date": "Thu, 04 Jun 2026 02:56:46 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417)."
+          },
+          {
+            "comment": "Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438)."
+          }
+        ],
+        "patch": [
+          {
+            "comment": "`grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418)."
+          },
+          {
+            "comment": "Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438)."
+          },
+          {
+            "comment": "Extract shared ContextDetailShell for Code and Agent context headers"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.164.0",
+      "tag": "@grackle-ai/cli_v0.164.0",
+      "date": "Thu, 04 Jun 2026 02:30:57 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417)."
+          },
+          {
+            "comment": "Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438)."
+          }
+        ],
+        "patch": [
+          {
+            "comment": "`grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418)."
+          },
+          {
+            "comment": "Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438)."
+          },
+          {
+            "comment": "Update all runtime SDKs: Claude Agent SDK 0.3, Copilot SDK 1.0, Codex SDK 0.136, ACP SDK 0.24, and ACP bridge CLIs"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.163.0",
       "tag": "@grackle-ai/cli_v0.163.0",
       "date": "Wed, 03 Jun 2026 20:15:23 GMT",

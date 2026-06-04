@@ -1,6 +1,34 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 03 Jun 2026 20:15:23 GMT and should not be manually modified.
+This log was last generated on Thu, 04 Jun 2026 02:56:46 GMT and should not be manually modified.
+
+## 0.165.0
+Thu, 04 Jun 2026 02:56:46 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Extract shared ContextDetailShell for Code and Agent context headers
+
+## 0.164.0
+Thu, 04 Jun 2026 02:30:57 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Update all runtime SDKs: Claude Agent SDK 0.3, Copilot SDK 1.0, Codex SDK 0.136, ACP SDK 0.24, and ACP bridge CLIs
 
 ## 0.163.0
 Wed, 03 Jun 2026 20:15:23 GMT

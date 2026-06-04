@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/runtime-sdk",
-  "version": "0.163.0",
+  "version": "0.165.0",
   "description": "Grackle runtime SDK — interfaces, base classes, shared utilities, and runtime installer",
   "license": "MIT",
   "repository": {

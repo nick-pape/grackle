@@ -439,7 +439,7 @@ class CodexSession extends BaseAgentSession {
               { turnCount: this.turnCount, maxTurns: this.maxTurns },
               "Codex max turns reached — going idle",
             );
-            this.status = SESSION_STATUS.IDLE;
+            this.transitionTo(SESSION_STATUS.IDLE);
             this.emit({ type: "status", timestamp: ts(), content: "waiting_input" });
             if (this.activeStream && typeof this.activeStream.abort === "function") {
               this.activeStream.abort();

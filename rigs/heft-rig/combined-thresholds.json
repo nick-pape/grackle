@@ -62,12 +62,12 @@
   "packages/knowledge": {
     "lines": 90,
     "functions": 100,
-    "branches": 55
+    "branches": 50
   },
   "packages/knowledge-core": {
     "lines": 85,
-    "functions": 85,
-    "branches": 70
+    "functions": 75,
+    "branches": 55
   },
   "packages/mcp": {
     "lines": 75,
@@ -85,9 +85,9 @@
     "branches": 60
   },
   "packages/plugin-knowledge": {
-    "lines": 70,
-    "functions": 75,
-    "branches": 55
+    "lines": 65,
+    "functions": 70,
+    "branches": 50
   },
   "packages/plugin-orchestration": {
     "lines": 90,

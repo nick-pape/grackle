@@ -24,7 +24,7 @@ type Story = StoryObj<typeof meta>;
 export const AllTabsRendered: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Dashboard/ })).toBeInTheDocument();
-    await expect(canvas.getByRole("tab", { name: /Root/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Chat/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Environments/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Knowledge/ })).toBeInTheDocument();
@@ -46,7 +46,7 @@ export const CoreOnlyTabs: Story = {
       },
       {
         view: "chat",
-        label: "Root",
+        label: "Chat",
         icon: <MessageSquare size={ICON_LG} />,
         route: CHAT_URL,
         testId: "sidebar-tab-chat",
@@ -69,7 +69,7 @@ export const CoreOnlyTabs: Story = {
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Dashboard/ })).toBeInTheDocument();
-    await expect(canvas.getByRole("tab", { name: /Root/ })).toBeInTheDocument();
+    await expect(canvas.getByRole("tab", { name: /Chat/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Environments/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Settings/ })).toBeInTheDocument();
     await expect(canvas.queryByRole("tab", { name: /Tasks/ })).not.toBeInTheDocument();
@@ -91,7 +91,7 @@ export const AllTabsExplicit: Story = {
       },
       {
         view: "chat",
-        label: "Root",
+        label: "Chat",
         icon: <MessageSquare size={ICON_LG} />,
         route: CHAT_URL,
         testId: "sidebar-tab-chat",
@@ -152,7 +152,7 @@ export const SettingsPinnedRight: Story = {
       },
       {
         view: "chat",
-        label: "Root",
+        label: "Chat",
         icon: <MessageSquare size={ICON_LG} />,
         route: CHAT_URL,
         testId: "sidebar-tab-chat",
@@ -278,7 +278,7 @@ export const GlobalClusterEndAligned: Story = {
     // Settings is rightmost (sole global/end-aligned tab after #1419).
     await expect(tabs[tabs.length - 1]).toHaveAccessibleName(/Settings/);
     // Workbench views lead the row.
-    await expect(tabs[0]).toHaveAccessibleName(/Dashboard/);
+    await expect(tabs[0]).toHaveAccessibleName(/Chat/);
   },
 };
 
@@ -292,7 +292,8 @@ export const WorkbenchAndFleetOnly: Story = {
   args: { groups: ["workbench", "fleet"] },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
-    // Fleet surfaces: Coordination, Personas, Environments, Schedules (#1419).
+    // Fleet surfaces: Dashboard, Coordination, Personas, Environments, Schedules.
+    await expect(canvas.getByRole("tab", { name: /Dashboard/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Coordination/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Personas/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Environments/ })).toBeInTheDocument();
@@ -314,6 +315,7 @@ export const WorkbenchAndGlobalOnly: Story = {
     await expect(canvas.getByRole("tab", { name: /Tasks/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Settings/ })).toBeInTheDocument();
     // All fleet tabs absent from the workbench+global bar.
+    await expect(canvas.queryByRole("tab", { name: /Dashboard/ })).not.toBeInTheDocument();
     await expect(canvas.queryByRole("tab", { name: /Coordination/ })).not.toBeInTheDocument();
     await expect(canvas.queryByRole("tab", { name: /Personas/ })).not.toBeInTheDocument();
     await expect(canvas.queryByRole("tab", { name: /Environments/ })).not.toBeInTheDocument();
