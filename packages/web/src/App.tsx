@@ -74,7 +74,6 @@ import { WorkspaceCreatePage } from "./pages/WorkspaceCreatePage.js";
 import { NewTaskPage } from "./pages/NewTaskPage.js";
 import { TaskPage } from "./pages/TaskPage.js";
 import { NewEnvironmentPage } from "./pages/NewEnvironmentPage.js";
-import { EnvironmentEditPage } from "./pages/EnvironmentEditPage.js";
 import { EnvironmentsPage } from "./pages/EnvironmentsPage.js";
 import { EnvironmentDetailPage } from "./pages/EnvironmentDetailPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
@@ -662,7 +661,6 @@ function AppRoutes(): JSX.Element {
             <Route index element={<EnvironmentsEmptyPage />} />
             <Route path="new" element={<NewEnvironmentPage />} />
             <Route path=":environmentId" element={<EnvironmentDetailPage />} />
-            <Route path=":environmentId/edit" element={<EnvironmentEditPage />} />
           </Route>
         </Route>
 

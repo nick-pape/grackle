@@ -295,7 +295,6 @@ export {
   ENVIRONMENTS_URL,
   NEW_ENVIRONMENT_URL,
   environmentUrl,
-  environmentEditUrl,
   SETTINGS_URL,
   SETTINGS_ENVIRONMENTS_URL,
   SETTINGS_CREDENTIALS_URL,
@@ -321,6 +320,8 @@ export {
   TASKS_URL,
 } from "./utils/navigation.js";
 export type { AgentTab } from "./utils/navigation.js";
+
+export { isPortValid, parseAdapterConfig } from "./utils/environmentUtils.js";
 
 export {
   TASK_STATUS_STYLES,

@@ -24,6 +24,10 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+// ---------------------------------------------------------------------------
+// Existing stories: lifecycle + workspaces
+// ---------------------------------------------------------------------------
+
 /** New Chat button is visible and enabled for a connected environment. */
 export const NewChatButtonVisible: Story = {
   render: () => <DetailRouteWrapper envId="env-local-01" />,
@@ -37,12 +41,9 @@ export const NewChatButtonVisible: Story = {
 
 /** Workspaces section shows workspaces that include this env in their pool. */
 export const LinkedWorkspacesVisible: Story = {
-  // env-docker-01 is linked to proj-alpha (which has primary env-local-01)
   render: () => <DetailRouteWrapper envId="env-docker-01" />,
   play: async ({ canvas }) => {
-    // The "Workspaces" heading should be present
     await expect(canvas.getByText("Workspaces")).toBeInTheDocument();
-    // At least one linked workspace card (e.g., proj-alpha / Workspace Alpha) should appear
     const linkedWorkspaceCards = canvas.getAllByTestId("workspace-card");
     await expect(linkedWorkspaceCards.length).toBeGreaterThan(0);
   },
@@ -50,7 +51,6 @@ export const LinkedWorkspacesVisible: Story = {
 
 /** Workspaces section shows empty state when no workspaces are linked. */
 export const LinkedWorkspacesEmpty: Story = {
-  // env-cs-01 has no workspaces linked to it in mock data
   render: () => <DetailRouteWrapper envId="env-cs-01" />,
   play: async ({ canvas }) => {
     await expect(canvas.getByText("Workspaces")).toBeInTheDocument();
@@ -62,7 +62,6 @@ export const LinkedWorkspacesEmpty: Story = {
 export const UnlinkButtonOnCard: Story = {
   render: () => <DetailRouteWrapper envId="env-docker-01" />,
   play: async ({ canvas }) => {
-    // proj-alpha is linked to env-docker-01
     const unlinkButton = canvas.getByTestId("unlink-workspace-proj-alpha");
     await expect(unlinkButton).toBeInTheDocument();
     await expect(unlinkButton).toHaveTextContent("Unlink");
@@ -73,10 +72,8 @@ export const UnlinkButtonOnCard: Story = {
 export const LinkErrorShowsMessage: Story = {
   render: () => <DetailRouteWrapper envId="error-env" />,
   play: async ({ canvas }) => {
-    // Select a workspace from the link dropdown to trigger a mock error
     const linkSelect = canvas.getByTestId("link-workspace-select");
     await userEvent.selectOptions(linkSelect, "proj-alpha");
-    // Error message should appear
     await waitFor(() => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       expect(canvas.getByTestId("link-operation-error")).toBeInTheDocument();
@@ -91,14 +88,12 @@ export const LinkErrorShowsMessage: Story = {
 export const LinkErrorDismissible: Story = {
   render: () => <DetailRouteWrapper envId="error-env" />,
   play: async ({ canvas }) => {
-    // Trigger the error first
     const linkSelect = canvas.getByTestId("link-workspace-select");
     await userEvent.selectOptions(linkSelect, "proj-alpha");
     await waitFor(() => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       expect(canvas.getByTestId("link-operation-error")).toBeInTheDocument();
     });
-    // Click the dismiss button
     await userEvent.click(canvas.getByTestId("dismiss-link-error"));
     await waitFor(() => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -111,16 +106,87 @@ export const LinkErrorDismissible: Story = {
 export const UnlinkRemovesCard: Story = {
   render: () => <DetailRouteWrapper envId="env-docker-01" />,
   play: async ({ canvas }) => {
-    // proj-alpha is linked to env-docker-01
     await expect(canvas.getByTestId("unlink-workspace-proj-alpha")).toBeInTheDocument();
-    // Click Unlink
     await userEvent.click(canvas.getByTestId("unlink-workspace-proj-alpha"));
-    // proj-alpha card should disappear (its unlink button is gone)
     await waitFor(() => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       expect(canvas.queryByTestId("unlink-workspace-proj-alpha")).not.toBeInTheDocument();
     });
-    // proj-beta card remains
     await expect(canvas.getByTestId("unlink-workspace-proj-beta")).toBeInTheDocument();
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Inline config editing stories
+// ---------------------------------------------------------------------------
+
+/** Configuration section shows host and port fields for a local adapter environment. */
+export const ConfigFieldsLocalAdapter: Story = {
+  render: () => <DetailRouteWrapper envId="env-local-01" />,
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("env-config-section")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-adapter-type")).toHaveTextContent("local");
+    await expect(canvas.getByTestId("env-edit-host")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-port")).toBeInTheDocument();
+  },
+};
+
+/** Configuration section shows SSH-specific fields for an SSH adapter environment. */
+export const ConfigFieldsSshAdapter: Story = {
+  render: () => <DetailRouteWrapper envId="env-remote-01" />,
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("env-config-section")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-adapter-type")).toHaveTextContent("ssh");
+    await expect(canvas.getByTestId("env-edit-host")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-user")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-ssh-port")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-identity-file")).toBeInTheDocument();
+  },
+};
+
+/** Configuration section shows image and repo fields for a Docker create-mode environment. */
+export const ConfigFieldsDockerAdapter: Story = {
+  render: () => <DetailRouteWrapper envId="env-docker-01" />,
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("env-config-section")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-adapter-type")).toHaveTextContent("docker");
+    await expect(canvas.getByTestId("env-edit-image")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-repo")).toBeInTheDocument();
+  },
+};
+
+/** Configuration section shows codespace name field for a codespace adapter environment. */
+export const ConfigFieldsCodespaceAdapter: Story = {
+  render: () => <DetailRouteWrapper envId="env-cs-01" />,
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("env-config-section")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-adapter-type")).toHaveTextContent("codespace");
+    await expect(canvas.getByTestId("env-edit-codespace-name")).toBeInTheDocument();
+  },
+};
+
+/** Clicking the environment name field allows inline editing and reflects the change. */
+export const InlineEditNameSaves: Story = {
+  render: () => <DetailRouteWrapper envId="env-local-01" />,
+  play: async ({ canvas }) => {
+    const nameField = canvas.getByTestId("env-edit-name");
+    await expect(nameField).toBeInTheDocument();
+    await userEvent.click(nameField);
+    const input = canvas.getByRole("textbox", { name: "Environment name" });
+    await userEvent.clear(input);
+    await userEvent.type(input, "Renamed Local Env");
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      expect(canvas.getByTestId("env-edit-name")).toHaveTextContent("Renamed Local Env");
+    });
+  },
+};
+
+/** The old Edit Config button no longer exists on the detail page. */
+export const EditConfigButtonRemoved: Story = {
+  render: () => <DetailRouteWrapper envId="env-local-01" />,
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByTestId("env-edit-btn")).not.toBeInTheDocument();
   },
 };
