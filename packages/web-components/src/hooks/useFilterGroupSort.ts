@@ -15,8 +15,8 @@ export interface UseFilterGroupSortOptions {
 
 /** Return type of {@link useFilterGroupSort}. */
 export interface UseFilterGroupSortReturn {
-  /** Currently selected filter keys. */
-  filterValues: Set<string>;
+  /** Currently selected filter keys (read-only to prevent accidental mutation). */
+  filterValues: ReadonlySet<string>;
   /** Whether any filter is active. */
   filterActive: boolean;
   /** Toggle a filter key on/off. */
