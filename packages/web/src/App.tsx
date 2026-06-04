@@ -492,7 +492,7 @@ function AppShell(): JSX.Element {
 /** Redirect legacy `/environments/:id/edit` to `/environments/:id`. */
 function EditRedirect(): JSX.Element {
   const { environmentId } = useParams<{ environmentId: string }>();
-  return <Navigate to={`/environments/${environmentId ?? ""}`} replace />;
+  return <Navigate to={`/environments/${encodeURIComponent(environmentId ?? "")}`} replace />;
 }
 
 /**
