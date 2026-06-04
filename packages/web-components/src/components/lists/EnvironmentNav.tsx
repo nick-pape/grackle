@@ -204,7 +204,7 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
   // ── Grouped environments ────────────────────────────────────────
   const groups = useMemo(() => {
     if (!groupActive) {
-      return [{ label: "", environments: filtered }];
+      return [{ id: "__all__", label: "", environments: filtered }];
     }
     const map = new Map<string, Environment[]>();
     for (const env of filtered) {
@@ -219,7 +219,7 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
     const labels = groupBy === "status" ? STATUS_LABELS : TYPE_LABELS;
     return [...map.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, envs]) => ({ label: labels[key] || key, environments: envs }));
+      .map(([key, envs]) => ({ id: key, label: labels[key] || key, environments: envs }));
   }, [filtered, groupActive, groupBy]);
 
   // ── Header actions ──────────────────────────────────────────────
@@ -320,6 +320,7 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
             onToggle={handleFilterToggle}
             onClear={handleFilterClear}
             onClose={() => setFilterOpen(false)}
+            showClear={!!filterField}
             data-testid="env-nav-filter-dropdown"
           />
         )}
@@ -348,9 +349,9 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
         className={styles.nav}
       >
         {groups.map((group) => (
-          <div key={group.label || "__all__"}>
+          <div key={group.id}>
             {group.label && (
-              <div className={styles.groupLabel} data-testid={`env-nav-group-${group.label}`}>
+              <div className={styles.groupLabel} data-testid={`env-nav-group-${group.id}`}>
                 {group.label}
               </div>
             )}

@@ -32,6 +32,8 @@ export interface FilterDropdownProps {
   onClear: () => void;
   /** Close the dropdown. */
   onClose: () => void;
+  /** Force the Clear button to show even when no options are selected. */
+  showClear?: boolean;
   /** Optional data-testid for the menu root. */
   "data-testid"?: string;
 }
@@ -43,6 +45,7 @@ export function FilterDropdown({
   onToggle,
   onClear,
   onClose,
+  showClear: showClearProp = false,
   "data-testid": testId = "filter-dropdown",
 }: FilterDropdownProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -57,8 +60,8 @@ export function FilterDropdown({
         onClose();
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, [onClose]);
 
   useEffect(() => {
@@ -73,7 +76,7 @@ export function FilterDropdown({
 
   return (
     <div ref={containerRef} className={styles.dropdown} data-testid={testId}>
-      {selected.size > 0 && (
+      {(selected.size > 0 || showClearProp) && (
         <button
           type="button"
           className={styles.clearButton}

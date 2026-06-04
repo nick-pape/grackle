@@ -206,7 +206,7 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
   // ── Grouped personas ────────────────────────────────────────────
   const groups = useMemo(() => {
     if (!groupActive) {
-      return [{ label: "", personas: processed }];
+      return [{ id: "__all__", label: "", personas: processed }];
     }
     const map = new Map<string, PersonaData[]>();
     for (const p of processed) {
@@ -220,7 +220,7 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
     }
     return [...map.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, items]) => ({ label: key, personas: items }));
+      .map(([key, items]) => ({ id: key, label: key, personas: items }));
   }, [processed, groupActive]);
 
   // ── Header actions ──────────────────────────────────────────────
@@ -378,7 +378,7 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
         className={styles.nav}
       >
         {groups.map((group) => (
-          <div key={group.label || "__all__"}>
+          <div key={group.id}>
             {group.label && <div className={styles.groupLabel}>{group.label}</div>}
             {group.personas.map((persona) => {
               const isActive = persona.id === activeId;

@@ -185,7 +185,7 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
   // ── Grouped schedules ───────────────────────────────────────────
   const groups = useMemo(() => {
     if (!groupActive) {
-      return [{ label: "", schedules: filtered }];
+      return [{ id: "__all__", label: "", schedules: filtered }];
     }
     const map = new Map<string, ScheduleData[]>();
     for (const s of filtered) {
@@ -204,6 +204,7 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
     return [...map.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, items]) => ({
+        id: key,
         label: key === "(none)" ? "(none)" : nameResolver(key),
         schedules: items,
       }));
@@ -311,6 +312,7 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
             onToggle={handleFilterToggle}
             onClear={handleFilterClear}
             onClose={() => setFilterOpen(false)}
+            showClear={!!filterField}
             data-testid="schedule-nav-filter-dropdown"
           />
         )}
@@ -339,7 +341,7 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
         className={styles.nav}
       >
         {groups.map((group) => (
-          <div key={group.label || "__all__"}>
+          <div key={group.id}>
             {group.label && <div className={styles.groupLabel}>{group.label}</div>}
             {group.schedules.map((schedule) => {
               const isActive = schedule.id === activeId;
