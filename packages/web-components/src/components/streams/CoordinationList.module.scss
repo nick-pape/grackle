@@ -10,52 +10,6 @@
   padding: var(--space-sm) 0;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.title {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.internalsToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  user-select: none;
-}
-
-.refreshButton {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  border-radius: var(--radius-sm);
-
-  &:hover {
-    color: var(--text-primary);
-    background: var(--bg-overlay);
-  }
-}
-
 .state {
   padding: var(--space-lg) var(--space-md);
   font-size: var(--font-size-sm);

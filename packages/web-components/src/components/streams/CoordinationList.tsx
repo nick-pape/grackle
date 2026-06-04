@@ -10,11 +10,12 @@
  * @module
  */
 
-import { type JSX } from "react";
-import { GitBranch, Hash, MessagesSquare, RefreshCw } from "lucide-react";
+import { useMemo, type JSX } from "react";
+import { Eye, EyeOff, GitBranch, Hash, MessagesSquare, RefreshCw } from "lucide-react";
 import type { Session, StreamData, TaskData } from "../../hooks/types.js";
 import { groupStreamsByTask, streamKind, type StreamKind } from "../../utils/streamCoordination.js";
-import { ICON_SM } from "../../utils/iconSize.js";
+import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
+import { SectionHeader, type SectionHeaderAction } from "../display/SectionHeader.js";
 import styles from "./CoordinationList.module.scss";
 
 /** Human-readable label per stream kind. */
@@ -86,35 +87,42 @@ export function CoordinationList({
   };
   const taskTitle = (taskId: string): string => tasks.find((t) => t.id === taskId)?.title ?? taskId;
 
+  const headerActions = useMemo<SectionHeaderAction[]>(() => {
+    if (hideHeaderControls) {
+      return [];
+    }
+    const actions: SectionHeaderAction[] = [
+      {
+        key: "internals",
+        icon: showInternals ? <EyeOff size={ICON_MD} /> : <Eye size={ICON_MD} />,
+        tooltip: showInternals ? "Hide internals" : "Show internals",
+        ariaLabel: showInternals ? "Hide internals" : "Show internals",
+        onClick: () => onToggleInternals(!showInternals),
+        active: showInternals,
+        ariaPressed: showInternals,
+        testId: "coordination-show-internals",
+      },
+    ];
+    if (onRefresh) {
+      actions.push({
+        key: "refresh",
+        icon: <RefreshCw size={ICON_MD} />,
+        tooltip: "Refresh streams",
+        ariaLabel: "Refresh streams",
+        onClick: onRefresh,
+        testId: "coordination-refresh",
+      });
+    }
+    return actions;
+  }, [hideHeaderControls, showInternals, onToggleInternals, onRefresh]);
+
   return (
     <div className={styles.container} data-testid="coordination-list">
-      <div className={styles.header}>
-        <span className={styles.title}>Coordination</span>
-        {!hideHeaderControls && (
-          <div className={styles.headerActions}>
-            <label className={styles.internalsToggle}>
-              <input
-                type="checkbox"
-                checked={showInternals}
-                onChange={(e) => onToggleInternals(e.target.checked)}
-                data-testid="coordination-show-internals"
-              />
-              Show internals
-            </label>
-            {onRefresh && (
-              <button
-                type="button"
-                className={styles.refreshButton}
-                onClick={onRefresh}
-                aria-label="Refresh streams"
-                data-testid="coordination-refresh"
-              >
-                <RefreshCw size={ICON_SM} aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <SectionHeader
+        title="Coordination"
+        actions={headerActions}
+        data-testid="coordination-list-header"
+      />
 
       {loading && streams.length === 0 && <div className={styles.state}>Loading{"…"}</div>}
       {!loading && loadError && (

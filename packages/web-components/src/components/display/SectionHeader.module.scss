@@ -1,0 +1,34 @@
+@use "../../styles/mixins" as *;
+
+// =============================================================================
+// SectionHeader -- shared sidebar section label with trailing action buttons
+// =============================================================================
+
+.header {
+  @include section-label;
+  padding: var(--space-xs) var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  user-select: none;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.actionButton {
+  @include btn-ghost;
+  font-size: var(--font-size-md);
+  line-height: 1;
+  padding: 1px 5px;
+}
+
+.actionActive {
+  color: var(--accent-green);
+}

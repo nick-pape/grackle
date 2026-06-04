@@ -13,6 +13,8 @@ export { Skeleton, SkeletonText, SkeletonCard } from "./Skeleton.js";
 export { Spinner } from "./Spinner.js";
 export { SplashScreen } from "./SplashScreen.js";
 export { Tooltip } from "./Tooltip.js";
+export { SectionHeader } from "./SectionHeader.js";
+export { FilterDropdown } from "./FilterDropdown.js";
 export { SessionAttemptSelector } from "./SessionAttemptSelector.js";
 // NOTE: McpAppWidget is intentionally NOT re-exported as a value — EventRenderer
 // lazy-imports it directly so the heavy ext-apps AppBridge stays code-split out of
@@ -22,3 +24,5 @@ export type { ButtonProps, ButtonVariant, ButtonSize } from "./Button.js";
 export type { TooltipProps, TooltipPlacement } from "./Tooltip.js";
 export type { SessionAttemptSelectorProps } from "./SessionAttemptSelector.js";
 export type { McpAppWidgetProps, McpAppWidgetCallToolParams } from "./McpAppWidget.js";
+export type { SectionHeaderProps, SectionHeaderAction } from "./SectionHeader.js";
+export type { FilterDropdownProps, FilterDropdownOption } from "./FilterDropdown.js";

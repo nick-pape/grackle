@@ -1,0 +1,78 @@
+@use "../../styles/mixins" as *;
+
+// =============================================================================
+// FilterDropdown -- absolutely-positioned multi-select filter menu
+// =============================================================================
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + var(--space-xs));
+  right: 0;
+  z-index: 1000;
+  min-width: 160px;
+  max-width: 240px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-xs) 0;
+}
+
+.clearButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+  padding: var(--space-xs) var(--space-md);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  text-align: left;
+  margin-bottom: var(--space-xs);
+
+  &:hover {
+    color: var(--accent-red);
+    background: var(--bg-overlay);
+  }
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-xs) var(--space-md);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  text-align: left;
+
+  &:hover {
+    background: var(--bg-overlay);
+  }
+}
+
+.optionSelected {
+  color: var(--accent-green);
+  font-weight: var(--font-weight-medium);
+}
+
+.check {
+  width: 14px;
+  font-size: 11px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.optionLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
