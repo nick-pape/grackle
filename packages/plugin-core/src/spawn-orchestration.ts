@@ -16,7 +16,6 @@ import {
   pipeDelivery,
   processEventStream,
   ensureStdinStream,
-  getTraceId,
   type EventStreamOptions,
 } from "@grackle-ai/core";
 import { toDialableHost } from "./grpc-shared.js";
