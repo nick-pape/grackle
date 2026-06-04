@@ -1,10 +1,11 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn } from "@storybook/test";
+import { expect, fn, userEvent } from "@storybook/test";
 import { ReactFlowProvider } from "@xyflow/react";
 import { CoordinationGraph } from "./CoordinationGraph.js";
 import { MOCK_STREAMS, MOCK_STREAM_MESSAGES } from "../../mocks/mockStreamsData.js";
 import { MOCK_SESSIONS } from "../../mocks/mockData.js";
+import { isInternalStream } from "../../utils/streamCoordination.js";
 
 /**
  * CoordinationGraph uses @xyflow/react, which requires a parent
@@ -131,5 +132,70 @@ export const MessageInFlight: Story = {
     await expect(await canvas.findByTestId("coordination-graph")).toBeInTheDocument();
     const dots = await canvas.findAllByTestId("coordination-message-dot");
     await expect(dots.length).toBeGreaterThanOrEqual(1);
+  },
+};
+
+/**
+ * Regression: toggling streams (e.g. Show Internals ON then OFF) must not
+ * crash the graph. React Flow v12's StoreUpdater triggers an infinite setState
+ * loop under React 19 when the nodes prop changes if inline objects like
+ * fitViewOptions are recreated each render. The fix defers store updates via
+ * setTimeout and stabilizes object props. This story renders with all streams,
+ * then a button removes the internal ones, simulating the toggle.
+ */
+export const StreamToggleRegression: Story = {
+  name: "Stream toggle (regression)",
+  decorators: [
+    (_Story, context) => {
+      const [showInternals, setShowInternals] = useState(true);
+      const streams = showInternals
+        ? MOCK_STREAMS
+        : MOCK_STREAMS.filter((s) => !isInternalStream(s));
+      return (
+        <ReactFlowProvider>
+          <div
+            style={
+              {
+                width: "800px",
+                height: "600px",
+                "--text-primary": "#e6e6e6",
+                "--text-secondary": "#b0b8c4",
+                "--text-tertiary": "#6b7a8d",
+                "--text-disabled": "#444",
+                "--accent-green": "#22c55e",
+                "--accent-yellow": "#eab308",
+                "--accent-red": "#ef4444",
+                "--accent-blue": "#3b82f6",
+                "--bg-elevated": "#252535",
+                "--bg-inset": "#1e1e2e",
+                "--bg-overlay": "rgba(0,0,0,0.4)",
+                "--border-subtle": "#33384a",
+              } as CSSProperties
+            }
+          >
+            <button
+              data-testid="toggle-internals"
+              onClick={() => setShowInternals((v) => !v)}
+              style={{ position: "absolute", zIndex: 10 }}
+            >
+              Toggle
+            </button>
+            <CoordinationGraph
+              streams={streams}
+              sessions={context.args.sessions}
+              onSelectStream={context.args.onSelectStream}
+              resolvedThemeId={context.args.resolvedThemeId}
+            />
+          </div>
+        </ReactFlowProvider>
+      );
+    },
+  ],
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByTestId("coordination-graph")).toBeInTheDocument();
+    const toggle = await canvas.findByTestId("toggle-internals");
+    await userEvent.click(toggle);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await expect(await canvas.findByTestId("coordination-graph")).toBeInTheDocument();
   },
 };
