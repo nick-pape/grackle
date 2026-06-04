@@ -14,8 +14,7 @@
 import { vi } from "vitest";
 
 /** Create a complete mock of the `@grackle-ai/database` barrel export. */
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function createDatabaseMock() {
+export function createDatabaseMock(): Record<string, unknown> {
   return {
     db: {},
     sqlite: undefined,
