@@ -1,17 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent } from "@storybook/test";
 import { EnvironmentEditPanel } from "./EnvironmentEditPanel.js";
-import { buildEnvironment } from "../../test-utils/storybook-helpers.js";
 
 const meta: Meta<typeof EnvironmentEditPanel> = {
   title: "App/Panels/EnvironmentEditPanel",
   component: EnvironmentEditPanel,
   args: {
-    mode: "new",
-    environments: [],
     githubAccounts: [],
     onAddEnvironment: fn(),
-    onUpdateEnvironment: fn(),
     onListCodespaces: fn(),
     codespaces: [],
     codespaceError: "",
@@ -281,25 +277,5 @@ export const CodespaceManualEntryEnablesCreate: Story = {
     // Create button should be enabled
     const createButton = canvas.getByTestId("env-create-submit");
     await expect(createButton).toBeEnabled();
-  },
-};
-
-/** Edit mode renders pre-populated fields for an existing environment. */
-export const EditModeLocal: Story = {
-  args: {
-    mode: "edit",
-    environmentId: "env-local-01",
-    environments: [
-      buildEnvironment({
-        id: "env-local-01",
-        displayName: "My Local Env",
-        adapterType: "local",
-        adapterConfig: '{"host":"127.0.0.1","port":7434}',
-      }),
-    ],
-  },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByTestId("env-edit-panel")).toBeInTheDocument();
-    await expect(canvas.getByText("local")).toBeInTheDocument();
   },
 };

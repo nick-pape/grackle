@@ -77,7 +77,6 @@ import { WorkspaceCreatePage } from "./pages/WorkspaceCreatePage.js";
 import { NewTaskPage } from "./pages/NewTaskPage.js";
 import { TaskPage } from "./pages/TaskPage.js";
 import { NewEnvironmentPage } from "./pages/NewEnvironmentPage.js";
-import { EnvironmentEditPage } from "./pages/EnvironmentEditPage.js";
 import { EnvironmentsPage } from "./pages/EnvironmentsPage.js";
 import { EnvironmentDetailPage } from "./pages/EnvironmentDetailPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
@@ -497,6 +496,12 @@ function AppShell(): JSX.Element {
   );
 }
 
+/** Redirect legacy `/environments/:id/edit` to `/environments/:id`. */
+function EditRedirect(): JSX.Element {
+  const { environmentId } = useParams<{ environmentId: string }>();
+  return <Navigate to={`/environments/${encodeURIComponent(environmentId ?? "")}`} replace />;
+}
+
 /**
  * Redirect component for legacy `/workspaces/:workspaceId` URLs.
  * Looks up the workspace's environmentId and redirects to the new
@@ -674,7 +679,7 @@ function AppRoutes(): JSX.Element {
             <Route index element={<EnvironmentsEmptyPage />} />
             <Route path="new" element={<NewEnvironmentPage />} />
             <Route path=":environmentId" element={<EnvironmentDetailPage />} />
-            <Route path=":environmentId/edit" element={<EnvironmentEditPage />} />
+            <Route path=":environmentId/edit" element={<EditRedirect />} />
           </Route>
         </Route>
 

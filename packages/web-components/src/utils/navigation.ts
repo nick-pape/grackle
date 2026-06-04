@@ -117,11 +117,6 @@ export function environmentUrl(environmentId: string): string {
   return `/environments/${encodeURIComponent(environmentId)}`;
 }
 
-/** Build URL for the environment edit page. */
-export function environmentEditUrl(environmentId: string): string {
-  return `/environments/${encodeURIComponent(environmentId)}/edit`;
-}
-
 /** URL for the settings page. */
 export const SETTINGS_URL: string = "/settings";
 

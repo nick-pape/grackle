@@ -1,27 +1,12 @@
 import { useState, useCallback, type JSX } from "react";
 import type { ToastVariant } from "../../context/ToastContext.js";
-import type {
-  Environment,
-  Codespace,
-  DockerContainer,
-  GitHubAccountData,
-} from "../../hooks/types.js";
-import { ENVIRONMENTS_URL, environmentUrl, useAppNavigate } from "../../utils/navigation.js";
-import { EditableTextField } from "../editable/EditableTextField.js";
+import type { Codespace, DockerContainer, GitHubAccountData } from "../../hooks/types.js";
+import { ENVIRONMENTS_URL, useAppNavigate } from "../../utils/navigation.js";
+import { isPortValid, MIN_PORT, MAX_PORT } from "../../utils/environmentUtils.js";
 import styles from "./EnvironmentEditPanel.module.scss";
-
-/** Minimum valid network port. */
-const MIN_PORT: number = 1;
-/** Maximum valid network port. */
-const MAX_PORT: number = 65535;
 
 /** Props for the EnvironmentEditPanel component. */
 interface Props {
-  mode: "new" | "edit";
-  /** Environment ID — required in edit mode. */
-  environmentId?: string;
-  /** All environments (for lookup in edit mode). */
-  environments: Environment[];
   /** All registered GitHub accounts for the account selector. */
   githubAccounts: GitHubAccountData[];
   /** Callback to add a new environment. */
@@ -30,15 +15,6 @@ interface Props {
     adapterType: string,
     adapterConfig?: Record<string, unknown>,
     githubAccountId?: string,
-  ) => void;
-  /** Callback to update an existing environment. */
-  onUpdateEnvironment: (
-    environmentId: string,
-    fields: {
-      displayName?: string;
-      adapterConfig?: Record<string, unknown>;
-      githubAccountId?: string;
-    },
   ) => void;
   /** Callback to list available codespaces, optionally filtered by GitHub account. */
   onListCodespaces: (githubAccountId?: string) => void;
@@ -60,28 +36,6 @@ interface Props {
   dockerContainersError: string;
   /** Display a toast notification. */
   onShowToast?: (message: string, variant?: ToastVariant) => void;
-}
-
-/** Returns true if portStr is empty (optional) or a valid integer in [1, 65535]. */
-function isPortValid(portStr: string): boolean {
-  if (!portStr.trim()) {
-    return true;
-  }
-  const n = Number(portStr);
-  return Number.isInteger(n) && n >= MIN_PORT && n <= MAX_PORT;
-}
-
-/** Parse adapter config JSON string into a record, defaulting to empty object. */
-function parseAdapterConfig(raw: string): Record<string, unknown> {
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
-  } catch {
-    // fall through
-  }
-  return {};
 }
 
 // ─── Codespace Picker ─────────────────────────────────────────────────────────
@@ -229,20 +183,10 @@ function CodespacePicker({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-/**
- * Full-panel create/edit form for environments.
- *
- * - new: blank form; calls addEnvironment on save, then navigates to settings.
- * - edit: pre-populated form; uses click-to-edit fields that auto-save via
- *         updateEnvironment.
- */
+/** Full-panel create form for new environments. */
 export function EnvironmentEditPanel({
-  mode,
-  environmentId,
-  environments,
   githubAccounts,
   onAddEnvironment,
-  onUpdateEnvironment,
   onListCodespaces,
   codespaces,
   codespaceError,
@@ -255,10 +199,6 @@ export function EnvironmentEditPanel({
   onShowToast,
 }: Props): JSX.Element {
   const navigate = useAppNavigate();
-
-  const isEdit = mode === "edit";
-  const existingEnv =
-    isEdit && environmentId ? environments.find((e) => e.id === environmentId) : undefined;
 
   // ─── Create mode state ─────────────────────────────
 
@@ -275,10 +215,6 @@ export function EnvironmentEditPanel({
   // Docker: "create" a new container vs "attach" to an existing one (issue #1223).
   const [dockerMode, setDockerMode] = useState<"create" | "attach">("create");
   const [attachContainer, setAttachContainer] = useState("");
-
-  // ─── Edit mode state ───────────────────────────────
-
-  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
   // ─── Helpers ───────────────────────────────────────
 
@@ -374,324 +310,8 @@ export function EnvironmentEditPanel({
   };
 
   const handleCancel = (): void => {
-    if (environmentId) {
-      navigate(environmentUrl(environmentId));
-    } else {
-      navigate(ENVIRONMENTS_URL);
-    }
+    navigate(ENVIRONMENTS_URL);
   };
-
-  /** Save a single config field in edit mode by merging into existing adapterConfig. */
-  const saveConfigField = useCallback(
-    (fieldName: string, value: string) => {
-      if (!existingEnv || !environmentId) {
-        return;
-      }
-      const current = parseAdapterConfig(existingEnv.adapterConfig);
-      const trimmed = value.trim();
-      if (trimmed) {
-        current[fieldName] = trimmed;
-      } else {
-        delete current[fieldName];
-      }
-      onUpdateEnvironment(environmentId, { adapterConfig: current });
-    },
-    [existingEnv, environmentId, onUpdateEnvironment],
-  );
-
-  /** Save a numeric config field in edit mode. */
-  const saveConfigNumberField = useCallback(
-    (fieldName: string, value: string) => {
-      if (!existingEnv || !environmentId) {
-        return;
-      }
-      const current = parseAdapterConfig(existingEnv.adapterConfig);
-      if (value.trim()) {
-        const n = Number(value);
-        if (Number.isInteger(n) && n >= MIN_PORT && n <= MAX_PORT) {
-          current[fieldName] = n;
-        }
-      } else {
-        delete current[fieldName];
-      }
-      onUpdateEnvironment(environmentId, { adapterConfig: current });
-    },
-    [existingEnv, environmentId, onUpdateEnvironment],
-  );
-
-  // ─── Edit mode ─────────────────────────────────────
-
-  if (isEdit) {
-    if (!existingEnv) {
-      return (
-        <div className={styles.container}>
-          <div className={styles.header}>
-            <div className={styles.headerTitle}>
-              <span className={styles.badge}>edit environment</span>
-            </div>
-            <div className={styles.headerActions}>
-              <button onClick={handleCancel} className={styles.btnGhost}>
-                Back
-              </button>
-            </div>
-          </div>
-          <div className={styles.body}>
-            <div className={styles.formContent}>
-              <span className={styles.readOnlyValue}>Environment not found</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    const config = parseAdapterConfig(existingEnv.adapterConfig);
-
-    return (
-      <div className={styles.container} data-testid="env-edit-panel">
-        {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.headerTitle}>
-            <span className={styles.badge}>edit environment</span>
-          </div>
-          <div className={styles.headerActions}>
-            <button onClick={handleCancel} className={styles.btnGhost} data-testid="env-edit-back">
-              Back
-            </button>
-          </div>
-        </div>
-
-        {/* Form body */}
-        <div className={styles.body}>
-          <div className={styles.formContent}>
-            {/* Name */}
-            <div className={styles.section}>
-              <label className={styles.label}>Name</label>
-              <EditableTextField
-                value={existingEnv.displayName}
-                onSave={(value) => {
-                  if (environmentId) {
-                    onUpdateEnvironment(environmentId, { displayName: value });
-                  }
-                }}
-                validate={(v) => (v.trim() === "" ? "Name cannot be empty" : undefined)}
-                mode="edit"
-                fieldId="name"
-                activeFieldId={activeFieldId}
-                onActivate={setActiveFieldId}
-                placeholder="Environment name"
-                ariaLabel="Environment name"
-                data-testid="env-edit-name"
-              />
-            </div>
-
-            {/* Adapter Type (read-only) */}
-            <div className={styles.section}>
-              <label className={styles.label}>Adapter Type</label>
-              <span className={styles.readOnlyValue} data-testid="env-edit-adapter-type">
-                {existingEnv.adapterType}
-              </span>
-            </div>
-
-            {/* GitHub Account (codespace and docker only). Show when accounts are
-                registered OR when the env already has an account association so
-                the user can clear it even if the referenced account was removed. */}
-            {(existingEnv.adapterType === "codespace" || existingEnv.adapterType === "docker") &&
-              (githubAccounts.length > 0 || Boolean(existingEnv.githubAccountId)) && (
-                <div className={styles.section}>
-                  <label className={styles.label}>GitHub Account</label>
-                  <select
-                    value={existingEnv.githubAccountId || ""}
-                    onChange={(e) => {
-                      if (environmentId) {
-                        onUpdateEnvironment(environmentId, { githubAccountId: e.target.value });
-                      }
-                    }}
-                    className={styles.adapterSelect}
-                    data-testid="env-edit-github-account"
-                  >
-                    <option value="">(Default)</option>
-                    {githubAccounts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.label}
-                        {a.username ? ` (@${a.username})` : ""}
-                        {a.isDefault ? " — default" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-            {/* Adapter-specific editable fields */}
-            {existingEnv.adapterType === "local" && (
-              <>
-                <div className={styles.section}>
-                  <label className={styles.label}>Host</label>
-                  <EditableTextField
-                    value={String(config.host ?? "")}
-                    onSave={(v) => saveConfigField("host", v)}
-                    mode="edit"
-                    fieldId="host"
-                    activeFieldId={activeFieldId}
-                    onActivate={setActiveFieldId}
-                    placeholder="(default)"
-                    ariaLabel="Host"
-                    data-testid="env-edit-host"
-                  />
-                </div>
-                <div className={styles.section}>
-                  <label className={styles.label}>Port</label>
-                  <EditableTextField
-                    value={String(config.port ?? "")}
-                    onSave={(v) => saveConfigNumberField("port", v)}
-                    validate={(v) => (!isPortValid(v) ? "Port must be 1-65535" : undefined)}
-                    mode="edit"
-                    fieldId="port"
-                    activeFieldId={activeFieldId}
-                    onActivate={setActiveFieldId}
-                    placeholder="(default)"
-                    ariaLabel="Port"
-                    data-testid="env-edit-port"
-                  />
-                </div>
-              </>
-            )}
-
-            {existingEnv.adapterType === "ssh" && (
-              <>
-                <div className={styles.section}>
-                  <label className={styles.label}>Host</label>
-                  <EditableTextField
-                    value={String(config.host ?? "")}
-                    onSave={(v) => saveConfigField("host", v)}
-                    validate={(v) => (v.trim() === "" ? "Host is required" : undefined)}
-                    mode="edit"
-                    fieldId="host"
-                    activeFieldId={activeFieldId}
-                    onActivate={setActiveFieldId}
-                    placeholder="hostname or IP"
-                    ariaLabel="Host"
-                    data-testid="env-edit-host"
-                  />
-                </div>
-                <div className={styles.section}>
-                  <label className={styles.label}>User</label>
-                  <EditableTextField
-                    value={String(config.user ?? "")}
-                    onSave={(v) => saveConfigField("user", v)}
-                    mode="edit"
-                    fieldId="user"
-                    activeFieldId={activeFieldId}
-                    onActivate={setActiveFieldId}
-                    placeholder="(default)"
-                    ariaLabel="User"
-                    data-testid="env-edit-user"
-                  />
-                </div>
-                <div className={styles.section}>
-                  <label className={styles.label}>SSH Port</label>
-                  <EditableTextField
-                    value={String(config.sshPort ?? "")}
-                    onSave={(v) => saveConfigNumberField("sshPort", v)}
-                    validate={(v) => (!isPortValid(v) ? "Port must be 1-65535" : undefined)}
-                    mode="edit"
-                    fieldId="sshPort"
-                    activeFieldId={activeFieldId}
-                    onActivate={setActiveFieldId}
-                    placeholder="22"
-                    ariaLabel="SSH Port"
-                    data-testid="env-edit-ssh-port"
-                  />
-                </div>
-                <div className={styles.section}>
-                  <label className={styles.label}>Identity File</label>
-                  <EditableTextField
-                    value={String(config.identityFile ?? "")}
-                    onSave={(v) => saveConfigField("identityFile", v)}
-                    mode="edit"
-                    fieldId="identityFile"
-                    activeFieldId={activeFieldId}
-                    onActivate={setActiveFieldId}
-                    placeholder="~/.ssh/id_rsa"
-                    ariaLabel="Identity File"
-                    data-testid="env-edit-identity-file"
-                  />
-                </div>
-              </>
-            )}
-
-            {existingEnv.adapterType === "docker" && config.attach !== undefined && (
-              <div className={styles.section}>
-                <label className={styles.label}>Attach (container)</label>
-                <EditableTextField
-                  value={String(config.attach ?? "")}
-                  onSave={(v) => saveConfigField("attach", v)}
-                  validate={(v) => (v.trim() === "" ? "Container name is required" : undefined)}
-                  mode="edit"
-                  fieldId="attach"
-                  activeFieldId={activeFieldId}
-                  onActivate={setActiveFieldId}
-                  placeholder="container name or ID"
-                  ariaLabel="Attach container"
-                  data-testid="env-edit-attach"
-                />
-              </div>
-            )}
-
-            {existingEnv.adapterType === "docker" && config.attach === undefined && (
-              <>
-                <div className={styles.section}>
-                  <label className={styles.label}>Image</label>
-                  <EditableTextField
-                    value={String(config.image ?? "")}
-                    onSave={(v) => saveConfigField("image", v)}
-                    mode="edit"
-                    fieldId="image"
-                    activeFieldId={activeFieldId}
-                    onActivate={setActiveFieldId}
-                    placeholder="(default)"
-                    ariaLabel="Image"
-                    data-testid="env-edit-image"
-                  />
-                </div>
-                <div className={styles.section}>
-                  <label className={styles.label}>Repo</label>
-                  <EditableTextField
-                    value={String(config.repo ?? "")}
-                    onSave={(v) => saveConfigField("repo", v)}
-                    mode="edit"
-                    fieldId="repo"
-                    activeFieldId={activeFieldId}
-                    onActivate={setActiveFieldId}
-                    placeholder="(none)"
-                    ariaLabel="Repo"
-                    data-testid="env-edit-repo"
-                  />
-                </div>
-              </>
-            )}
-
-            {existingEnv.adapterType === "codespace" && (
-              <div className={styles.section}>
-                <label className={styles.label}>Codespace Name</label>
-                <EditableTextField
-                  value={String(config.codespaceName ?? "")}
-                  onSave={(v) => saveConfigField("codespaceName", v)}
-                  validate={(v) => (v.trim() === "" ? "Codespace name is required" : undefined)}
-                  mode="edit"
-                  fieldId="codespaceName"
-                  activeFieldId={activeFieldId}
-                  onActivate={setActiveFieldId}
-                  placeholder="codespace-name"
-                  ariaLabel="Codespace Name"
-                  data-testid="env-edit-codespace-name"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // ─── Create mode ───────────────────────────────────
 

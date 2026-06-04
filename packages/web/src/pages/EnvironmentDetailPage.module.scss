@@ -67,6 +67,52 @@
   color: var(--accent-red);
 }
 
+// --- Configuration section ---
+
+.configSection {
+  margin-bottom: var(--space-xl);
+}
+
+.configHeading {
+  margin: 0 0 var(--space-md);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.configFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.configField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.configLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.configValue {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.configSelect {
+  @include input-field;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: var(--space-xs) var(--space-sm);
+  width: 100%;
+  max-width: 320px;
+  cursor: pointer;
+}
+
 // --- Workspace section ---
 
 .section {
