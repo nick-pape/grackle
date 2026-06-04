@@ -1242,7 +1242,7 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
       case "idle":
         return SessionStatus.InputNeeded;
       case "stopped":
-        return SessionStatus.Error;
+        return SessionStatus.Idle;
       case "suspended":
         return SessionStatus.Idle;
       // Status event content strings (from event stream)

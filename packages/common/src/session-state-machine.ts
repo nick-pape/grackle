@@ -27,7 +27,7 @@ export const SESSION_TRANSITIONS: ReadonlyMap<SessionStatus, ReadonlySet<Session
       SESSION_STATUS.SUSPENDED,
     ]),
   ],
-  [SESSION_STATUS.STOPPED, new Set<SessionStatus>([SESSION_STATUS.RUNNING])],
+  [SESSION_STATUS.STOPPED, new Set<SessionStatus>([])],
   [
     SESSION_STATUS.SUSPENDED,
     new Set<SessionStatus>([SESSION_STATUS.RUNNING, SESSION_STATUS.STOPPED]),
