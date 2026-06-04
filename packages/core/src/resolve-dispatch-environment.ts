@@ -33,8 +33,8 @@ export interface ResolveEnvironmentDeps {
  * @returns The resolved environment ID, or `undefined` if none available.
  */
 export function resolveDispatchEnvironment(
-  // eslint-disable-next-line @rushstack/no-new-null
-  task: { workspaceId: string | null; parentTaskId: string },
+  // eslint-disable-next-line @rushstack/no-new-null -- accept both Row (null) and Model (undefined)
+  task: { workspaceId: string | null | undefined; parentTaskId: string },
   deps: ResolveEnvironmentDeps,
 ): string | undefined {
   // 1. Ancestor environment — inherit from parent chain

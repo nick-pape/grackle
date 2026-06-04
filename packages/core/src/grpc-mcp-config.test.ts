@@ -1,5 +1,5 @@
 /**
- * Tests for the persona MCP server JSON helpers. Pure functions, no IO.
+ * Tests for the MCP server JSON helpers. Pure functions, no IO.
  */
 import { describe, it, expect, vi } from "vitest";
 
@@ -36,7 +36,7 @@ describe("buildMcpServersJson", () => {
   });
 });
 
-describe("personaMcpServersToJson", () => {
+describe("personaMcpServersToJson (deprecated)", () => {
   it("parses + reformats a valid JSON array", () => {
     const input = JSON.stringify([{ name: "fs", command: "fs-mcp" }]);
     const out = personaMcpServersToJson(input, "persona-1");

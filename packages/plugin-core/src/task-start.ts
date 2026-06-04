@@ -23,7 +23,7 @@ import { logger } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
 import { computeTaskStatus } from "@grackle-ai/core";
 import { toPersonaResolveInput, buildOrchestratorContextInput } from "@grackle-ai/core";
-import { personaMcpServersToJson } from "@grackle-ai/core";
+import { buildMcpServersJson, toPersonaModel } from "@grackle-ai/core";
 import { hasCapacity, type ConcurrencyDeps, checkBudget } from "@grackle-ai/core";
 import { hasSpawnContextProviders, runSpawnContextProviders } from "@grackle-ai/core";
 import {
@@ -112,7 +112,10 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
       task.defaultPersonaId,
       workspace?.defaultPersonaId || "",
       settingsStore.getSetting("default_persona_id") || undefined,
-      (id) => toPersonaResolveInput(personaStore.getPersona(id)),
+      (id) => {
+        const row = personaStore.getPersona(id);
+        return row ? toPersonaResolveInput(toPersonaModel(row)) : undefined;
+      },
     );
   } catch (err) {
     throw new ConnectError((err as Error).message, Code.FailedPrecondition);
@@ -253,7 +256,8 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
   );
   emit("task.started", { taskId: task.id, sessionId, workspaceId: task.workspaceId || "" });
 
-  const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
+  const mcpServersJson =
+    resolved.mcpServers.length > 0 ? buildMcpServersJson(resolved.mcpServers) : "";
 
   // Preserve the task-path's historical default of `false` when no workspace
   // expresses an opinion (e.g. root/schedule/channel tasks without a

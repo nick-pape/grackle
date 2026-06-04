@@ -40,7 +40,7 @@ import {
   spawnRequestToLayer,
   hostDefaults,
 } from "@grackle-ai/core";
-import { personaMcpServersToJson } from "@grackle-ai/core";
+import { buildMcpServersJson, toPersonaModel } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
 import { resolveBootstrapRuntime } from "@grackle-ai/core";
 import { publishToStdin } from "@grackle-ai/core";
@@ -141,7 +141,10 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
       undefined,
       undefined,
       settingsStore.getSetting("default_persona_id") || undefined,
-      (id) => toPersonaResolveInput(personaStore.getPersona(id)),
+      (id) => {
+        const row = personaStore.getPersona(id);
+        return row ? toPersonaResolveInput(toPersonaModel(row)) : undefined;
+      },
     );
   } catch (err) {
     throw new ConnectError((err as Error).message, Code.FailedPrecondition);
@@ -202,7 +205,8 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     pipeMode || "", // pipeMode
   );
 
-  const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
+  const mcpServersJson =
+    resolved.mcpServers.length > 0 ? buildMcpServersJson(resolved.mcpServers) : "";
 
   const mcpUrl = buildMcpUrl();
   // Resolve workspace scope for the token: prefer explicit workspaceId, then inherit from the

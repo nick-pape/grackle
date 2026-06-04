@@ -141,8 +141,8 @@ async function handleTaskUpdated(delivered: Map<string, number>, taskId: string)
     urgency: "normal",
     status: "pending",
     createdAt: new Date().toISOString(),
-    deliveredAt: null,
-    acknowledgedAt: null,
+    deliveredAt: undefined,
+    acknowledgedAt: undefined,
     taskUrl,
   });
 

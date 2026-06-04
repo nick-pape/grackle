@@ -2282,6 +2282,18 @@ type McpServerConfig = Message<"grackle.McpServerConfig"> & {
 const McpServerConfigSchema: GenMessage<McpServerConfig>;
 
 // @public
+export interface McpServerSpec {
+    // (undocumented)
+    args: string[];
+    // (undocumented)
+    command: string;
+    // (undocumented)
+    name: string;
+    // (undocumented)
+    tools: string[];
+}
+
+// @public
 type ModelInfo = Message<"grackle.ModelInfo"> & {
     id: string;
     name: string;
@@ -3546,6 +3558,14 @@ type ToolConfig = Message<"grackle.ToolConfig"> & {
 
 // @public
 const ToolConfigSchema: GenMessage<ToolConfig>;
+
+// @public
+export interface ToolConfigSpec {
+    // (undocumented)
+    allowedTools: string[];
+    // (undocumented)
+    disallowedTools: string[];
+}
 
 // @public
 export type TooltipBuiltinProps = z.infer<typeof tooltipPropsSchema>;

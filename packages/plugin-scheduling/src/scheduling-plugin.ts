@@ -16,13 +16,14 @@ import {
   agentStore,
   sessionStore,
   dispatchQueueStore,
-  type TaskRow,
 } from "@grackle-ai/database";
 import {
   findFirstConnectedEnvironment,
   reanimateAgent,
   publishToStdin,
   startTaskSession,
+  toTaskModel,
+  type TaskModel,
 } from "@grackle-ai/core";
 import { createScheduleHandlers } from "./schedule-handlers.js";
 import { createCronPhase } from "./cron-phase.js";
@@ -38,7 +39,7 @@ import { createCronPhase } from "./cron-phase.js";
  * Exported so it can be unit tested directly (the cron-phase deps pass it as
  * `resolveEnvironment`, without a wrapper arrow).
  */
-export function resolveEnvironmentForHeartbeat(task: TaskRow): string | undefined {
+export function resolveEnvironmentForHeartbeat(task: TaskModel): string | undefined {
   if (task.agentId) {
     const agent = agentStore.getAgent(task.agentId);
     if (agent?.environmentId) {
@@ -78,7 +79,10 @@ export function createSchedulingPlugin(): GracklePlugin {
         // Heartbeat branch wiring (#1438). `reanimateAgent` is sync (returns
         // SessionRow); the CronPhaseDep type accepts `unknown` so it can be
         // passed directly without an async wrapper.
-        getTask: taskStore.getTask,
+        getTask: (id: string) => {
+          const row = taskStore.getTask(id);
+          return row ? toTaskModel(row) : undefined;
+        },
         getLatestSessionForTask: sessionStore.getLatestSessionForTask,
         reanimateAgent,
         publishToStdin,

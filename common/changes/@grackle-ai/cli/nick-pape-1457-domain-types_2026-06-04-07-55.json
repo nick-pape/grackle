@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Decouple core from database row types with domain models (TaskModel, SessionModel, EnvironmentModel, PersonaModel, EscalationModel). Move ToolConfigSpec/McpServerSpec to @grackle-ai/common. Update PersonaResolveInput/ResolvedPersona in @grackle-ai/prompt to use parsed types. Update dep interfaces in plugin-core, plugin-scheduling, and server to use domain model types at the core boundary.",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

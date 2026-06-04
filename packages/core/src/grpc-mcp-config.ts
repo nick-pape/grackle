@@ -20,7 +20,10 @@ export function buildMcpServersJson(
   return JSON.stringify(obj);
 }
 
-/** Convert persona MCP server JSON string to a PowerLine-formatted JSON string. */
+/**
+ * @deprecated Use {@link buildMcpServersJson} with already-parsed `McpServerSpec[]` instead.
+ * Retained for backward compatibility with external consumers.
+ */
 export function personaMcpServersToJson(mcpServersJson: string, personaId: string): string {
   let mcpServers: { name: string; command: string; args?: string[]; tools?: string[] }[];
   try {

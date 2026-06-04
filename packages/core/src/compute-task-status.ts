@@ -1,4 +1,4 @@
-import type { SessionRow } from "@grackle-ai/database";
+import type { SessionModel } from "./domain/index.js";
 import { SESSION_STATUS, TASK_STATUS } from "@grackle-ai/common";
 
 /** Result of computing a task's effective status from its session history. */
@@ -36,7 +36,7 @@ const ACTIVE_SESSION_STATUSES: ReadonlySet<string> = new Set([
  */
 export function computeTaskStatus(
   storedStatus: string,
-  sessions: Pick<SessionRow, "id" | "status" | "startedAt">[],
+  sessions: Pick<SessionModel, "id" | "status" | "startedAt">[],
 ): TaskStatusResult {
   // "complete" and "failed" are sticky — human-authoritative when no sessions contradict
   if (storedStatus === TASK_STATUS.COMPLETE || storedStatus === TASK_STATUS.FAILED) {
@@ -75,8 +75,8 @@ export function computeTaskStatus(
 
 /** Get the most recent session by startedAt (descending), breaking ties by ID. */
 function getLatestSession(
-  sessions: Pick<SessionRow, "id" | "status" | "startedAt">[],
-): Pick<SessionRow, "id" | "status" | "startedAt"> {
+  sessions: Pick<SessionModel, "id" | "status" | "startedAt">[],
+): Pick<SessionModel, "id" | "status" | "startedAt"> {
   return sessions.reduce((latest, current) => {
     if (current.startedAt > latest.startedAt) {
       return current;
@@ -101,7 +101,7 @@ function getLatestSession(
  * @returns The id of the most recent active session, or `""` if none is live.
  */
 export function getLatestLiveSessionId(
-  sessions: Pick<SessionRow, "id" | "status" | "startedAt">[],
+  sessions: Pick<SessionModel, "id" | "status" | "startedAt">[],
 ): string {
   const live = sessions.filter((s) => ACTIVE_SESSION_STATUSES.has(s.status));
   return live.length > 0 ? getLatestSession(live).id : "";

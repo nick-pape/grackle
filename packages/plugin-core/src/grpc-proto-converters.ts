@@ -2,6 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { grackle, scheduleRowToProto } from "@grackle-ai/common";
 import { workspaceStatusToEnum, taskStatusToEnum } from "@grackle-ai/common";
 import type { EnvironmentRow, SessionRow } from "@grackle-ai/database";
+import type { SessionModel } from "@grackle-ai/core";
 import {
   workspaceStore,
   taskStore,
@@ -30,8 +31,8 @@ export function envRowToProto(row: EnvironmentRow): grackle.Environment {
   });
 }
 
-/** Convert a session database row to its proto representation. */
-export function sessionRowToProto(row: SessionRow): grackle.Session {
+/** Convert a session database row (or domain model) to its proto representation. */
+export function sessionRowToProto(row: SessionRow | SessionModel): grackle.Session {
   return create(grackle.SessionSchema, {
     id: row.id,
     environmentId: row.environmentId,

@@ -4,6 +4,9 @@
 
 ```ts
 
+import type { McpServerSpec } from '@grackle-ai/common';
+import type { ToolConfigSpec } from '@grackle-ai/common';
+
 // @public
 export function buildOrchestratorContext(input: OrchestratorContextInput): OrchestratorContext;
 
@@ -63,13 +66,13 @@ export interface PersonaInput {
 export interface PersonaResolveInput {
     id: string;
     maxTurns: number;
-    mcpServers: string;
+    mcpServers: McpServerSpec[];
     model: string;
     name: string;
     runtime: string;
     script: string;
     systemPrompt: string;
-    toolConfig: string;
+    toolConfig: ToolConfigSpec | undefined;
     type: string;
 }
 
@@ -84,13 +87,13 @@ export interface PersonaSummary {
 // @public
 export interface ResolvedPersona {
     maxTurns: number;
-    mcpServers: string;
+    mcpServers: McpServerSpec[];
     model: string;
     personaId: string;
     runtime: string;
     script: string;
     systemPrompt: string;
-    toolConfig: string;
+    toolConfig: ToolConfigSpec | undefined;
     type: string;
 }
 

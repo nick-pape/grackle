@@ -9,8 +9,8 @@
 import { v4 as uuidv4 } from "uuid";
 import type { Logger } from "pino";
 import { computeNextRunAt } from "./schedule-expression.js";
-import type { ScheduleRow, TaskRow, SessionRow } from "@grackle-ai/database";
-import type { GrackleEventType } from "@grackle-ai/core";
+import type { ScheduleRow, SessionRow } from "@grackle-ai/database";
+import type { GrackleEventType, TaskModel } from "@grackle-ai/core";
 import type { ReconciliationPhase } from "@grackle-ai/plugin-sdk";
 import { ROOT_TASK_ID, SESSION_STATUS, type SessionStatus } from "@grackle-ai/common";
 
@@ -63,7 +63,7 @@ export interface CronPhaseDeps {
   setScheduleEnabled: (id: string, enabled: boolean, nextRunAt: string | null) => void;
   // ── Heartbeat branch dependencies (#1438) ──
   /** Look up a task by id (heartbeat target resolution). */
-  getTask: (id: string) => TaskRow | undefined;
+  getTask: (id: string) => TaskModel | undefined;
   /** Latest session for a task (skip-on-overrun + reanimate target). */
   getLatestSessionForTask: (taskId: string) => SessionRow | undefined;
   /**
@@ -78,11 +78,11 @@ export interface CronPhaseDeps {
   publishToStdin: (sessionId: string, text: string) => void;
   /** Start a new session for a task (fresh-spawn fallback). Returns error string on failure. */
   startTaskSession: (
-    task: TaskRow,
+    task: TaskModel,
     options?: { personaId?: string; environmentId?: string; rawPrompt?: string },
   ) => Promise<string | undefined>;
   /** Resolve an environment id for the heartbeat fresh-spawn fallback. */
-  resolveEnvironment: (task: TaskRow) => string | undefined;
+  resolveEnvironment: (task: TaskModel) => string | undefined;
   /** Logger instance provided by the plugin context. */
   logger: Pick<Logger, "debug" | "info" | "warn" | "error">;
 }

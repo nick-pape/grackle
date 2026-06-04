@@ -1,3 +1,19 @@
+// ─── Domain Models (#1457) ───────────────────────────────────
+export type {
+  SessionModel,
+  EnvironmentModel,
+  TaskModel,
+  PersonaModel,
+  EscalationModel,
+} from "./domain/index.js";
+export {
+  toSessionModel,
+  toEnvironmentModel,
+  toTaskModel,
+  toPersonaModel,
+  toEscalationModel,
+} from "./domain/index.js";
+
 // ─── Service Collector ────────────────────────────────────────
 export { createServiceCollector } from "./service-collector.js";
 export type { ServiceCollector, HandlerGroup } from "./service-collector.js";
@@ -145,11 +161,12 @@ export type {
   SpawnConfigLayer,
   ResolvedSpawnSpec,
   ResolveSpawnSpecInput,
-  ToolConfigSpec,
-  McpServerSpec,
   PersonaConfigSource,
   WorkspaceConfigSource,
   TaskConfigSource,
   AgentConfigSource,
   SpawnRequestSource,
 } from "./resolve-spawn-spec.js";
+// ToolConfigSpec and McpServerSpec moved to @grackle-ai/common (#1457);
+// re-export for backward compatibility.
+export type { ToolConfigSpec, McpServerSpec } from "@grackle-ai/common";

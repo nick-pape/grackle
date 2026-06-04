@@ -3,7 +3,7 @@ import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 import { escalationStore } from "@grackle-ai/database";
 import { ulid } from "ulid";
-import { routeEscalation } from "@grackle-ai/core";
+import { routeEscalation, toEscalationModel } from "@grackle-ai/core";
 import { escalationRowToProto } from "./grpc-proto-converters.js";
 
 /** Valid urgency values for escalations. */
@@ -32,7 +32,7 @@ export async function createEscalation(
 
   const row = escalationStore.getEscalation(id);
   if (row) {
-    await routeEscalation(row);
+    await routeEscalation(toEscalationModel(row));
   }
 
   // Re-read after routing to get updated status
