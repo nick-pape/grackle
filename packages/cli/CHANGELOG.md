@@ -1,6 +1,23 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 04 Jun 2026 07:25:35 GMT and should not be manually modified.
+This log was last generated on Thu, 04 Jun 2026 14:28:07 GMT and should not be manually modified.
+
+## 0.169.0
+Thu, 04 Jun 2026 14:28:07 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Decouple core from database row types with domain models (TaskModel, SessionModel, EnvironmentModel, PersonaModel, EscalationModel). Move ToolConfigSpec/McpServerSpec to @grackle-ai/common. Update PersonaResolveInput/ResolvedPersona in @grackle-ai/prompt to use parsed types. Update dep interfaces in plugin-core, plugin-scheduling, and server to use domain model types at the core boundary.
+- Decompose god handlers (session-handlers, task-handlers) into focused domain modules
+- Inline environment editing on detail page; remove separate edit route and page
+- Move Settings from Code context tab bar to ContextNav gear icon for app-wide access
 
 ## 0.168.0
 Thu, 04 Jun 2026 07:25:35 GMT
