@@ -3,6 +3,7 @@ import { expect, fn, userEvent } from "@storybook/test";
 import { Activity, MessageSquare, Settings } from "lucide-react";
 import { ContextDetailShell, AGENT_DETAIL_TABS, CODE_HEADER_ICON } from "./ContextDetailShell.js";
 import type { ContextDetailTab } from "./ContextDetailShell.js";
+import { CodeHeaderStatus } from "./CodeHeaderStatus.js";
 
 const ICON_SIZE: number = 18;
 
@@ -43,6 +44,14 @@ export const CodeContext: Story = {
   args: {
     icon: CODE_HEADER_ICON,
     name: "Code",
+    statusContent: (
+      <CodeHeaderStatus
+        summary={{
+          activeCount: 2,
+          lastActivityAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+        }}
+      />
+    ),
     tabs: CODE_TABS,
     activeTab: "chat",
     ariaLabel: "App navigation",
@@ -52,9 +61,32 @@ export const CodeContext: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("code-header-name")).toHaveTextContent("Code");
     await expect(canvas.getByTestId("code-header-back")).toBeInTheDocument();
+    await expect(canvas.getByTestId("code-header-status")).toBeInTheDocument();
+    await expect(canvas.getByTestId("code-header-active-sessions")).toHaveTextContent(
+      "2 active sessions",
+    );
+    await expect(canvas.getByTestId("code-header-last-activity")).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Chat/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Sessions/ })).toBeInTheDocument();
     await expect(canvas.getByRole("tab", { name: /Settings/ })).toBeInTheDocument();
+  },
+};
+
+export const CodeContextNoSessions: Story = {
+  args: {
+    icon: CODE_HEADER_ICON,
+    name: "Code",
+    statusContent: <CodeHeaderStatus summary={{ activeCount: 0, lastActivityAt: undefined }} />,
+    tabs: CODE_TABS,
+    activeTab: "chat",
+    ariaLabel: "App navigation",
+    headerTestId: "code-header",
+    tabBarTestId: "code-tab-bar",
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("code-header-name")).toHaveTextContent("Code");
+    const status = canvas.queryByTestId("code-header-status");
+    await expect(status).toBeNull();
   },
 };
 

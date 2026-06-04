@@ -9,6 +9,8 @@ export { ContextNav, CONTEXTS, DEFAULT_CONTEXT_ID } from "./ContextNav.js";
 export type { ContextItem, ContextNavProps } from "./ContextNav.js";
 export { ContextDetailShell, CODE_HEADER_ICON, AGENT_DETAIL_TABS } from "./ContextDetailShell.js";
 export type { ContextDetailShellProps, ContextDetailTab } from "./ContextDetailShell.js";
+export { describeCodeStatus, CodeHeaderStatus } from "./CodeHeaderStatus.js";
+export type { CodeStatusSummary, CodeHeaderStatusProps } from "./CodeHeaderStatus.js";
 export { Sidebar } from "./Sidebar.js";
 export { BottomStatusBar } from "./BottomStatusBar.js";
 export { PageHeader } from "./PageHeader.js";
