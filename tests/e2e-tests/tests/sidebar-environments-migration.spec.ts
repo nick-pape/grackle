@@ -62,8 +62,8 @@ test.describe("Environments Page", { tag: ["@environment"] }, () => {
     // Click the environment
     await page.getByTestId("env-nav-item").first().click();
 
-    // Detail page should show lifecycle actions
-    await expect(page.getByTestId("env-edit-btn")).toBeVisible({ timeout: 5_000 });
+    // Detail page should show environment configuration
+    await expect(page.getByTestId("env-edit-adapter-type")).toBeVisible({ timeout: 5_000 });
   });
 
   test("clicking + Add Environment opens form panel and returns to list after submit", async ({
