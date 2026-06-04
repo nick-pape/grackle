@@ -147,6 +147,8 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
           setGroupOpen(false);
         },
         active: filterActive,
+        ariaHasPopup: true,
+        ariaExpanded: filterOpen,
         testId: "schedule-nav-filter",
       },
       {
@@ -159,6 +161,8 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
           setFilterOpen(false);
         },
         active: groupActive,
+        ariaHasPopup: true,
+        ariaExpanded: groupOpen,
         testId: "schedule-nav-group",
       },
       {
@@ -170,7 +174,7 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
         testId: "schedule-nav-add-header",
       },
     ],
-    [filterActive, groupActive, groupBy, navigate],
+    [filterActive, filterOpen, groupActive, groupOpen, groupBy, navigate],
   );
 
   // ── Keyboard nav ────────────────────────────────────────────────

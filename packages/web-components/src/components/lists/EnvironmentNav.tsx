@@ -156,6 +156,8 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
           setGroupOpen(false);
         },
         active: filterActive,
+        ariaHasPopup: true,
+        ariaExpanded: filterOpen,
         testId: "env-nav-filter",
       },
       {
@@ -168,6 +170,8 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
           setFilterOpen(false);
         },
         active: groupActive,
+        ariaHasPopup: true,
+        ariaExpanded: groupOpen,
         testId: "env-nav-group",
       },
       {
@@ -179,7 +183,7 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
         testId: "env-nav-add-header",
       },
     ],
-    [filterActive, groupActive, groupBy, navigate],
+    [filterActive, filterOpen, groupActive, groupOpen, groupBy, navigate],
   );
 
   // ── Keyboard nav ────────────────────────────────────────────────

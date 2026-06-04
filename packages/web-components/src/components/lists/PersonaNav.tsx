@@ -130,6 +130,8 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
           setSortOpen(false);
         },
         active: filterActive,
+        ariaHasPopup: true,
+        ariaExpanded: filterOpen,
         testId: "persona-nav-filter",
       },
       {
@@ -143,6 +145,8 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
           setSortOpen(false);
         },
         active: groupActive,
+        ariaHasPopup: true,
+        ariaExpanded: groupOpen,
         testId: "persona-nav-group",
       },
       {
@@ -156,6 +160,8 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
           setGroupOpen(false);
         },
         active: sortActive,
+        ariaHasPopup: true,
+        ariaExpanded: sortOpen,
         testId: "persona-nav-sort",
       },
       {
@@ -167,7 +173,7 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
         testId: "persona-nav-add-header",
       },
     ],
-    [filterActive, groupActive, sortActive, sortBy, navigate],
+    [filterActive, filterOpen, groupActive, groupOpen, sortActive, sortOpen, sortBy, navigate],
   );
 
   // ── Keyboard nav ────────────────────────────────────────────────
