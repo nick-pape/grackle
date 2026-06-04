@@ -5,6 +5,7 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
+  useReactFlow,
   useStoreApi,
   type Edge,
   type EdgeTypes,
@@ -61,27 +62,26 @@ export interface CoordinationGraphProps {
  * so StoreUpdater never calls setNodes. This avoids the "Maximum update depth
  * exceeded" (error #185) cascade that React Flow v12's Zustand store triggers
  * under React 19.
+ *
+ * fitView is called imperatively after nodes/edges land so the viewport
+ * centers on the populated graph (the `fitView` prop on `<ReactFlow>` fires
+ * before this deferred update, when the graph is still empty).
  */
 function DeferredFlowUpdater({ nodes, edges }: { nodes: Node[]; edges: Edge[] }): JSX.Element {
   const store = useStoreApi();
+  const { fitView } = useReactFlow();
 
   useEffect(() => {
     const id = window.setTimeout(() => {
-      store.getState().setNodes(nodes);
+      const state = store.getState();
+      state.setNodes(nodes);
+      state.setEdges(edges);
+      fitView(FIT_VIEW_OPTIONS).catch(() => {});
     }, 0);
     return () => {
       window.clearTimeout(id);
     };
-  }, [nodes, store]);
-
-  useEffect(() => {
-    const id = window.setTimeout(() => {
-      store.getState().setEdges(edges);
-    }, 0);
-    return () => {
-      window.clearTimeout(id);
-    };
-  }, [edges, store]);
+  }, [nodes, edges, store, fitView]);
 
   return <></>;
 }
@@ -187,8 +187,6 @@ export function CoordinationGraph({
         edgeTypes={edgeTypes}
         onNodeClick={onNodeClick}
         nodesConnectable={false}
-        fitView
-        fitViewOptions={FIT_VIEW_OPTIONS}
         minZoom={0.3}
         maxZoom={2}
       >

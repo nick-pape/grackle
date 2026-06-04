@@ -127,7 +127,7 @@ export function useStreams(): UseStreamsResult {
         case "stream.attached":
         case "stream.detached":
         case "stream.closed":
-          loadStreams().catch(() => {});
+          loadStreams().catch(() => {}); // TODO(#1537): does not respect showInternals
           return true;
         default:
           return false;
