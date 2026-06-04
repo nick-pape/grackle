@@ -90,6 +90,7 @@ export * as pipeDelivery from "./pipe-delivery.js";
 // ─── Individual Exports for Plugin-Core ──────────────────────
 export { processEventStream, publishWidgetEvent, publishDocumentShow } from "./event-processor.js";
 export type {
+  EventStreamOptions,
   WidgetEventPayload,
   PublishWidgetEvent,
   DocumentShowPayload,
