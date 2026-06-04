@@ -101,8 +101,13 @@ export function FilterDropdown({
         onClose();
       }
     }
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
+    const id = requestAnimationFrame(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    });
+    return () => {
+      cancelAnimationFrame(id);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [onClose]);
 
   useEffect(() => {
