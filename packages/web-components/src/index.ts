@@ -95,6 +95,8 @@ export {
   ContextDetailShell,
   CODE_HEADER_ICON,
   AGENT_DETAIL_TABS,
+  describeCodeStatus,
+  CodeHeaderStatus,
 } from "./components/layout/index.js";
 export type {
   AppTab,
@@ -105,6 +107,8 @@ export type {
   ContextNavProps,
   ContextDetailShellProps,
   ContextDetailTab,
+  CodeStatusSummary,
+  CodeHeaderStatusProps,
   PageHeaderProps,
 } from "./components/layout/index.js";
 
