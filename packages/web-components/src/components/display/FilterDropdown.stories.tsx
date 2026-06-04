@@ -104,7 +104,9 @@ export const MultiSelect: Story = {
 
 /** Escape key fires onClose. */
 export const EscapeCloses: Story = {
-  play: async ({ args }) => {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByTestId("filter-dropdown")).toBeInTheDocument();
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await expect(args.onClose).toHaveBeenCalledOnce();
   },
