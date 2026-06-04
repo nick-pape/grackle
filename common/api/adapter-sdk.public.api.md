@@ -27,6 +27,9 @@ export interface AdapterDependencies {
 }
 
 // @public
+export type AdapterLifecycleState = "idle" | "provisioning" | "provisioned" | "connected";
+
+// @public
 export interface AdapterLogger {
     // (undocumented)
     debug(obj: object, msg: string): void;
@@ -80,6 +83,30 @@ export interface AuthenticateTokenItem {
     name: string;
     type: string;
     value: string;
+}
+
+// @public
+export abstract class BaseAdapter implements EnvironmentAdapter {
+    connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
+    destroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
+    disconnect(environmentId: string): Promise<void>;
+    // (undocumented)
+    protected abstract doConnect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
+    // (undocumented)
+    protected abstract doDestroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
+    // (undocumented)
+    protected abstract doDisconnect(environmentId: string): Promise<void>;
+    // (undocumented)
+    protected abstract doProvision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+    // (undocumented)
+    protected abstract doStop(environmentId: string, config: Record<string, unknown>): Promise<void>;
+    getState(environmentId: string): AdapterLifecycleState;
+    abstract healthCheck(connection: PowerLineConnection): Promise<boolean>;
+    provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+    stop(environmentId: string, config: Record<string, unknown>): Promise<void>;
+    // (undocumented)
+    abstract type: string;
+    protected withProvisionLock(environmentId: string, generator: AsyncGenerator<ProvisionEvent>): AsyncGenerator<ProvisionEvent>;
 }
 
 // @public

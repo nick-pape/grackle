@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Add session lifecycle state machine with validated transitions",
+      "comment": "Add BaseAdapter lifecycle state machine to adapter-sdk with per-environment state tracking, transition guards, and provision mutex",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

@@ -1,10 +1,13 @@
-import { useCallback, useMemo, type JSX, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, type JSX, type MouseEvent } from "react";
 import {
   Background,
   BackgroundVariant,
   Controls,
   MiniMap,
   ReactFlow,
+  useReactFlow,
+  useStoreApi,
+  type Edge,
   type EdgeTypes,
   type Node,
   type NodeTypes,
@@ -26,6 +29,14 @@ import styles from "./CoordinationGraph.module.scss";
 /** Fallback node color for the MiniMap when a CSS variable is unavailable. */
 const MINIMAP_FALLBACK_COLOR: string = "#6b7a8d";
 
+/**
+ * Stable reference for fitView options. MUST be a module-level constant —
+ * an inline `{{ padding: 0.2 }}` creates a new object every render, which
+ * makes React Flow's StoreUpdater think the prop changed (strict ===),
+ * triggering an infinite setState loop under React 19 (error #185).
+ */
+const FIT_VIEW_OPTIONS: { padding: number } = { padding: 0.2 };
+
 /** Props for {@link CoordinationGraph}. */
 export interface CoordinationGraphProps {
   /** Streams to visualize (already filtered for internals by the caller). */
@@ -43,6 +54,36 @@ export interface CoordinationGraphProps {
   recentMessages?: Record<string, StreamMessageData[]>;
   /** Resolved theme id; recomputes MiniMap colors when the theme changes. */
   resolvedThemeId: string;
+}
+
+/**
+ * Defers node/edge store updates to a setTimeout(0) macrotask, fully outside
+ * React's commit phase. No `nodes`/`edges` props are passed to `<ReactFlow>`
+ * so StoreUpdater never calls setNodes. This avoids the "Maximum update depth
+ * exceeded" (error #185) cascade that React Flow v12's Zustand store triggers
+ * under React 19.
+ *
+ * fitView is called imperatively after nodes/edges land so the viewport
+ * centers on the populated graph (the `fitView` prop on `<ReactFlow>` fires
+ * before this deferred update, when the graph is still empty).
+ */
+function DeferredFlowUpdater({ nodes, edges }: { nodes: Node[]; edges: Edge[] }): JSX.Element {
+  const store = useStoreApi();
+  const { fitView } = useReactFlow();
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      const state = store.getState();
+      state.setNodes(nodes);
+      state.setEdges(edges);
+      fitView(FIT_VIEW_OPTIONS).catch(() => {});
+    }, 0);
+    return () => {
+      window.clearTimeout(id);
+    };
+  }, [nodes, edges, store, fitView]);
+
+  return <></>;
 }
 
 /** Custom node type registry for the coordination graph. */
@@ -142,19 +183,14 @@ export function CoordinationGraph({
   return (
     <div className={styles.graphContainer} data-testid="coordination-graph">
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodeClick={onNodeClick}
-        // Read-only "watch" graph: there is no edit mode and no onConnect, so
-        // disable the drag-to-connect affordance on node handles (#1303).
         nodesConnectable={false}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3}
         maxZoom={2}
       >
+        <DeferredFlowUpdater nodes={nodes} edges={edges} />
         <Background
           variant={BackgroundVariant.Dots}
           gap={24}

@@ -11,7 +11,7 @@ vi.mock("./logger.js", () => ({
 import { createRootTaskBoot, type RootTaskBootDeps } from "./root-task-boot.js";
 import type { TaskRow, SessionRow, EnvironmentRow } from "@grackle-ai/database";
 import { TASK_STATUS, ROOT_TASK_ID, ROOT_TASK_INITIAL_PROMPT } from "@grackle-ai/common";
-import type { TaskStatusResult } from "./compute-task-status.js";
+import type { TaskStatusResult } from "@grackle-ai/core";
 
 // ── Factories ───────────────────────────────────────────────
 

@@ -95,7 +95,9 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => ({
 }));
 
 vi.mock("@grackle-ai/prompt", () => ({
-  SystemPromptBuilder: vi.fn().mockImplementation(() => ({ build: () => "" })),
+  SystemPromptBuilder: vi.fn(function () {
+    return { build: () => "" };
+  }),
   buildTaskPrompt: vi.fn((title: string) => title),
 }));
 
@@ -112,7 +114,8 @@ vi.mock("./processor-registry.js", () => ({
   lateBind: vi.fn(),
 }));
 
-vi.mock("./compute-task-status.js", () => ({
+vi.mock("@grackle-ai/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@grackle-ai/core")>()),
   computeTaskStatus: vi.fn((storedStatus: string) => ({
     status: storedStatus,
     latestSessionId: "",
@@ -122,7 +125,7 @@ vi.mock("./compute-task-status.js", () => ({
 // ── Import AFTER mocks ──────────────────────────────────────────
 
 import { workspaceStore, taskStore, sessionStore } from "@grackle-ai/database";
-import { computeTaskStatus } from "./compute-task-status.js";
+import { computeTaskStatus } from "@grackle-ai/core";
 import { grackle } from "@grackle-ai/common";
 import { resetSchema, getHandlers } from "./grpc-task-test-helpers.js";
 

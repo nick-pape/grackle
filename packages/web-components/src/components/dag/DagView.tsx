@@ -16,6 +16,9 @@ import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import { STATUS_CSS_VAR_MAP } from "../../utils/taskStatus.js";
 import styles from "./DagView.module.scss";
 
+/** Stable fitView options — inline objects trigger React Flow's StoreUpdater cascade under React 19. */
+const FIT_VIEW_OPTIONS: { padding: number } = { padding: 0.2 };
+
 /** Props for the DagView component. */
 interface Props {
   workspaceId: string;
@@ -101,7 +104,7 @@ export function DagView({
         // so disable the drag-to-connect affordance on node handles (#1303).
         nodesConnectable={false}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={FIT_VIEW_OPTIONS}
         minZoom={0.3}
         maxZoom={2}
       >

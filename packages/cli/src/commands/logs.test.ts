@@ -20,6 +20,12 @@ vi.mock("@grackle-ai/common", () => ({
   eventTypeToString: (t: number) => `type-${t}`,
 }));
 
+/** Extract logged strings from a console spy, isolating the any-typed mock.calls. */
+function getLoggedStrings(spy: ReturnType<typeof vi.spyOn>): string[] {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return spy.mock.calls.map((c: unknown[]) => String(c[0]));
+}
+
 describe("registerLogCommands", () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
@@ -64,7 +70,7 @@ describe("registerLogCommands", () => {
 
     await program.parseAsync(["logs", "sess-1"], { from: "user" });
 
-    const logged = logSpy.mock.calls.map((c) => c[0] as string);
+    const logged = getLoggedStrings(logSpy);
     expect(logged).toHaveLength(2);
     expect(logged[0]).toContain("hello");
     expect(logged[1]).toContain("world");
@@ -91,7 +97,7 @@ describe("registerLogCommands", () => {
 
     await program.parseAsync(["logs", "sess-1"], { from: "user" });
 
-    const logged = logSpy.mock.calls.map((c) => c[0] as string);
+    const logged = getLoggedStrings(logSpy);
     expect(logged).toHaveLength(1);
     expect(logged[0]).toContain("test content");
   });
@@ -139,7 +145,7 @@ describe("registerLogCommands", () => {
 
     await program.parseAsync(["logs", "sess-abc"], { from: "user" });
 
-    const logged = logSpy.mock.calls.map((c) => c[0] as string);
+    const logged = getLoggedStrings(logSpy);
     expect(logged[0]).toContain("found-by-prefix");
   });
 
@@ -212,7 +218,7 @@ describe("registerLogCommands", () => {
 
     await program.parseAsync(["logs", "sess-1", "--transcript"], { from: "user" });
 
-    const logged = logSpy.mock.calls.map((c) => c[0] as string);
+    const logged = getLoggedStrings(logSpy);
     expect(logged[0]).toContain("# Transcript");
   });
 
@@ -257,7 +263,7 @@ describe("registerLogCommands", () => {
 
     await program.parseAsync(["logs", "sess-1", "--tail"], { from: "user" });
 
-    const logged = logSpy.mock.calls.map((c) => c[0] as string);
+    const logged = getLoggedStrings(logSpy);
     expect(logged[0]).toContain("Streaming session sess-1");
     expect(logged[1]).toContain("event-1");
     expect(logged[2]).toContain("event-2");
