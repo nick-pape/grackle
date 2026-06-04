@@ -67,14 +67,21 @@ function DeferredFlowUpdater({ nodes, edges }: { nodes: Node[]; edges: Edge[] })
 
   useEffect(() => {
     const id = window.setTimeout(() => {
-      const { setNodes, setEdges } = store.getState();
-      setNodes(nodes);
-      setEdges(edges);
+      store.getState().setNodes(nodes);
     }, 0);
     return () => {
       window.clearTimeout(id);
     };
-  }, [nodes, edges, store]);
+  }, [nodes, store]);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      store.getState().setEdges(edges);
+    }, 0);
+    return () => {
+      window.clearTimeout(id);
+    };
+  }, [edges, store]);
 
   return <></>;
 }

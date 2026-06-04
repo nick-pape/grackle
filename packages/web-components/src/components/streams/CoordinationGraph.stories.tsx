@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent } from "@storybook/test";
+import { expect, fn, userEvent, waitFor } from "@storybook/test";
 import { ReactFlowProvider } from "@xyflow/react";
 import { CoordinationGraph } from "./CoordinationGraph.js";
 import { MOCK_STREAMS, MOCK_STREAM_MESSAGES } from "../../mocks/mockStreamsData.js";
@@ -193,9 +193,19 @@ export const StreamToggleRegression: Story = {
   ],
   play: async ({ canvas }) => {
     await expect(await canvas.findByTestId("coordination-graph")).toBeInTheDocument();
+    // Internal stream node should be present initially (all streams shown)
+    await waitFor(() =>
+      expect(canvas.getByTestId("coordination-node-stream-stream-lifecycle")).toBeInTheDocument(),
+    );
+    // Toggle internals OFF — removes internal streams
     const toggle = await canvas.findByTestId("toggle-internals");
     await userEvent.click(toggle);
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    await expect(await canvas.findByTestId("coordination-graph")).toBeInTheDocument();
+    // Graph must survive the data change and the internal node must disappear
+    await waitFor(async () => {
+      await expect(canvas.getByTestId("coordination-graph")).toBeInTheDocument();
+      await expect(
+        canvas.queryByTestId("coordination-node-stream-stream-lifecycle"),
+      ).not.toBeInTheDocument();
+    });
   },
 };
