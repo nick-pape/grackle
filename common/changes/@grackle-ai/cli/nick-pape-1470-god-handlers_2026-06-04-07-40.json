@@ -1,8 +1,8 @@
 {
   "changes": [
     {
-      "comment": "Add session summary status line to Code context header",
-      "type": "none",
+      "comment": "Decompose god handlers (session-handlers, task-handlers) into focused domain modules",
+      "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
   ],
