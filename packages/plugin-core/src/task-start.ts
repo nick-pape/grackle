@@ -294,13 +294,11 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     scriptContent: resolved.type === "script" ? resolved.script : "",
     workingDirectory: task.branch ? spec.workingDirectory : "",
     workspaceId: task.workspaceId ?? "",
+    branch: task.branch,
+    useWorktrees,
+    taskId: task.id,
+    pipe: req.pipe,
   });
-  // Override fields that buildCreateSessionParams derives from config (which is
-  // undefined for the task path) — task-specific values come from the task row.
-  createParams.branch = task.branch;
-  createParams.useWorktrees = useWorktrees;
-  createParams.taskId = task.id;
-  createParams.pipe = req.pipe;
 
   const { stream: spawnStream } = conn.transport.createSession(createParams);
 

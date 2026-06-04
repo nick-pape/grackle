@@ -27,6 +27,14 @@ export interface CreateSessionInputs {
   workingDirectory: string;
   /** Already-resolved workspace id (incl. parent-session/task inheritance); "" = none. */
   workspaceId: string;
+  /** Git branch override — takes precedence over `config.branch`. Used by the task path where branch comes from the task row, not the client config. */
+  branch?: string;
+  /** Worktree override — takes precedence over `config.useWorktrees`. */
+  useWorktrees?: boolean;
+  /** Task ID override — takes precedence over `config.taskId`. */
+  taskId?: string;
+  /** Pipe mode override — takes precedence over `config.pipe`. */
+  pipe?: string;
 }
 
 /**
@@ -43,16 +51,16 @@ export function buildCreateSessionParams(args: CreateSessionInputs): CreateSessi
     prompt: args.prompt,
     model: args.model,
     maxTurns: args.maxTurns,
-    branch: cfg?.branch ?? "",
+    branch: args.branch ?? cfg?.branch ?? "",
     workingDirectory: args.workingDirectory,
     systemContext: args.systemContext,
     workspaceId: args.workspaceId || undefined,
-    taskId: cfg?.taskId ?? "",
+    taskId: args.taskId ?? cfg?.taskId ?? "",
     mcpServersJson: args.mcpServersJson,
     mcpUrl: args.mcpUrl,
     mcpToken: args.mcpToken,
     scriptContent: args.scriptContent,
-    useWorktrees: cfg?.useWorktrees,
-    pipe: cfg?.pipe ?? "",
+    useWorktrees: args.useWorktrees ?? cfg?.useWorktrees,
+    pipe: args.pipe ?? cfg?.pipe ?? "",
   };
 }
