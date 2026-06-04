@@ -95,6 +95,7 @@ export function FilterDropdown({
             type="button"
             className={`${styles.option} ${isSelected ? styles.optionSelected : ""}`}
             onClick={() => onToggle(opt.key)}
+            aria-pressed={isSelected}
             data-testid={`${testId}-option-${opt.key}`}
           >
             <span className={styles.check} aria-hidden="true">
