@@ -1,5 +1,3 @@
-import { logger } from "./logger.js";
-
 /** Build a JSON string of MCP server configs for the PowerLine SpawnRequest. */
 export function buildMcpServersJson(
   mcpServers: {
@@ -18,19 +16,4 @@ export function buildMcpServersJson(
     };
   }
   return JSON.stringify(obj);
-}
-
-/** Convert persona MCP server JSON string to a PowerLine-formatted JSON string. */
-export function personaMcpServersToJson(mcpServersJson: string, personaId: string): string {
-  let mcpServers: { name: string; command: string; args?: string[]; tools?: string[] }[];
-  try {
-    mcpServers = JSON.parse(mcpServersJson || "[]") as typeof mcpServers;
-  } catch {
-    logger.warn({ personaId }, "Failed to parse persona mcpServers JSON; ignoring");
-    return "";
-  }
-  if (!Array.isArray(mcpServers) || mcpServers.length === 0) {
-    return "";
-  }
-  return buildMcpServersJson(mcpServers);
 }

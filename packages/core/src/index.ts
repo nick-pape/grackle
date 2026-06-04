@@ -135,7 +135,7 @@ export { readLastTextEntry } from "./log-writer.js";
 
 // ─── Shared Utilities (used by both core and plugin-core) ────
 export { routeEscalation, deliverPendingEscalations } from "./notification-router.js";
-export { buildMcpServersJson, personaMcpServersToJson } from "./grpc-mcp-config.js";
+export { buildMcpServersJson } from "./grpc-mcp-config.js";
 export {
   toDialableHost,
   validatePipeInputs,
