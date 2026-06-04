@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import { useFilterGroupSort } from "./useFilterGroupSort.js";
+import { renderHook, act, type RenderHookResult } from "@testing-library/react";
+import { useFilterGroupSort, type UseFilterGroupSortReturn } from "./useFilterGroupSort.js";
 
-const PREFIX = "test-nav";
+const PREFIX: string = "test-nav";
 
 function renderFGS(opts?: {
   validGroupKeys?: string[];
   validSortKeys?: string[];
-}): ReturnType<typeof renderHook<ReturnType<typeof useFilterGroupSort>>> {
+}): RenderHookResult<UseFilterGroupSortReturn, unknown> {
   return renderHook(() => useFilterGroupSort({ storagePrefix: PREFIX, ...opts }));
 }
 
