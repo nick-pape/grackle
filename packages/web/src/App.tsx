@@ -31,6 +31,8 @@ import {
   type ContextItem,
   type ContextDetailTab,
   CODE_HEADER_ICON,
+  describeCodeStatus,
+  CodeHeaderStatus,
 } from "@grackle-ai/web-components";
 import {
   useCallback,
@@ -245,6 +247,8 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
     }));
   }, [tabs]);
 
+  const codeStatusSummary = useMemo(() => describeCodeStatus(sessions), [sessions]);
+
   const handleCodeTabSelect = useCallback(
     (tabId: string) => {
       const tab = tabs.find((t) => t.view === tabId);
@@ -368,6 +372,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
               icon={CODE_HEADER_ICON}
               name="Code"
               onNavigateBack={() => navigate("/chat")}
+              statusContent={<CodeHeaderStatus summary={codeStatusSummary} />}
               tabs={codeDetailTabs}
               activeTab={activeView}
               onSelectTab={handleCodeTabSelect}
