@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add shared SectionHeader and FilterDropdown components; add filter/group/sort to all sidebar navs",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "nickpape@outlook.com"
+}
