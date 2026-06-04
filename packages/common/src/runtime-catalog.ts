@@ -59,14 +59,14 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
       { id: "opus", name: "Claude Opus", provider: "claude-code" },
       { id: "haiku", name: "Claude Haiku", provider: "claude-code" },
     ],
-    install: { packages: { "@anthropic-ai/claude-agent-sdk": "^0.2.50" } },
+    install: { packages: { "@anthropic-ai/claude-agent-sdk": "^0.3.0" } },
   },
   copilot: {
     displayName: "GitHub Copilot",
     description: "GitHub Copilot via the Copilot SDK.",
     models: [{ id: "gpt-4o", name: "GPT-4o", provider: "copilot" }],
     install: {
-      packages: { "@github/copilot-sdk": "^0.1.29", "@github/copilot": "^1.0.43" },
+      packages: { "@github/copilot-sdk": "^1.0.0", "@github/copilot": "^1.0.43" },
       needsJsonRpcHook: true,
     },
   },
@@ -74,27 +74,27 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
     displayName: "Codex",
     description: "OpenAI Codex via the Codex SDK.",
     models: [{ id: "gpt-5.5", name: "GPT-5.5", provider: "codex" }],
-    install: { packages: { "@openai/codex-sdk": "^0.135.0" } },
+    install: { packages: { "@openai/codex-sdk": "^0.136.0" } },
   },
   goose: {
     displayName: "Goose",
     description: "Block Goose via the Agent Client Protocol (experimental).",
     models: [],
-    install: { packages: { "@agentclientprotocol/sdk": "^0.16.1" } },
+    install: { packages: { "@agentclientprotocol/sdk": "^0.24.0" } },
   },
   "codex-acp": {
     displayName: "Codex (ACP)",
     description: "OpenAI Codex via the Agent Client Protocol (experimental).",
     models: [],
     install: {
-      packages: { "@agentclientprotocol/sdk": "^0.16.1", "@zed-industries/codex-acp": "^0.10.0" },
+      packages: { "@agentclientprotocol/sdk": "^0.24.0", "@zed-industries/codex-acp": "^0.15.0" },
     },
   },
   "copilot-acp": {
     displayName: "Copilot (ACP)",
     description: "GitHub Copilot via the Agent Client Protocol (experimental).",
     models: [],
-    install: { packages: { "@agentclientprotocol/sdk": "^0.16.1", "@github/copilot": "^1.0.43" } },
+    install: { packages: { "@agentclientprotocol/sdk": "^0.24.0", "@github/copilot": "^1.0.43" } },
   },
   "claude-code-acp": {
     displayName: "Claude Code (ACP)",
@@ -102,8 +102,8 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
     models: [],
     install: {
       packages: {
-        "@agentclientprotocol/sdk": "^0.16.1",
-        "@zed-industries/claude-agent-acp": "^0.22.0",
+        "@agentclientprotocol/sdk": "^0.24.0",
+        "@zed-industries/claude-agent-acp": "^0.23.0",
       },
     },
   },

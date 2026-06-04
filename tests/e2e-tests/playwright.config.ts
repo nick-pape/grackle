@@ -30,6 +30,9 @@ export default defineConfig({
   globalSetup: "./coverage-global-setup.ts",
   globalTeardown: "./coverage-global-teardown.ts",
   reporter: [["list"], ["junit", { outputFile: "test-results/e2e-results.xml" }]],
+  use: {
+    trace: process.env.CI ? "on-first-retry" : "off",
+  },
   projects: [
     {
       name: "chromium",

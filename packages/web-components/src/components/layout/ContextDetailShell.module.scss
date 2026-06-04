@@ -1,3 +1,12 @@
+@use "../../styles/mixins" as *;
+
+// =============================================================================
+// ContextDetailShell — shared header + tab bar for context detail views
+// (Code, Agent, etc.)
+// =============================================================================
+
+// --- Header row: back arrow + icon + name + optional status -----------------
+
 .header {
   display: flex;
   align-items: center;
@@ -31,7 +40,7 @@
   }
 }
 
-.avatar {
+.icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -43,6 +52,7 @@
   line-height: 1;
   object-fit: cover;
   flex-shrink: 0;
+  color: var(--text-primary);
 }
 
 .info {
@@ -59,18 +69,5 @@
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.status {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.statusItem {
-  font-size: var(--font-size-xs);
-  color: var(--text-tertiary);
   white-space: nowrap;
 }

@@ -156,7 +156,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
     await page.goto("/");
     // Wait for the WebSocket to connect and initial data to load.
-    // "Connected" appears when WS connects; the env count appears once
+    // "Connected" appears in the StatusBar; the env count appears once
     // ListEnvironments completes via ConnectRPC.
     await page.waitForFunction(
       () =>
@@ -164,6 +164,19 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         /\d+\/\d+ env/.test(document.body.innerText),
       { timeout: 10_000 },
     );
+    // Enter the Code context so workbench tabs are visible. Dashboard
+    // is now a fleet page (no Code tab bar). On mobile viewports the
+    // context rail is hidden, so use direct navigation instead of clicking.
+    const codeBtn = page.locator('[data-testid="context-code"]');
+    if (await codeBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await codeBtn.click();
+      await page.waitForURL(/\/chat/);
+    } else {
+      await page.goto("/chat");
+      await page.waitForFunction(() => document.body.innerText.includes("Connected"), {
+        timeout: 5_000,
+      });
+    }
     await use(page);
   },
 

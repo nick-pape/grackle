@@ -99,6 +99,15 @@ runs:
         if-no-files-found: ignore
         retention-days: 30
 
+    - name: Upload Playwright traces
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}-traces
+        path: tests/e2e-tests/test-results/*/trace.zip
+        if-no-files-found: ignore
+        retention-days: 7
+
     - name: Upload E2E coverage
       if: always() && inputs.coverage-artifact-name != ''
       uses: actions/upload-artifact@v4

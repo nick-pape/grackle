@@ -2,13 +2,10 @@ import { test, expect } from "./fixtures.js";
 import { patchWsForStubRuntime } from "./helpers.js";
 
 test.describe("Chat Page (root task)", { tag: ["@session"] }, () => {
-  test("navigates to /chat by default and renders chat page", async ({ appPage }) => {
+  test("renders chat page as the default Code context landing", async ({ appPage }) => {
     const page = appPage;
 
-    // The home route now renders the dashboard/welcome page.
-    await expect(page).toHaveURL(/\/$/);
-
-    await page.getByTestId("sidebar-tab-chat").click();
+    // The fixture lands at /chat (the default Code context view).
     await expect(page).toHaveURL(/\/chat/);
 
     // Chat page renders
