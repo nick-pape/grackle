@@ -1,12 +1,15 @@
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import type {
-  EnvironmentAdapter,
   BaseEnvironmentConfig,
   PowerLineConnection,
   ProvisionEvent,
   AdapterDependencies,
 } from "@grackle-ai/adapter-sdk";
-import { createAhpHostTransport, sleep as defaultSleep } from "@grackle-ai/adapter-sdk";
+import {
+  BaseAdapter,
+  createAhpHostTransport,
+  sleep as defaultSleep,
+} from "@grackle-ai/adapter-sdk";
 
 const POWERLINE_RETRY_DELAY_MS: number = 1_000;
 const POWERLINE_MAX_RETRIES: number = 5;
@@ -17,15 +20,16 @@ export interface LocalEnvironmentConfig extends BaseEnvironmentConfig {
 }
 
 /** Environment adapter that connects to a locally-running PowerLine process. */
-export class LocalAdapter implements EnvironmentAdapter {
+export class LocalAdapter extends BaseAdapter {
   public type: string = "local";
   private readonly sleep: (ms: number) => Promise<void>;
 
   public constructor(deps: AdapterDependencies = {}) {
+    super();
     this.sleep = deps.sleep ?? defaultSleep;
   }
 
-  public async *provision(
+  protected async *doProvision(
     environmentId: string,
     config: Record<string, unknown>,
     powerlineToken: string,
@@ -61,14 +65,12 @@ export class LocalAdapter implements EnvironmentAdapter {
       }
     }
 
-    yield {
-      stage: "error",
-      message: `Could not reach PowerLine: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
-      progress: 0,
-    };
+    throw new Error(
+      `Could not reach PowerLine: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
+    );
   }
 
-  public async connect(
+  protected async doConnect(
     environmentId: string,
     config: Record<string, unknown>,
     powerlineToken: string,
@@ -86,8 +88,6 @@ export class LocalAdapter implements EnvironmentAdapter {
     try {
       await socket.request("ping", { channel: "ahp-root://" });
     } catch (err) {
-      // Liveness probe failed — close the socket we just opened so we don't
-      // leak it back to the caller, then re-raise.
       try {
         await socket.close();
       } catch {
@@ -109,15 +109,15 @@ export class LocalAdapter implements EnvironmentAdapter {
     };
   }
 
-  public async disconnect(): Promise<void> {
+  protected async doDisconnect(): Promise<void> {
     // Nothing to clean up for local connections
   }
 
-  public async stop(): Promise<void> {
+  protected async doStop(): Promise<void> {
     // Local PowerLine lifecycle is managed externally
   }
 
-  public async destroy(): Promise<void> {
+  protected async doDestroy(): Promise<void> {
     // Local PowerLine lifecycle is managed externally
   }
 

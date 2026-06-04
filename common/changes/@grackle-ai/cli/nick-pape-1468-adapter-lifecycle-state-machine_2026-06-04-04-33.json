@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add BaseAdapter lifecycle state machine to adapter-sdk with per-environment state tracking, transition guards, and provision mutex",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

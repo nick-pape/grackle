@@ -1,6 +1,5 @@
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import type {
-  EnvironmentAdapter,
   BaseEnvironmentConfig,
   PowerLineConnection,
   ProvisionEvent,
@@ -10,6 +9,7 @@ import type {
   ExecResult,
 } from "@grackle-ai/adapter-sdk";
 import {
+  BaseAdapter,
   createAhpHostTransport,
   isDevMode,
   bootstrapPowerLine,
@@ -95,8 +95,6 @@ type LocalExecFunction = (
   options?: { timeout?: number },
 ) => Promise<ExecResult>;
 
-const containerPorts: Map<string, number> = new Map<string, number>();
-
 /** Resolved connectivity to an attached container's PowerLine, keyed by environment id. */
 interface AttachConnection {
   /** Base URL the server uses to reach the attached container's PowerLine. */
@@ -106,8 +104,6 @@ interface AttachConnection {
   /** Name of the Grackle-owned socat sidecar, if one was created. */
   sidecarName?: string;
 }
-
-const attachConnections: Map<string, AttachConnection> = new Map<string, AttachConnection>();
 
 // ─── Docker CLI Helpers ────────────────────────────────────
 
@@ -469,21 +465,27 @@ export class DockerExecutor implements RemoteExecutor {
 // ─── Docker Adapter ────────────────────────────────────────
 
 /** Environment adapter that provisions and manages Docker containers running the PowerLine. */
-export class DockerAdapter implements EnvironmentAdapter {
+export class DockerAdapter extends BaseAdapter {
   public type: string = "docker";
   private readonly execFn: LocalExecFunction;
   private readonly sleepFn: (ms: number) => Promise<void>;
   private readonly logger: AdapterLogger;
   private readonly isGitHubProviderEnabled: () => boolean;
+  private readonly containerPorts: Map<string, number> = new Map<string, number>();
+  private readonly attachConnections: Map<string, AttachConnection> = new Map<
+    string,
+    AttachConnection
+  >();
 
   public constructor(deps: AdapterDependencies = {}) {
+    super();
     this.execFn = deps.exec ?? defaultExec;
     this.sleepFn = deps.sleep ?? defaultSleep;
     this.logger = deps.logger ?? defaultLogger;
     this.isGitHubProviderEnabled = deps.isGitHubProviderEnabled ?? (() => false);
   }
 
-  public async *provision(
+  protected async *doProvision(
     environmentId: string,
     config: Record<string, unknown>,
     powerlineToken: string,
@@ -542,7 +544,7 @@ export class DockerAdapter implements EnvironmentAdapter {
       );
     }
 
-    containerPorts.set(environmentId, actualPort);
+    this.containerPorts.set(environmentId, actualPort);
 
     yield { stage: "starting", message: "Waiting for container...", progress: 0.15 };
     await waitForContainerRunning(this.execFn, this.sleepFn, containerName, this.logger);
@@ -607,7 +609,7 @@ export class DockerAdapter implements EnvironmentAdapter {
 
     yield { stage: "connecting", message: "Resolving connectivity...", progress: 0.85 };
     const conn = await this.resolveAttachConnectivity(environmentId, target, powerlineToken);
-    attachConnections.set(environmentId, conn);
+    this.attachConnections.set(environmentId, conn);
     yield { stage: "connecting", message: `Connecting via ${conn.url}...`, progress: 0.9 };
   }
 
@@ -617,6 +619,17 @@ export class DockerAdapter implements EnvironmentAdapter {
    * so the server's reconnect-or-provision fallback runs a full create-mode provision.
    */
   public async *reconnect(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): AsyncGenerator<ProvisionEvent> {
+    yield* this.withProvisionLock(
+      environmentId,
+      this.doReconnect(environmentId, config, powerlineToken),
+    );
+  }
+
+  private async *doReconnect(
     environmentId: string,
     config: Record<string, unknown>,
     powerlineToken: string,
@@ -641,7 +654,7 @@ export class DockerAdapter implements EnvironmentAdapter {
 
     yield { stage: "reconnecting", message: "Resolving connectivity...", progress: 0.6 };
     const conn = await this.resolveAttachConnectivity(environmentId, target, powerlineToken);
-    attachConnections.set(environmentId, conn);
+    this.attachConnections.set(environmentId, conn);
     yield { stage: "reconnecting", message: `Reconnected via ${conn.url}`, progress: 0.9 };
   }
 
@@ -722,7 +735,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     }
   }
 
-  public async connect(
+  protected async doConnect(
     environmentId: string,
     config: Record<string, unknown>,
     powerlineToken: string,
@@ -732,7 +745,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     let connectUrl: string;
     let port: number;
     if (cfg.attach) {
-      let conn = attachConnections.get(environmentId);
+      let conn = this.attachConnections.get(environmentId);
       if (!conn) {
         // No cached connectivity (e.g. after a server restart). Re-resolve it —
         // recreating the socat sidecar if needed — instead of failing the connect.
@@ -741,14 +754,14 @@ export class DockerAdapter implements EnvironmentAdapter {
           "No cached attach connectivity; re-resolving",
         );
         conn = await this.resolveAttachConnectivity(environmentId, cfg.attach, powerlineToken);
-        attachConnections.set(environmentId, conn);
+        this.attachConnections.set(environmentId, conn);
       }
       connectUrl = conn.url;
       port = conn.port;
     } else {
       const containerName = cfg.containerName || `grackle-${environmentId}`;
       const localPort =
-        containerPorts.get(environmentId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
+        this.containerPorts.get(environmentId) || cfg.localPort || DEFAULT_POWERLINE_PORT;
       port = localPort;
       // When on a shared Docker network, connect directly to the sibling container
       // by name on the default PowerLine port. Otherwise, use the mapped host port.
@@ -804,16 +817,16 @@ export class DockerAdapter implements EnvironmentAdapter {
     );
   }
 
-  public async disconnect(environmentId: string): Promise<void> {
-    const conn = attachConnections.get(environmentId);
+  protected async doDisconnect(environmentId: string): Promise<void> {
+    const conn = this.attachConnections.get(environmentId);
     if (conn?.sidecarName) {
       await removeSidecar(this.execFn, conn.sidecarName, this.logger);
     }
-    attachConnections.delete(environmentId);
-    containerPorts.delete(environmentId);
+    this.attachConnections.delete(environmentId);
+    this.containerPorts.delete(environmentId);
   }
 
-  public async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
+  protected async doStop(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as DockerEnvironmentConfig;
 
     // Attach mode: never stop the externally-managed container. Stop the
@@ -821,8 +834,8 @@ export class DockerAdapter implements EnvironmentAdapter {
     if (cfg.attach) {
       await remoteStop(environmentId, new DockerExecutor(cfg.attach, this.execFn), this.logger);
       await removeSidecar(this.execFn, `${ATTACH_SIDECAR_PREFIX}${environmentId}`, this.logger);
-      attachConnections.delete(environmentId);
-      containerPorts.delete(environmentId);
+      this.attachConnections.delete(environmentId);
+      this.containerPorts.delete(environmentId);
       return;
     }
 
@@ -832,10 +845,10 @@ export class DockerAdapter implements EnvironmentAdapter {
     } catch (err) {
       this.logger.debug({ environmentId, err }, "Container may already be stopped");
     }
-    containerPorts.delete(environmentId);
+    this.containerPorts.delete(environmentId);
   }
 
-  public async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
+  protected async doDestroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as DockerEnvironmentConfig;
 
     // Attach mode: never remove the externally-managed container. Stop the
@@ -843,8 +856,8 @@ export class DockerAdapter implements EnvironmentAdapter {
     if (cfg.attach) {
       await remoteDestroy(environmentId, new DockerExecutor(cfg.attach, this.execFn), this.logger);
       await removeSidecar(this.execFn, `${ATTACH_SIDECAR_PREFIX}${environmentId}`, this.logger);
-      attachConnections.delete(environmentId);
-      containerPorts.delete(environmentId);
+      this.attachConnections.delete(environmentId);
+      this.containerPorts.delete(environmentId);
       return;
     }
 
@@ -854,7 +867,7 @@ export class DockerAdapter implements EnvironmentAdapter {
     } catch (err) {
       this.logger.debug({ environmentId, err }, "Container may not exist");
     }
-    containerPorts.delete(environmentId);
+    this.containerPorts.delete(environmentId);
   }
 
   public async healthCheck(connection: PowerLineConnection): Promise<boolean> {

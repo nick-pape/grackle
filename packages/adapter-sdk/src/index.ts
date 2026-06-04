@@ -14,6 +14,10 @@ export type {
 } from "./adapter.js";
 export { reconnectOrProvision } from "./adapter.js";
 
+// ─── Base Adapter ──────────────────────────────────────────
+export type { AdapterLifecycleState } from "./base-adapter.js";
+export { BaseAdapter } from "./base-adapter.js";
+
 // ─── Remote Executor ────────────────────────────────────────
 export type { RemoteExecutor } from "./remote-executor.js";
 

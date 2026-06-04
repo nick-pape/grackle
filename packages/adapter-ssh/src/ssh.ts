@@ -1,5 +1,4 @@
 import type {
-  EnvironmentAdapter,
   BaseEnvironmentConfig,
   PowerLineConnection,
   ProvisionEvent,
@@ -8,6 +7,7 @@ import type {
 } from "@grackle-ai/adapter-sdk";
 import { DEFAULT_POWERLINE_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import {
+  BaseAdapter,
   type RemoteExecutor,
   type TunnelProcessFactory,
   type TunnelPortProbe,
@@ -201,20 +201,21 @@ class SshReverseTunnel extends ProcessTunnel {
 // ─── Adapter ────────────────────────────────────────────────
 
 /** Environment adapter that provisions and manages remote environments via SSH. */
-export class SshAdapter implements EnvironmentAdapter {
+export class SshAdapter extends BaseAdapter {
   public type: string = "ssh";
   private readonly execFn: ExecFunction;
   private readonly sleepFn: (ms: number) => Promise<void>;
   private readonly isGitHubProviderEnabled: () => boolean;
 
   public constructor(deps: AdapterDependencies = {}) {
+    super();
     this.execFn = deps.exec ?? defaultExec;
     this.sleepFn = deps.sleep ?? defaultSleep;
     this.isGitHubProviderEnabled = deps.isGitHubProviderEnabled ?? (() => false);
   }
 
   /** Provision the remote host: test connectivity, bootstrap PowerLine, open tunnel. */
-  public async *provision(
+  protected async *doProvision(
     environmentId: string,
     config: Record<string, unknown>,
     powerlineToken: string,
@@ -298,6 +299,17 @@ export class SshAdapter implements EnvironmentAdapter {
     config: Record<string, unknown>,
     powerlineToken: string,
   ): AsyncGenerator<ProvisionEvent> {
+    yield* this.withProvisionLock(
+      environmentId,
+      this.doReconnect(environmentId, config, powerlineToken),
+    );
+  }
+
+  private async *doReconnect(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as SshEnvironmentConfig;
     if (!cfg.host) {
       throw new Error("SSH adapter requires a 'host' in the configuration");
@@ -351,9 +363,9 @@ export class SshAdapter implements EnvironmentAdapter {
   }
 
   /** Connect to the PowerLine through the SSH tunnel. */
-  public async connect(
+  protected async doConnect(
     environmentId: string,
-    config: Record<string, unknown>,
+    _config: Record<string, unknown>,
     powerlineToken: string,
   ): Promise<PowerLineConnection> {
     const state = getTunnel(environmentId);
@@ -364,18 +376,18 @@ export class SshAdapter implements EnvironmentAdapter {
   }
 
   /** Close the SSH tunnel without stopping the remote PowerLine. */
-  public async disconnect(environmentId: string): Promise<void> {
+  protected async doDisconnect(environmentId: string): Promise<void> {
     await closeTunnel(environmentId);
   }
 
   /** Stop the remote PowerLine process and close the tunnel. */
-  public async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
+  protected async doStop(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as SshEnvironmentConfig;
     await remoteStop(environmentId, new SshExecutor(cfg, this.execFn));
   }
 
   /** Stop the remote PowerLine, remove artifacts, and close the tunnel. */
-  public async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
+  protected async doDestroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as SshEnvironmentConfig;
     await remoteDestroy(environmentId, new SshExecutor(cfg, this.execFn));
   }
