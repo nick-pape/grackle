@@ -198,7 +198,7 @@ export async function navigateToTask(page: Page, taskTitle: string): Promise<voi
 
 /** Navigate to settings and wait for the tab nav to appear. */
 export async function goToSettings(page: Page): Promise<void> {
-  await page.locator('[data-testid="sidebar-tab-settings"]').click();
+  await page.locator('[data-testid="context-nav-settings"]').click();
   await page
     .getByRole("tablist", { name: "Settings" })
     .waitFor({ state: "visible", timeout: 5_000 });

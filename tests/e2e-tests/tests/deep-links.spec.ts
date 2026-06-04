@@ -56,8 +56,8 @@ test.describe("Deep linking", { tag: ["@webui"] }, () => {
   test("page refresh preserves current view", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to settings via sidebar tab
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Navigate to settings via gear icon in context rail
+    await page.locator('[data-testid="context-nav-settings"]').click();
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Reload
@@ -78,7 +78,7 @@ test.describe("Deep linking", { tag: ["@webui"] }, () => {
     await createWorkspace(client, "back-fwd-proj");
     await navigateToWorkspace(page, "back-fwd-proj");
 
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    await page.locator('[data-testid="context-nav-settings"]').click();
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Go back — should be on the workspace page

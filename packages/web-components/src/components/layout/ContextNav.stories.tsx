@@ -160,3 +160,33 @@ export const WithFleetCollapsed: Story = {
     );
   },
 };
+
+/** Settings gear icon renders and fires onOpenSettings when clicked. */
+export const WithSettings: Story = {
+  args: { onOpenSettings: fn(), isSettingsActive: false },
+  play: async ({ canvas, args }) => {
+    const gear = canvas.getByTestId("context-nav-settings");
+    await expect(gear).toBeInTheDocument();
+    await expect(gear).toHaveTextContent("Settings");
+    await userEvent.click(gear);
+    await expect(args.onOpenSettings).toHaveBeenCalled();
+  },
+};
+
+/** Settings gear highlights when the settings route is active. */
+export const WithSettingsActive: Story = {
+  args: { onOpenSettings: fn(), isSettingsActive: true },
+  play: async ({ canvas }) => {
+    const gear = canvas.getByTestId("context-nav-settings");
+    await expect(gear).toHaveAttribute("aria-current", "page");
+  },
+};
+
+/** Collapsed: settings gear is icon-only (label in tooltip). */
+export const WithSettingsCollapsed: Story = {
+  args: { onOpenSettings: fn(), isSettingsActive: false, collapsed: true, onToggleCollapsed: fn() },
+  play: async ({ canvas }) => {
+    const gear = canvas.getByTestId("context-nav-settings");
+    await expect(gear).not.toHaveTextContent("Settings");
+  },
+};
