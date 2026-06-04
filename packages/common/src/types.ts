@@ -66,6 +66,25 @@ export type AgentEventType =
 /** Discriminator for all session events, including user input and signals. */
 export type EventType = AgentEventType | "user_input" | "signal";
 
+// ─── Config Specs ──────────────────────────────────────────
+// Structural shapes for parsed persona/spawn configuration.
+// Defined here so both @grackle-ai/core and @grackle-ai/prompt can reference
+// them without a circular dependency (#1457).
+
+/** Parsed tool policy — matches the shape of `grackle.ToolConfig`. */
+export interface ToolConfigSpec {
+  allowedTools: string[];
+  disallowedTools: string[];
+}
+
+/** Parsed MCP server entry — matches the shape of `grackle.McpServerConfig`. */
+export interface McpServerSpec {
+  name: string;
+  command: string;
+  args: string[];
+  tools: string[];
+}
+
 /** Supported environment adapter backends. */
 export type AdapterType = "docker" | "local" | "codespace" | "ssh";
 

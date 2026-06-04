@@ -32,7 +32,7 @@ import {
 } from "@grackle-ai/prompt";
 import { logger } from "./logger.js";
 import { processEventStream } from "./event-processor.js";
-import { personaMcpServersToJson } from "./grpc-mcp-config.js";
+import { buildMcpServersJson } from "./grpc-mcp-config.js";
 import { toDialableHost } from "./grpc-shared-utils.js";
 import { emit } from "./event-bus.js";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
@@ -45,6 +45,8 @@ import {
   taskToLayer,
   hostDefaults,
 } from "./resolve-spawn-spec.js";
+import type { TaskModel } from "./domain/index.js";
+import { toPersonaModel } from "./domain/index.js";
 
 /**
  * Start a new agent session for a task.
@@ -61,7 +63,7 @@ import {
  * @returns An error message string on failure, `undefined` on success.
  */
 export async function startTaskSession(
-  task: taskStore.TaskRow,
+  task: TaskModel,
   options?: { personaId?: string; environmentId?: string; notes?: string; rawPrompt?: string },
 ): Promise<string | undefined> {
   const workspace = task.workspaceId ? workspaceStore.getWorkspace(task.workspaceId) : undefined;
@@ -97,7 +99,10 @@ export async function startTaskSession(
       task.defaultPersonaId,
       workspace?.defaultPersonaId || "",
       settingsStore.getSetting("default_persona_id") || undefined,
-      (id) => toPersonaResolveInput(personaStore.getPersona(id)),
+      (id) => {
+        const row = personaStore.getPersona(id);
+        return row ? toPersonaResolveInput(toPersonaModel(row)) : undefined;
+      },
     );
   } catch (err) {
     return (err as Error).message;
@@ -209,7 +214,8 @@ export async function startTaskSession(
     workspaceId: freshTask.workspaceId || "",
   });
 
-  const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
+  const mcpServersJson =
+    resolved.mcpServers.length > 0 ? buildMcpServersJson(resolved.mcpServers) : "";
 
   // Build MCP broker URL + scoped token so runtimes can call the MCP server.
   const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);

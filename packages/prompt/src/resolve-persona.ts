@@ -2,6 +2,7 @@
  * Persona resolution with cascade logic.
  * Pure function — no database or store dependencies.
  */
+import type { ToolConfigSpec, McpServerSpec } from "@grackle-ai/common";
 
 /** Database-agnostic persona data for resolution. */
 export interface PersonaResolveInput {
@@ -17,10 +18,10 @@ export interface PersonaResolveInput {
   maxTurns: number;
   /** System prompt to prepend. */
   systemPrompt: string;
-  /** JSON tool configuration. */
-  toolConfig: string;
-  /** JSON array of MCP server configs. */
-  mcpServers: string;
+  /** Parsed tool policy. `undefined` = no policy configured. */
+  toolConfig: ToolConfigSpec | undefined;
+  /** Parsed MCP server entries. */
+  mcpServers: McpServerSpec[];
   /** Persona type: "agent" (interactive LLM session) or "script" (run-to-completion). */
   type: string;
   /** Script source code (non-empty for script personas). */
@@ -39,10 +40,10 @@ export interface ResolvedPersona {
   maxTurns: number;
   /** System prompt to prepend. */
   systemPrompt: string;
-  /** JSON tool configuration. */
-  toolConfig: string;
-  /** JSON array of MCP server configs. */
-  mcpServers: string;
+  /** Parsed tool policy. `undefined` = no policy configured. */
+  toolConfig: ToolConfigSpec | undefined;
+  /** Parsed MCP server entries. */
+  mcpServers: McpServerSpec[];
   /** Persona type: "agent" (interactive LLM session) or "script" (run-to-completion). */
   type: string;
   /** Script source code (non-empty for script personas). */

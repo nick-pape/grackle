@@ -10,6 +10,7 @@ import {
   resolveAncestorEnvironmentId,
   findFirstConnectedEnvironment,
   interruptChildSession,
+  toTaskModel,
 } from "@grackle-ai/core";
 import type { ReconciliationPhase } from "@grackle-ai/core";
 import {
@@ -50,7 +51,10 @@ export function createCoreReconciliationPhases(): ReconciliationPhase[] {
   const dispatchPhase = createDispatchPhase({
     listPendingEntries: dispatchQueueStore.listPending,
     dequeueEntry: dispatchQueueStore.dequeue,
-    getTask: taskStore.getTask,
+    getTask: (id: string) => {
+      const row = taskStore.getTask(id);
+      return row ? toTaskModel(row) : undefined;
+    },
     hasCapacity: (environmentId: string): boolean =>
       hasCapacity(environmentId, {
         countActiveForEnvironment: sessionStore.countActiveForEnvironment,

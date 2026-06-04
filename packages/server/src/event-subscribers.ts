@@ -3,6 +3,7 @@ import {
   findFirstConnectedEnvironment,
   startTaskSession,
   reanimateAgent,
+  toTaskModel,
 } from "@grackle-ai/core";
 import type { Disposable, PluginContext, SubscriberFactory } from "@grackle-ai/plugin-sdk";
 import {
@@ -29,7 +30,10 @@ export function createEventSubscribers(ctx: PluginContext): Disposable[] {
   if (!ctx.config.skipRootAutostart) {
     factories.push((pluginCtx) =>
       createRootTaskBootSubscriber(pluginCtx, {
-        getTask: taskStore.getTask,
+        getTask: (id: string) => {
+          const row = taskStore.getTask(id);
+          return row ? toTaskModel(row) : undefined;
+        },
         listSessionsForTask: sessionStore.listSessionsForTask,
         getLatestSessionForTask: sessionStore.getLatestSessionForTask,
         computeTaskStatus,

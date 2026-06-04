@@ -258,12 +258,11 @@ describe("personaToLayer — sentinel handling", () => {
       runtime: "",
       model: "",
       maxTurns: 0,
-      toolConfig: "",
-      mcpServers: "",
+      toolConfig: undefined,
+      mcpServers: [],
     });
     expect(layer.runtime).toBeUndefined();
     expect(layer.model).toBeUndefined();
-    // Persona maxTurns=0 means "unlimited" (not "unset"), so it's passed through.
     expect(layer.maxTurns).toBe(0);
     expect(layer.toolConfig).toBeUndefined();
     expect(layer.mcpServers).toBeUndefined();
@@ -274,71 +273,56 @@ describe("personaToLayer — sentinel handling", () => {
       runtime: "claude-code",
       model: "sonnet",
       maxTurns: 0,
-      toolConfig: "{}",
-      mcpServers: "[]",
+      toolConfig: undefined,
+      mcpServers: [],
     });
     expect(layer.maxTurns).toBe(0);
   });
 
-  it("parses non-empty toolConfig JSON", () => {
+  it("passes already-parsed toolConfig through", () => {
     const layer = personaToLayer({
       runtime: "claude-code",
       model: "sonnet",
       maxTurns: 100,
-      toolConfig: JSON.stringify({ allowedTools: ["read"], disallowedTools: ["exec"] }),
-      mcpServers: "[]",
+      toolConfig: { allowedTools: ["read"], disallowedTools: ["exec"] },
+      mcpServers: [],
     });
     expect(layer.toolConfig).toEqual({ allowedTools: ["read"], disallowedTools: ["exec"] });
     expect(layer.maxTurns).toBe(100);
   });
 
-  it("treats `{}` toolConfig as unset (empty arrays)", () => {
+  it("treats undefined toolConfig as unset", () => {
     const layer = personaToLayer({
       runtime: "claude-code",
       model: "sonnet",
       maxTurns: 50,
-      toolConfig: "{}",
-      mcpServers: "[]",
+      toolConfig: undefined,
+      mcpServers: [],
     });
     expect(layer.toolConfig).toBeUndefined();
   });
 
-  it("ignores malformed toolConfig JSON without throwing", () => {
+  it("passes already-parsed mcpServers through", () => {
     const layer = personaToLayer({
       runtime: "claude-code",
       model: "sonnet",
       maxTurns: 50,
-      toolConfig: "{not json}",
-      mcpServers: "[]",
-    });
-    expect(layer.toolConfig).toBeUndefined();
-  });
-
-  it("parses non-empty mcpServers JSON", () => {
-    const layer = personaToLayer({
-      runtime: "claude-code",
-      model: "sonnet",
-      maxTurns: 50,
-      toolConfig: "{}",
-      mcpServers: JSON.stringify([{ name: "github", command: "gh", args: ["--x"], tools: [] }]),
+      toolConfig: undefined,
+      mcpServers: [{ name: "github", command: "gh", args: ["--x"], tools: [] }],
     });
     expect(layer.mcpServers).toHaveLength(1);
-    expect(layer.mcpServers?.[0].name).toBe("github");
+    expect(layer.mcpServers?.[0]?.name).toBe("github");
   });
 
-  it("skips mcp entries with no name", () => {
+  it("treats empty mcpServers array as unset", () => {
     const layer = personaToLayer({
       runtime: "claude-code",
       model: "sonnet",
       maxTurns: 50,
-      toolConfig: "{}",
-      mcpServers: JSON.stringify([
-        { name: "", command: "x" },
-        { name: "ok", command: "y" },
-      ]),
+      toolConfig: undefined,
+      mcpServers: [],
     });
-    expect(layer.mcpServers).toHaveLength(1);
-    expect(layer.mcpServers?.[0].name).toBe("ok");
+    expect(layer.mcpServers).toBeUndefined();
   });
 });
 
@@ -457,10 +441,8 @@ describe("end-to-end — adapter + resolver against realistic shapes", () => {
       runtime: "claude-code",
       model: "sonnet",
       maxTurns: 50,
-      toolConfig: JSON.stringify({ allowedTools: ["read"], disallowedTools: [] }),
-      mcpServers: JSON.stringify([
-        { name: "github", command: "gh", args: ["--persona"], tools: [] },
-      ]),
+      toolConfig: { allowedTools: ["read"], disallowedTools: [] },
+      mcpServers: [{ name: "github", command: "gh", args: ["--persona"], tools: [] }],
     });
     const workspace = workspaceToLayer({ useWorktrees: true, workingDirectory: "/repo" });
     const task = taskToLayer({});
@@ -487,8 +469,8 @@ describe("end-to-end — adapter + resolver against realistic shapes", () => {
       runtime: "claude-code",
       model: "sonnet",
       maxTurns: 100,
-      toolConfig: "{}",
-      mcpServers: "[]",
+      toolConfig: undefined,
+      mcpServers: [],
     });
     const spawnOverride = spawnRequestToLayer({
       provider: "copilot",
@@ -513,8 +495,8 @@ describe("end-to-end — adapter + resolver against realistic shapes", () => {
       runtime: "claude-code",
       model: "sonnet",
       maxTurns: 0, // explicit "unlimited"
-      toolConfig: "{}",
-      mcpServers: "[]",
+      toolConfig: undefined,
+      mcpServers: [],
     });
     const spec = resolveSpawnSpec({
       host: { workingDirectory: "/workspace", maxTurns: 50 }, // would-be host default
@@ -531,8 +513,8 @@ describe("end-to-end — adapter + resolver against realistic shapes", () => {
       runtime: "claude-code",
       model: "sonnet",
       maxTurns: 100,
-      toolConfig: "{}",
-      mcpServers: "[]",
+      toolConfig: undefined,
+      mcpServers: [],
     });
     const spawnOverride = spawnRequestToLayer({ configMaxTurns: 0 });
     const spec = resolveSpawnSpec({

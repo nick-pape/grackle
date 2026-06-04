@@ -7,8 +7,8 @@
  */
 
 import { logger } from "@grackle-ai/core";
-import type { DispatchQueueRow, TaskRow } from "@grackle-ai/database";
-import type { ReconciliationPhase } from "@grackle-ai/core";
+import type { DispatchQueueRow } from "@grackle-ai/database";
+import type { ReconciliationPhase, TaskModel } from "@grackle-ai/core";
 
 /** Dependencies injected into the dispatch phase for testability. */
 export interface DispatchPhaseDeps {
@@ -17,7 +17,7 @@ export interface DispatchPhaseDeps {
   /** Remove an entry from the dispatch queue by taskId. */
   dequeueEntry: (taskId: string) => void;
   /** Look up a task by ID. */
-  getTask: (taskId: string) => TaskRow | undefined;
+  getTask: (taskId: string) => TaskModel | undefined;
   /** Check whether an environment has capacity for another session. */
   hasCapacity: (environmentId: string) => boolean;
   /** Check whether an environment exists in the registry. */
@@ -26,13 +26,13 @@ export interface DispatchPhaseDeps {
   isTaskEligible: (taskId: string) => boolean;
   /** Start a task session. Returns error string on failure, undefined on success. */
   startTaskSession: (
-    task: TaskRow,
+    task: TaskModel,
     options?: { personaId?: string; environmentId?: string; notes?: string },
   ) => Promise<string | undefined>;
   /** Check if an environment is connected. */
   isEnvironmentConnected: (environmentId: string) => boolean;
   /** Resolve an environment for a task with no explicit environmentId. */
-  resolveEnvironment: (task: TaskRow) => string | undefined;
+  resolveEnvironment: (task: TaskModel) => string | undefined;
 }
 
 /**

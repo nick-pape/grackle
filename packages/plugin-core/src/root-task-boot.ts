@@ -16,8 +16,8 @@
  */
 
 import { ROOT_TASK_ID, ROOT_TASK_INITIAL_PROMPT, TASK_STATUS } from "@grackle-ai/common";
-import type { TaskRow, SessionRow, EnvironmentRow } from "@grackle-ai/database";
-import type { GrackleEvent } from "@grackle-ai/core";
+import type { SessionRow } from "@grackle-ai/database";
+import type { GrackleEvent, TaskModel, EnvironmentModel, SessionModel } from "@grackle-ai/core";
 import type { TaskStatusResult } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
@@ -44,7 +44,7 @@ const BOOT_STABLE_THRESHOLD_MS: number = 30_000;
 /** Dependencies injected into the root task boot module for testability. */
 export interface RootTaskBootDeps {
   /** Look up a task by ID. */
-  getTask: (id: string) => TaskRow | undefined;
+  getTask: (id: string) => TaskModel | undefined;
   /** List all sessions for a task. */
   listSessionsForTask: (taskId: string) => Pick<SessionRow, "id" | "status" | "startedAt">[];
   /** Get the most recent session for a task (by startedAt DESC). */
@@ -55,14 +55,14 @@ export interface RootTaskBootDeps {
     sessions: Pick<SessionRow, "id" | "status" | "startedAt">[],
   ) => TaskStatusResult;
   /** Find the first connected environment, preferring local. */
-  findFirstConnectedEnvironment: () => EnvironmentRow | undefined;
+  findFirstConnectedEnvironment: () => EnvironmentModel | undefined;
   /** Start a new agent session for a task. Returns error string on failure, undefined on success. */
   startTaskSession: (
-    task: TaskRow,
+    task: TaskModel,
     options?: { environmentId?: string; notes?: string },
   ) => Promise<string | undefined>;
   /** Reanimate a terminal session by resuming it on PowerLine. Throws on failure. */
-  reanimateAgent: (sessionId: string) => SessionRow;
+  reanimateAgent: (sessionId: string) => SessionModel;
   /** Whether onboarding is complete. Boot is deferred until the user has chosen a runtime (#1031). */
   isOnboarded?: () => boolean;
 }

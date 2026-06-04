@@ -3,7 +3,8 @@ import { SESSION_STATUS, LOGS_DIR } from "@grackle-ai/common";
 import { type ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
 import { join } from "node:path";
 import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
-import type { SessionRow } from "@grackle-ai/database";
+import type { SessionModel } from "./domain/index.js";
+import { toSessionModel } from "./domain/index.js";
 import * as adapterManager from "./adapter-manager.js";
 import { ensureLifecycleStream } from "./lifecycle-streams.js";
 import { ensureStdinStream } from "./stdin-delivery.js";
@@ -19,7 +20,7 @@ import { processEventStream } from "./event-processor.js";
  *   - FAILED_PRECONDITION if the session is still active, has no runtimeSessionId,
  *     the environment already has an active session, or the environment is offline
  */
-export function reanimateAgent(sessionId: string): SessionRow {
+export function reanimateAgent(sessionId: string): SessionModel {
   const session = sessionStore.getSession(sessionId);
   if (!session) {
     throw new ConnectError(`Session not found: ${sessionId}`, Code.NotFound);
@@ -124,5 +125,5 @@ export function reanimateAgent(sessionId: string): SessionRow {
     taskId,
   });
 
-  return sessionStore.getSession(session.id)!;
+  return toSessionModel(sessionStore.getSession(session.id)!);
 }

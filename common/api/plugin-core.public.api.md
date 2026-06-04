@@ -10,6 +10,7 @@ import type { ConnectRouter } from '@connectrpc/connect';
 import type { DispatchQueueRow } from '@grackle-ai/database';
 import type { Disposable as Disposable_2 } from '@grackle-ai/plugin-sdk';
 import { ensureLifecycleStream } from '@grackle-ai/core';
+import type { EnvironmentModel } from '@grackle-ai/core';
 import type { EnvironmentRow } from '@grackle-ai/database';
 import type { EnvironmentStatus } from '@grackle-ai/common';
 import type { GrackleEventType } from '@grackle-ai/core';
@@ -17,7 +18,9 @@ import type { PluginContext } from '@grackle-ai/plugin-sdk';
 import type { ReconciliationPhase } from '@grackle-ai/core';
 import { resolveAncestorEnvironmentId } from '@grackle-ai/core';
 import { ServiceCollector } from '@grackle-ai/core';
+import type { SessionModel } from '@grackle-ai/core';
 import type { SessionRow } from '@grackle-ai/database';
+import type { TaskModel } from '@grackle-ai/core';
 import type { TaskRow } from '@grackle-ai/database';
 import type { TaskStatusResult } from '@grackle-ai/core';
 import { toDialableHost } from '@grackle-ai/core';
@@ -98,13 +101,13 @@ export function createSubagentReconciliationPhase(deps: SubagentReconciliationDe
 export interface DispatchPhaseDeps {
     dequeueEntry: (taskId: string) => void;
     environmentExists: (environmentId: string) => boolean;
-    getTask: (taskId: string) => TaskRow | undefined;
+    getTask: (taskId: string) => TaskModel | undefined;
     hasCapacity: (environmentId: string) => boolean;
     isEnvironmentConnected: (environmentId: string) => boolean;
     isTaskEligible: (taskId: string) => boolean;
     listPendingEntries: () => DispatchQueueRow[];
-    resolveEnvironment: (task: TaskRow) => string | undefined;
-    startTaskSession: (task: TaskRow, options?: {
+    resolveEnvironment: (task: TaskModel) => string | undefined;
+    startTaskSession: (task: TaskModel, options?: {
         personaId?: string;
         environmentId?: string;
         notes?: string;
@@ -176,13 +179,13 @@ export { resolveAncestorEnvironmentId }
 // @public
 export interface RootTaskBootDeps {
     computeTaskStatus: (storedStatus: string, sessions: Pick<SessionRow, "id" | "status" | "startedAt">[]) => TaskStatusResult;
-    findFirstConnectedEnvironment: () => EnvironmentRow | undefined;
+    findFirstConnectedEnvironment: () => EnvironmentModel | undefined;
     getLatestSessionForTask: (taskId: string) => SessionRow | undefined;
-    getTask: (id: string) => TaskRow | undefined;
+    getTask: (id: string) => TaskModel | undefined;
     isOnboarded?: () => boolean;
     listSessionsForTask: (taskId: string) => Pick<SessionRow, "id" | "status" | "startedAt">[];
-    reanimateAgent: (sessionId: string) => SessionRow;
-    startTaskSession: (task: TaskRow, options?: {
+    reanimateAgent: (sessionId: string) => SessionModel;
+    startTaskSession: (task: TaskModel, options?: {
         environmentId?: string;
         notes?: string;
     }) => Promise<string | undefined>;

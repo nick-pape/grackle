@@ -1,29 +1,29 @@
 /**
- * Maps database rows to prompt package input types.
- * Centralizes the DB-to-prompt mapping so callers don't duplicate it.
+ * Maps domain models to prompt package input types.
+ * Centralizes the model-to-prompt mapping so callers don't duplicate it.
  */
-import type { PersonaRow } from "@grackle-ai/database";
+import type { PersonaModel } from "./domain/index.js";
 import { personaStore, envRegistry, taskStore, safeParseJsonArray } from "@grackle-ai/database";
 import type { PersonaResolveInput, OrchestratorContextInput } from "@grackle-ai/prompt";
 
-/** Convert a database PersonaRow to a PersonaResolveInput for prompt resolution. */
+/** Convert a PersonaModel to a PersonaResolveInput for prompt resolution. */
 export function toPersonaResolveInput(
-  row: PersonaRow | undefined,
+  model: PersonaModel | undefined,
 ): PersonaResolveInput | undefined {
-  if (!row) {
+  if (!model) {
     return undefined;
   }
   return {
-    id: row.id,
-    name: row.name,
-    runtime: row.runtime,
-    model: row.model,
-    maxTurns: row.maxTurns,
-    systemPrompt: row.systemPrompt,
-    toolConfig: row.toolConfig,
-    mcpServers: row.mcpServers,
-    type: row.type,
-    script: row.script,
+    id: model.id,
+    name: model.name,
+    runtime: model.runtime,
+    model: model.model,
+    maxTurns: model.maxTurns,
+    systemPrompt: model.systemPrompt,
+    toolConfig: model.toolConfig,
+    mcpServers: model.mcpServers,
+    type: model.type,
+    script: model.script,
   };
 }
 

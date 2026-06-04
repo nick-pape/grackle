@@ -55,7 +55,7 @@ import {
   spawnRequestToLayer,
   hostDefaults,
 } from "@grackle-ai/core";
-import { personaMcpServersToJson } from "@grackle-ai/core";
+import { buildMcpServersJson, toPersonaModel } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
 import { resolveBootstrapRuntime } from "@grackle-ai/core";
 import { ensureStdinStream, publishToStdin } from "@grackle-ai/core";
@@ -156,7 +156,10 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
       undefined,
       undefined,
       settingsStore.getSetting("default_persona_id") || undefined,
-      (id) => toPersonaResolveInput(personaStore.getPersona(id)),
+      (id) => {
+        const row = personaStore.getPersona(id);
+        return row ? toPersonaResolveInput(toPersonaModel(row)) : undefined;
+      },
     );
   } catch (err) {
     throw new ConnectError((err as Error).message, Code.FailedPrecondition);
@@ -217,7 +220,8 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     pipeMode || "", // pipeMode
   );
 
-  const mcpServersJson = personaMcpServersToJson(resolved.mcpServers, resolved.personaId);
+  const mcpServersJson =
+    resolved.mcpServers.length > 0 ? buildMcpServersJson(resolved.mcpServers) : "";
 
   const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
   const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");

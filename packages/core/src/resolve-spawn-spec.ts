@@ -23,19 +23,7 @@
  * @module
  */
 
-/** Structural view of an MCP server entry — matches `grackle.McpServerConfig`. */
-export interface McpServerSpec {
-  name: string;
-  command: string;
-  args: string[];
-  tools: string[];
-}
-
-/** Structural view of a tool policy — matches `grackle.ToolConfig`. */
-export interface ToolConfigSpec {
-  allowedTools: string[];
-  disallowedTools: string[];
-}
+import type { ToolConfigSpec, McpServerSpec } from "@grackle-ai/common";
 
 /**
  * Per-layer contribution to the spawn config. `undefined` on any field means
@@ -219,15 +207,15 @@ export function mergeMcpServers(layers: SpawnConfigLayer[]): McpServerSpec[] {
 // Each adapter converts a source shape's proto/db sentinels (empty string,
 // zero, empty array) into `undefined` so the resolver remains field-agnostic.
 
-/** Subset of `ResolvedPersona` used to build the persona layer contribution. */
+/** Subset of a resolved persona used to build the persona layer contribution. */
 export interface PersonaConfigSource {
   runtime: string;
   model: string;
   maxTurns: number;
-  /** JSON string — see `Persona.tool_config` (`{}` is the empty sentinel). */
-  toolConfig: string;
-  /** JSON string — see `Persona.mcp_servers` (`[]` or `""` is the empty sentinel). */
-  mcpServers: string;
+  /** Already-parsed tool policy. `undefined` = no policy configured. */
+  toolConfig: ToolConfigSpec | undefined;
+  /** Already-parsed MCP server entries. */
+  mcpServers: McpServerSpec[];
 }
 
 /**
@@ -247,8 +235,8 @@ export function personaToLayer(p: PersonaConfigSource): SpawnConfigLayer {
     runtime: p.runtime || undefined,
     model: p.model || undefined,
     maxTurns: p.maxTurns,
-    toolConfig: parseToolConfigJson(p.toolConfig),
-    mcpServers: parseMcpServersJson(p.mcpServers),
+    toolConfig: p.toolConfig,
+    mcpServers: p.mcpServers.length > 0 ? p.mcpServers : undefined,
   };
 }
 
@@ -336,72 +324,4 @@ export function hostDefaults(): SpawnConfigLayer {
     workingDirectory:
       process.env.GRACKLE_WORKING_DIRECTORY || process.env.GRACKLE_WORKTREE_BASE || "/workspace",
   };
-}
-
-// ─── JSON parsers for persona-stored config ──────────────────────────────
-
-function parseToolConfigJson(json: string): ToolConfigSpec | undefined {
-  if (!json) {
-    return undefined;
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(json);
-  } catch {
-    return undefined;
-  }
-  if (!parsed || typeof parsed !== "object") {
-    return undefined;
-  }
-  const obj = parsed as { allowedTools?: unknown; disallowedTools?: unknown };
-  const allowed = stringArray(obj.allowedTools);
-  const disallowed = stringArray(obj.disallowedTools);
-  if (allowed.length === 0 && disallowed.length === 0) {
-    return undefined;
-  }
-  return { allowedTools: allowed, disallowedTools: disallowed };
-}
-
-function parseMcpServersJson(json: string): McpServerSpec[] | undefined {
-  if (!json) {
-    return undefined;
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(json);
-  } catch {
-    return undefined;
-  }
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    return undefined;
-  }
-  const servers: McpServerSpec[] = [];
-  for (const entry of parsed) {
-    if (!entry || typeof entry !== "object") {
-      continue;
-    }
-    const e = entry as {
-      name?: unknown;
-      command?: unknown;
-      args?: unknown;
-      tools?: unknown;
-    };
-    if (typeof e.name !== "string" || !e.name) {
-      continue;
-    }
-    servers.push({
-      name: e.name,
-      command: typeof e.command === "string" ? e.command : "",
-      args: stringArray(e.args),
-      tools: stringArray(e.tools),
-    });
-  }
-  return servers.length > 0 ? servers : undefined;
-}
-
-function stringArray(v: unknown): string[] {
-  if (!Array.isArray(v)) {
-    return [];
-  }
-  return v.filter((x): x is string => typeof x === "string");
 }
