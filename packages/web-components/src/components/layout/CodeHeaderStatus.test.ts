@@ -37,7 +37,7 @@ describe("describeCodeStatus", () => {
       makeSession({ id: "s2", status: "running", startedAt: "2026-06-01T11:00:00Z" }),
       makeSession({
         id: "s3",
-        status: "completed",
+        status: "stopped",
         endReason: "completed",
         startedAt: "2026-06-01T12:00:00Z",
       }),
@@ -51,7 +51,7 @@ describe("describeCodeStatus", () => {
     const sessions = [
       makeSession({
         id: "s1",
-        status: "completed",
+        status: "stopped",
         endReason: "completed",
         startedAt: "2026-06-01T10:00:00Z",
       }),
