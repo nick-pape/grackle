@@ -7,7 +7,7 @@ import type {
   SpawnOptions,
   ResumeOptions,
 } from "@grackle-ai/runtime-sdk";
-import { SESSION_STATUS } from "@grackle-ai/common";
+import { SESSION_STATUS, assertTransition } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import {
   parseScenario,
@@ -57,7 +57,7 @@ export class StubSession implements AgentSession {
   public id: string;
   public runtimeName: string;
   public runtimeSessionId: string;
-  public status: SessionStatus = SESSION_STATUS.RUNNING;
+  public status: SessionStatus = SESSION_STATUS.PENDING;
 
   private emitter: EventEmitter = new EventEmitter();
   private inputResolve: ((text: string) => void) | null = null;
@@ -87,6 +87,17 @@ export class StubSession implements AgentSession {
     this.scenario = parseScenario(prompt);
   }
 
+  private transitionTo(target: SessionStatus): void {
+    if (this.status === target) {
+      return;
+    }
+    assertTransition(this.status, target);
+    this.status = target;
+    if (target === SESSION_STATUS.STOPPED) {
+      this.killed = true;
+    }
+  }
+
   public async *stream(): AsyncIterable<AgentEvent> {
     if (this.scenario) {
       yield* this.runScenario();
@@ -98,6 +109,7 @@ export class StubSession implements AgentSession {
   /** Original hardcoded echo behavior, preserved for backward compatibility. */
   private async *runLegacy(): AsyncIterable<AgentEvent> {
     const ts: () => string = () => new Date().toISOString();
+    this.transitionTo(SESSION_STATUS.RUNNING);
 
     yield { type: "system", timestamp: ts(), content: "Stub runtime initialized" };
     yield { type: "runtime_session_id", timestamp: ts(), content: this.runtimeSessionId };
@@ -144,7 +156,7 @@ export class StubSession implements AgentSession {
 
     // Initial turn complete; wait for user input.
     yield { type: "turn_complete", timestamp: ts(), content: "", turnId: initialTurnId };
-    this.status = SESSION_STATUS.IDLE;
+    this.transitionTo(SESSION_STATUS.IDLE);
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
     if (this.killed as boolean) {
@@ -160,12 +172,12 @@ export class StubSession implements AgentSession {
 
     // Simulate failure when input is "fail"
     if (input === "fail") {
-      this.status = SESSION_STATUS.STOPPED;
+      this.transitionTo(SESSION_STATUS.STOPPED);
       yield { type: "status", timestamp: ts(), content: "failed" };
       return;
     }
 
-    this.status = SESSION_STATUS.RUNNING;
+    this.transitionTo(SESSION_STATUS.RUNNING);
     yield { type: "status", timestamp: ts(), content: "running" };
     const followUpTurnId = randomUUID();
     yield { type: "turn_started", timestamp: ts(), content: input, turnId: followUpTurnId };
@@ -173,13 +185,14 @@ export class StubSession implements AgentSession {
 
     // Agent finished turn — go idle, not "completed"
     yield { type: "turn_complete", timestamp: ts(), content: "", turnId: followUpTurnId };
-    this.status = SESSION_STATUS.IDLE;
+    this.transitionTo(SESSION_STATUS.IDLE);
     yield { type: "status", timestamp: ts(), content: "waiting_input" };
   }
 
   /** Execute a parsed JSON scenario step by step. */
   private async *runScenario(): AsyncIterable<AgentEvent> {
     const ts: () => string = () => new Date().toISOString();
+    this.transitionTo(SESSION_STATUS.RUNNING);
     const steps = this.scenario!.steps;
     let lastToolUseId: string | undefined;
 
@@ -207,7 +220,7 @@ export class StubSession implements AgentSession {
           return;
         }
       } else if (isIdleStep(step)) {
-        this.status = SESSION_STATUS.IDLE;
+        this.transitionTo(SESSION_STATUS.IDLE);
         yield { type: "status", timestamp: ts(), content: "waiting_input" };
 
         const input = await this.waitForInput();
@@ -220,12 +233,12 @@ export class StubSession implements AgentSession {
         const action = this.resolveInputAction(input);
 
         if (action === "fail") {
-          this.status = SESSION_STATUS.STOPPED;
+          this.transitionTo(SESSION_STATUS.STOPPED);
           yield { type: "status", timestamp: ts(), content: "failed" };
           return;
         }
 
-        this.status = SESSION_STATUS.RUNNING;
+        this.transitionTo(SESSION_STATUS.RUNNING);
         yield { type: "status", timestamp: ts(), content: "running" };
 
         if (action === "echo") {
@@ -277,7 +290,7 @@ export class StubSession implements AgentSession {
     }
 
     // All steps completed
-    this.status = SESSION_STATUS.STOPPED;
+    this.transitionTo(SESSION_STATUS.STOPPED);
     yield { type: "status", timestamp: ts(), content: "completed" };
   }
 
@@ -543,9 +556,8 @@ export class StubSession implements AgentSession {
   }
 
   public kill(reason?: string): void {
-    this.killed = true;
     this.killReason = reason || "killed";
-    this.status = SESSION_STATUS.STOPPED;
+    this.transitionTo(SESSION_STATUS.STOPPED);
     if (this.inputResolve) {
       // Remove the EventEmitter listener to prevent a stale callback if
       // sendInput() is called after kill().

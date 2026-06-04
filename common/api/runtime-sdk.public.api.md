@@ -128,6 +128,7 @@ export abstract class BaseAgentSession implements AgentSession {
     stream(): AsyncIterable<AgentEvent>;
     // (undocumented)
     protected readonly systemContext?: string;
+    protected transitionTo(target: SessionStatus): void;
     // (undocumented)
     protected readonly useWorktrees: boolean;
     // (undocumented)

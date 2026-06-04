@@ -14,7 +14,7 @@ import type {
   ResumeOptions,
 } from "@grackle-ai/runtime-sdk";
 import { logger, ensureRuntimeInstalled } from "@grackle-ai/runtime-sdk";
-import { SESSION_STATUS } from "@grackle-ai/common";
+import { SESSION_STATUS, assertTransition } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 
 /** Shape of the JSON result from genaiscript's res.json output. */
@@ -72,7 +72,7 @@ class GenAIScriptSession implements AgentSession {
   public id: string;
   public runtimeName: string = "genaiscript";
   public runtimeSessionId: string;
-  public status: SessionStatus = SESSION_STATUS.RUNNING;
+  public status: SessionStatus = SESSION_STATUS.PENDING;
 
   private scriptContent: string;
   private prompt: string;
@@ -90,12 +90,24 @@ class GenAIScriptSession implements AgentSession {
     this.mcpBroker = opts.mcpBroker;
   }
 
+  private transitionTo(target: SessionStatus): void {
+    if (this.status === target) {
+      return;
+    }
+    assertTransition(this.status, target);
+    this.status = target;
+    if (target === SESSION_STATUS.STOPPED) {
+      this.killed = true;
+    }
+  }
+
   public async *stream(): AsyncIterable<AgentEvent> {
     const ts: () => string = () => new Date().toISOString();
+    this.transitionTo(SESSION_STATUS.RUNNING);
 
     if (!this.scriptContent) {
       yield { type: "error", timestamp: ts(), content: "No script content provided" };
-      this.status = SESSION_STATUS.STOPPED;
+      this.transitionTo(SESSION_STATUS.STOPPED);
       yield { type: "status", timestamp: ts(), content: "failed" };
       return;
     }
@@ -172,7 +184,7 @@ class GenAIScriptSession implements AgentSession {
       });
 
       if (this.killed) {
-        this.status = SESSION_STATUS.STOPPED;
+        this.transitionTo(SESSION_STATUS.STOPPED);
         yield { type: "status", timestamp: ts(), content: this.killReason };
         return;
       }
@@ -232,13 +244,13 @@ class GenAIScriptSession implements AgentSession {
       // Final status — GenAIScript is a one-shot runtime, so it goes IDLE when done
       if (exitCode === 0 || result?.status === "success") {
         yield { type: "turn_complete", timestamp: ts(), content: "", turnId };
-        this.status = SESSION_STATUS.IDLE;
+        this.transitionTo(SESSION_STATUS.IDLE);
         yield { type: "status", timestamp: ts(), content: "waiting_input" };
       } else {
         const errorText =
           result?.statusText ?? result?.status ?? `Process exited with code ${exitCode}`;
         yield { type: "error", timestamp: ts(), content: String(errorText) };
-        this.status = SESSION_STATUS.STOPPED;
+        this.transitionTo(SESSION_STATUS.STOPPED);
         yield { type: "status", timestamp: ts(), content: "failed" };
       }
     } catch (err) {
@@ -247,7 +259,7 @@ class GenAIScriptSession implements AgentSession {
         timestamp: ts(),
         content: err instanceof Error ? err.message : String(err),
       };
-      this.status = SESSION_STATUS.STOPPED;
+      this.transitionTo(SESSION_STATUS.STOPPED);
       yield { type: "status", timestamp: ts(), content: "failed" };
     } finally {
       if (this.tmpDir) {
@@ -265,9 +277,8 @@ class GenAIScriptSession implements AgentSession {
   }
 
   public kill(reason?: string): void {
-    this.killed = true;
     this.killReason = reason || "killed";
-    this.status = SESSION_STATUS.STOPPED;
+    this.transitionTo(SESSION_STATUS.STOPPED);
     if (this.child && !this.child.killed) {
       this.child.kill("SIGTERM");
     }

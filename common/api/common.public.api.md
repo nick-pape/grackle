@@ -126,6 +126,9 @@ const AllowedMcpToolsSchema: GenMessage<AllowedMcpTools>;
 export const API_KEY_FILENAME: string;
 
 // @public
+export function assertTransition(from: SessionStatus, to: SessionStatus): void;
+
+// @public
 type AttachStreamRequest = Message<"grackle.AttachStreamRequest"> & {
     sessionId: string;
     fd: number;
@@ -2019,6 +2022,18 @@ const InputMessageSchema: GenMessage<InputMessage>;
 const InputMessageSchema_2: GenMessage<InputMessage_2>;
 
 // @public
+export class InvalidSessionTransitionError extends Error {
+    constructor(from: SessionStatus, to: SessionStatus);
+    // (undocumented)
+    readonly from: SessionStatus;
+    // (undocumented)
+    readonly to: SessionStatus;
+}
+
+// @public
+export function isValidTransition(from: SessionStatus, to: SessionStatus): boolean;
+
+// @public
 type KillAgentRequest = Message<"grackle.KillAgentRequest"> & {
     id: string;
     graceful: boolean;
@@ -2959,6 +2974,9 @@ export const SESSION_STATUS: {
     readonly STOPPED: "stopped";
     readonly SUSPENDED: "suspended";
 };
+
+// @public
+export const SESSION_TRANSITIONS: ReadonlyMap<SessionStatus, ReadonlySet<SessionStatus>>;
 
 // @public
 type SessionAction = Message<"grackle.SessionAction"> & {

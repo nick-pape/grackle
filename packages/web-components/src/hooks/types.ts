@@ -875,6 +875,8 @@ export function parseWsMessage(data: string): WsMessage | GrackleEvent | undefin
  */
 export function mapSessionStatus(rawStatus: string): string {
   switch (rawStatus) {
+    case "pending":
+      return "pending";
     case "waiting_input":
       return "idle";
     case "completed":

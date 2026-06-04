@@ -203,7 +203,7 @@ describe("CodexRuntime structural", () => {
     });
     expect(session.id).toBe("cdx-1");
     expect(session.runtimeName).toBe("codex");
-    expect(session.status).toBe("running");
+    expect(session.status).toBe("pending");
   });
 
   it("resume sets runtimeSessionId from options", () => {

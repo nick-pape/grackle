@@ -245,7 +245,7 @@ describe("ClaudeCodeRuntime structural", () => {
     });
     expect(session.id).toBe("cc-1");
     expect(session.runtimeName).toBe("claude-code");
-    expect(session.status).toBe("running");
+    expect(session.status).toBe("pending");
   });
 
   it("resume sets runtimeSessionId from options", async () => {

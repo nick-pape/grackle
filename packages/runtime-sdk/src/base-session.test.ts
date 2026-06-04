@@ -866,3 +866,77 @@ describe("BaseAgentSession.setRuntimeSessionId", () => {
     expect(events.find((e) => e.type === "runtime_session_id")).toBeUndefined();
   });
 });
+
+// ─── Session state machine ─────────────────────────────────────
+
+describe("BaseAgentSession state machine", () => {
+  it("starts in pending state", () => {
+    const session = new TestSession({ id: "sm-1", prompt: "p", model: "m", maxTurns: 0 });
+    expect(session.status).toBe("pending");
+  });
+
+  it("transitions to running when stream() starts", async () => {
+    const { session, nextEvent } = spawnSession();
+    // First event is the system startup message; by then status is running
+    await nextEvent();
+    expect(session.status).toBe("running");
+    session.kill();
+  });
+
+  it("transitions running → idle after initial query", async () => {
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+    expect(session.status).toBe("idle");
+    session.kill();
+  });
+
+  it("transitions idle → running → idle through input cycle", async () => {
+    const { session, nextEvent } = spawnSession();
+    const gate = session.addGate();
+    await drainUntilStatus(nextEvent, "waiting_input");
+    expect(session.status).toBe("idle");
+
+    session.sendInput("hello");
+    await drainUntilStatus(nextEvent, "running");
+    // Gate holds executeFollowUp so status stays running
+    expect(session.status).toBe("running");
+
+    gate.resolve();
+    await drainUntilStatus(nextEvent, "waiting_input");
+    expect(session.status).toBe("idle");
+
+    session.kill();
+  });
+
+  it("kill from idle transitions to stopped", async () => {
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    session.kill();
+    expect(session.status).toBe("stopped");
+  });
+
+  it("kill from running transitions to stopped", async () => {
+    const { session, nextEvent } = spawnSession();
+    const gate = session.addGate();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    session.sendInput("blocked");
+    await drainUntilStatus(nextEvent, "running");
+
+    session.kill();
+    expect(session.status).toBe("stopped");
+    gate.resolve();
+  });
+
+  it("double kill is idempotent (no throw)", async () => {
+    const { session, nextEvent } = spawnSession();
+    await drainUntilStatus(nextEvent, "waiting_input");
+
+    session.kill();
+    expect(session.status).toBe("stopped");
+
+    expect(() => session.kill()).not.toThrow();
+    expect(session.status).toBe("stopped");
+  });
+});
