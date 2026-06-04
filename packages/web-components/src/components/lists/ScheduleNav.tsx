@@ -87,13 +87,21 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
     if (!filterActive) {
       return schedules;
     }
+    const personaFilters = new Set<string>();
+    const workspaceFilters = new Set<string>();
+    for (const k of filterValues) {
+      if (k.startsWith("persona:")) {
+        personaFilters.add(k);
+      } else if (k.startsWith("workspace:")) {
+        workspaceFilters.add(k);
+      }
+    }
     return schedules.filter((s) => {
-      const personaKey = `persona:${s.personaId}`;
-      const workspaceKey = `workspace:${s.workspaceId}`;
-      const hasPersonaFilters = [...filterValues].some((k) => k.startsWith("persona:"));
-      const hasWorkspaceFilters = [...filterValues].some((k) => k.startsWith("workspace:"));
-      const passesPersona = !hasPersonaFilters || filterValues.has(personaKey);
-      const passesWorkspace = !hasWorkspaceFilters || filterValues.has(workspaceKey);
+      const passesPersona =
+        personaFilters.size === 0 || (s.personaId && personaFilters.has(`persona:${s.personaId}`));
+      const passesWorkspace =
+        workspaceFilters.size === 0 ||
+        (s.workspaceId && workspaceFilters.has(`workspace:${s.workspaceId}`));
       return passesPersona && passesWorkspace;
     });
   }, [schedules, filterActive, filterValues]);

@@ -106,13 +106,18 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
     if (!filterActive) {
       return environments;
     }
+    const statusFilters = new Set<string>();
+    const typeFilters = new Set<string>();
+    for (const k of filterValues) {
+      if (k.startsWith("status:")) {
+        statusFilters.add(k);
+      } else if (k.startsWith("type:")) {
+        typeFilters.add(k);
+      }
+    }
     return environments.filter((env) => {
-      const statusKey = `status:${env.status}`;
-      const typeKey = `type:${env.adapterType}`;
-      const hasStatusFilters = [...filterValues].some((k) => k.startsWith("status:"));
-      const hasTypeFilters = [...filterValues].some((k) => k.startsWith("type:"));
-      const passesStatus = !hasStatusFilters || filterValues.has(statusKey);
-      const passesType = !hasTypeFilters || filterValues.has(typeKey);
+      const passesStatus = statusFilters.size === 0 || statusFilters.has(`status:${env.status}`);
+      const passesType = typeFilters.size === 0 || typeFilters.has(`type:${env.adapterType}`);
       return passesStatus && passesType;
     });
   }, [environments, filterActive, filterValues]);
