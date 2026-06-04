@@ -157,7 +157,7 @@ export function agentUrl(agentId: string, tab?: AgentTab): string {
 
 /** Routes that render their own nav bar and suppress the global AppNav. */
 export function hasOwnNav(pathname: string): boolean {
-  return /^\/agents\//.test(pathname);
+  return /^\/agents\//.test(pathname) || /^\/settings(\/|$)/.test(pathname);
 }
 
 /** URL for the top-level Schedules surface. */

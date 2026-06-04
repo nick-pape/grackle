@@ -9,7 +9,6 @@ import {
   MessageSquare,
   Monitor,
   Network,
-  Settings,
   User,
 } from "lucide-react";
 import {
@@ -22,7 +21,6 @@ import {
   SCHEDULES_URL,
   SESSIONS_URL,
   SETTINGS_URL,
-  SETTINGS_CREDENTIALS_URL,
   TASKS_URL,
   useAppNavigate,
 } from "../../utils/navigation.js";
@@ -172,15 +170,6 @@ export const TABS: AppTab[] = [
     testId: "sidebar-tab-environments",
     order: 6.4,
     group: "fleet",
-  },
-  {
-    view: "settings",
-    label: "Settings",
-    icon: <Settings size={ICON_LG} />,
-    route: SETTINGS_CREDENTIALS_URL,
-    testId: "sidebar-tab-settings",
-    align: "end",
-    group: "global",
   },
 ];
 

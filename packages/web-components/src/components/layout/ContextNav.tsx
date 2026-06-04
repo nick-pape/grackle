@@ -1,5 +1,5 @@
 import { useCallback, useRef, type JSX, type KeyboardEvent, type ReactNode } from "react";
-import { Code2, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
+import { Code2, PanelLeftClose, PanelLeftOpen, Plus, Settings } from "lucide-react";
 import { ICON_LG } from "../../utils/iconSize.js";
 import { Tooltip } from "../display/Tooltip.js";
 import styles from "./ContextNav.module.scss";
@@ -65,6 +65,10 @@ export interface ContextNavProps {
   activeFleetId?: string;
   /** Called with a fleet item id when selected (the parent navigates to its route). */
   onSelectFleet?: (id: string) => void;
+  /** Called when the user clicks the settings gear icon. Omit to hide. */
+  onOpenSettings?: () => void;
+  /** Whether the settings route is currently active (highlights the gear icon). */
+  isSettingsActive?: boolean;
 }
 
 /**
@@ -92,8 +96,11 @@ export function ContextNav({
   fleetItems,
   activeFleetId,
   onSelectFleet,
+  onOpenSettings,
+  isSettingsActive = false,
 }: ContextNavProps): JSX.Element {
   const createAgentLabel = "Create Agent";
+  const settingsLabel = "Settings";
   const tabListRef = useRef<HTMLDivElement>(null);
 
   const handleKeyDown = useCallback(
@@ -245,20 +252,55 @@ export function ContextNav({
           ))}
       </div>
 
-      {onToggleCollapsed && (
-        <button
-          type="button"
-          className={styles.toggle}
-          onClick={onToggleCollapsed}
-          aria-label={collapsed ? "Expand context navigation" : "Collapse context navigation"}
-          aria-expanded={!collapsed}
-          data-testid="context-nav-toggle"
-        >
-          <span className={styles.tabIcon} aria-hidden="true">
-            {collapsed ? <PanelLeftOpen size={ICON_LG} /> : <PanelLeftClose size={ICON_LG} />}
-          </span>
-          {!collapsed && <span className={styles.tabLabel}>Collapse</span>}
-        </button>
+      {(onOpenSettings || onToggleCollapsed) && (
+        <div className={styles.bottomActions}>
+          {onOpenSettings &&
+            (collapsed ? (
+              <Tooltip text={settingsLabel} placement="right" inline={false}>
+                <button
+                  type="button"
+                  aria-current={isSettingsActive ? "page" : undefined}
+                  className={`${styles.tab} ${isSettingsActive ? styles.tabActive : ""}`}
+                  onClick={onOpenSettings}
+                  data-testid="context-nav-settings"
+                  aria-label={settingsLabel}
+                >
+                  <span className={styles.tabIcon} aria-hidden="true">
+                    <Settings size={ICON_LG} />
+                  </span>
+                </button>
+              </Tooltip>
+            ) : (
+              <button
+                type="button"
+                aria-current={isSettingsActive ? "page" : undefined}
+                className={`${styles.tab} ${isSettingsActive ? styles.tabActive : ""}`}
+                onClick={onOpenSettings}
+                data-testid="context-nav-settings"
+                aria-label={settingsLabel}
+              >
+                <span className={styles.tabIcon} aria-hidden="true">
+                  <Settings size={ICON_LG} />
+                </span>
+                <span className={styles.tabLabel}>{settingsLabel}</span>
+              </button>
+            ))}
+          {onToggleCollapsed && (
+            <button
+              type="button"
+              className={styles.toggle}
+              onClick={onToggleCollapsed}
+              aria-label={collapsed ? "Expand context navigation" : "Collapse context navigation"}
+              aria-expanded={!collapsed}
+              data-testid="context-nav-toggle"
+            >
+              <span className={styles.tabIcon} aria-hidden="true">
+                {collapsed ? <PanelLeftOpen size={ICON_LG} /> : <PanelLeftClose size={ICON_LG} />}
+              </span>
+              {!collapsed && <span className={styles.tabLabel}>Collapse</span>}
+            </button>
+          )}
+        </div>
       )}
     </nav>
   );

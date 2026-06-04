@@ -25,8 +25,8 @@ test.describe("Context nav (context axis)", { tag: ["@webui", "@smoke"] }, () =>
     await expect(page.getByTestId("sidebar-tab-chat")).toBeVisible();
     await expect(page.getByTestId("sidebar-tab-sessions")).toBeVisible();
 
-    // Settings is end-aligned in the Code tab bar.
-    await expect(page.getByTestId("sidebar-tab-settings")).toBeVisible();
+    // Settings is in the context rail (gear icon), not the Code tab bar.
+    await expect(page.getByTestId("context-nav").getByTestId("context-nav-settings")).toBeVisible();
     // Environments is a fleet surface in the context rail.
     await expect(
       page.getByTestId("context-nav").getByTestId("sidebar-tab-environments"),

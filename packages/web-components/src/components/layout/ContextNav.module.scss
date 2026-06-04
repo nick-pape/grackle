@@ -165,15 +165,23 @@ $rail-width-collapsed: 56px;
   width: calc(100% - var(--space-sm));
 }
 
+// Bottom-pinned actions (settings gear + collapse toggle). Uses margin-top: auto
+// to push the group to the rail's bottom edge.
+.bottomActions {
+  margin-top: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-subtle);
+}
+
 .toggle {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   width: 100%;
   padding: var(--space-sm) var(--space-md);
-  margin-top: auto;
   border: none;
-  border-top: 1px solid var(--border-subtle);
   background: transparent;
   color: var(--text-tertiary);
   font-size: var(--font-size-sm);

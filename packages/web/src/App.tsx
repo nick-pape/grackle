@@ -27,6 +27,7 @@ import {
   personaUrl,
   scheduleUrl,
   useAppNavigate,
+  SETTINGS_CREDENTIALS_URL,
   type AppTab,
   type ContextItem,
   type ContextDetailTab,
@@ -232,6 +233,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   );
   const activeView = getActiveView(location.pathname);
   const activeFleetId = fleetTabs.some((t) => t.view === activeView) ? activeView : undefined;
+  const isSettingsRoute = /^\/settings(\/|$)/.test(location.pathname);
 
   // Code context tabs: workbench + global groups, mapped to ContextDetailTab shape.
   const codeDetailTabs = useMemo<ContextDetailTab[]>(() => {
@@ -274,7 +276,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   }
   const activeContextId = activeAgentId
     ? `${AGENT_CONTEXT_PREFIX}${activeAgentId}`
-    : activeFleetId
+    : activeFleetId || isSettingsRoute
       ? ""
       : DEFAULT_CONTEXT_ID;
 
@@ -357,6 +359,11 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
             onSelectFleet={handleSelectFleet}
             collapsed={isMobile ? false : contextNavCollapsed}
             onToggleCollapsed={isMobile ? undefined : toggleContextNavCollapsed}
+            onOpenSettings={() => {
+              navigate(SETTINGS_CREDENTIALS_URL);
+              setContextNavOpen(false);
+            }}
+            isSettingsActive={isSettingsRoute}
           />
         </div>
         {contextNavOpen && (

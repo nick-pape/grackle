@@ -10,7 +10,9 @@ test.describe("App Navigation Bar", { tag: ["@environment"] }, () => {
     // Workbench tabs present in the Code tab bar
     await expect(page.locator('[data-testid="sidebar-tab-chat"]')).toBeVisible();
     await expect(page.locator('[data-testid="sidebar-tab-tasks"]')).toBeVisible();
-    await expect(page.locator('[data-testid="sidebar-tab-settings"]')).toBeVisible();
+
+    // Settings is in the context rail (gear icon), not the Code tab bar
+    await expect(page.getByTestId("context-nav").getByTestId("context-nav-settings")).toBeVisible();
 
     // Environments is a fleet surface in the context rail
     await expect(
@@ -105,8 +107,8 @@ test.describe("Navigation Between Settings and Environments", { tag: ["@environm
   test("clicking Grackle brand from Settings returns to Dashboard", async ({ appPage }) => {
     const page = appPage;
 
-    // Navigate to Settings
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Navigate to Settings via gear icon in context rail
+    await page.locator('[data-testid="context-nav-settings"]').click();
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });
 
     // Click Grackle brand to go home — lands on / (Dashboard, fleet)
@@ -122,11 +124,8 @@ test.describe("Navigation Between Settings and Environments", { tag: ["@environm
     await page.getByTestId("context-nav").getByTestId("sidebar-tab-environments").click();
     await page.getByTestId("env-nav-item").first().click();
 
-    // Return to Code context (tab bar is hidden on fleet pages)
-    await page.locator('[data-testid="context-code"]').click();
-
-    // Now click Settings tab (visible in the Code context's tab bar)
-    await page.locator('[data-testid="sidebar-tab-settings"]').click();
+    // Click Settings gear icon in context rail (accessible from any context)
+    await page.locator('[data-testid="context-nav-settings"]').click();
 
     // Settings should be visible with Credentials tab
     await expect(page.getByRole("tablist", { name: "Settings" })).toBeVisible({ timeout: 5_000 });

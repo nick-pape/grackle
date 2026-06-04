@@ -18,7 +18,6 @@ const CORE_VIEWS: ReadonlySet<string> = new Set([
   "environments",
   "sessions",
   "coordination",
-  "settings",
 ]);
 
 /** Views contributed by the orchestration plugin. */
