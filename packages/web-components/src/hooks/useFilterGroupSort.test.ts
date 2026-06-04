@@ -5,7 +5,10 @@ import { useFilterGroupSort } from "./useFilterGroupSort.js";
 
 const PREFIX = "test-nav";
 
-function renderFGS(opts?: { validGroupKeys?: string[]; validSortKeys?: string[] }) {
+function renderFGS(opts?: {
+  validGroupKeys?: string[];
+  validSortKeys?: string[];
+}): ReturnType<typeof renderHook<ReturnType<typeof useFilterGroupSort>>> {
   return renderHook(() => useFilterGroupSort({ storagePrefix: PREFIX, ...opts }));
 }
 
