@@ -13,7 +13,7 @@ import { processEventStream } from "./event-processor.js";
 
 /**
  * Reanimate a terminal session: validate state, reset the DB record, and fire a
- * PowerLine resume stream. Returns the updated session row (status=running).
+ * PowerLine resume stream. Returns the updated session as a domain model (status=running).
  *
  * Throws ConnectError on any validation failure:
  *   - NOT_FOUND if the session does not exist
