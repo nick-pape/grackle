@@ -60,29 +60,21 @@ test.describe("Coordination tab", { tag: ["@session"] }, () => {
     await expect(page.getByTestId("coordination-page")).toBeVisible();
   });
 
-  test("toggling Show Internals in graph mode does not crash", async ({ stubTask }) => {
+  test("toggling Show Internals does not crash the graph", async ({ stubTask }) => {
     const page = stubTask.page;
 
     // Spawn a session so streams exist (stub runtime creates lifecycle/pipe streams)
     await stubTask.createAndNavigate("toggle-test", stubScenario(idle()));
 
-    // Wait for the session to be running (streams are created on spawn)
-    await expect(page.getByTestId("session-status")).toHaveText(/running|idle/i, {
-      timeout: 15_000,
-    });
-
-    // Navigate to Coordination tab
+    // Navigate to Coordination tab (graph is always the main content)
     const coordTab = page.getByTestId("context-nav").getByTestId("sidebar-tab-coordination");
     await coordTab.click();
     await expect(page.getByTestId("coordination-page")).toBeVisible();
-
-    // Switch to graph view
-    await page.getByTestId("coordination-view-graph").click();
     await expect(
       page.getByTestId("coordination-graph").or(page.getByTestId("coordination-graph-empty")),
     ).toBeVisible();
 
-    // Toggle Show Internals ON
+    // Toggle Show Internals ON (checkbox is in the sidebar list)
     const toggle = page.getByTestId("coordination-show-internals");
     await toggle.check();
     await expect(toggle).toBeChecked();
@@ -91,7 +83,7 @@ test.describe("Coordination tab", { tag: ["@session"] }, () => {
     await toggle.uncheck();
     await expect(toggle).not.toBeChecked();
 
-    // Graph must survive without crashing (page element still exists)
+    // Graph must survive without crashing
     await expect(page.getByTestId("coordination-page")).toBeVisible();
     await expect(
       page.getByTestId("coordination-graph").or(page.getByTestId("coordination-graph-empty")),
