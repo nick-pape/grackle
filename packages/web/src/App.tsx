@@ -27,7 +27,6 @@ import {
   personaUrl,
   scheduleUrl,
   useAppNavigate,
-  SETTINGS_URL,
   SETTINGS_CREDENTIALS_URL,
   type AppTab,
   type ContextItem,
@@ -232,7 +231,7 @@ function AppShellBody({ tabs }: { tabs: AppTab[] }): JSX.Element {
   );
   const activeView = getActiveView(location.pathname);
   const activeFleetId = fleetTabs.some((t) => t.view === activeView) ? activeView : undefined;
-  const isSettingsRoute = location.pathname.startsWith(SETTINGS_URL);
+  const isSettingsRoute = /^\/settings(\/|$)/.test(location.pathname);
 
   // Code context tabs: workbench + global groups, mapped to ContextDetailTab shape.
   const codeDetailTabs = useMemo<ContextDetailTab[]>(() => {
