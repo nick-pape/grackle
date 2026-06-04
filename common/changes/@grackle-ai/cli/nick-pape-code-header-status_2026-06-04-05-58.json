@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "placeholder",
+      "comment": "Add session summary status line to Code context header",
       "type": "none",
       "packageName": "@grackle-ai/cli"
     }

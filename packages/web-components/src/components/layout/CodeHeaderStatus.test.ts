@@ -57,7 +57,7 @@ describe("describeCodeStatus", () => {
       }),
       makeSession({
         id: "s2",
-        status: "error",
+        status: "stopped",
         endReason: "error",
         startedAt: "2026-06-01T09:00:00Z",
       }),

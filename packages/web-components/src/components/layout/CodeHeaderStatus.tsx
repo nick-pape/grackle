@@ -6,7 +6,7 @@
  * @module
  */
 
-import type { JSX } from "react";
+import type { CSSProperties, JSX } from "react";
 import type { Session } from "../../hooks/types.js";
 import { isActiveSession } from "../sessions/sessionsView.js";
 import { formatRelativeTime } from "../../utils/time.js";
@@ -45,7 +45,7 @@ export function describeCodeStatus(
 // ---------------------------------------------------------------------------
 
 /** Inline styles matching the agent header's HeartbeatStatus pattern. */
-const STATUS_ITEM_STYLE: React.CSSProperties = {
+const STATUS_ITEM_STYLE: CSSProperties = {
   fontSize: "var(--font-size-xs)",
   color: "var(--text-tertiary)",
   whiteSpace: "nowrap",
