@@ -316,7 +316,10 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
   );
 
   const flatPersonas = groups.flatMap((g) => g.personas);
-  const focusableId = activeId ?? (flatPersonas.length > 0 ? flatPersonas[0].id : undefined);
+  const activeInList = activeId && flatPersonas.some((p) => p.id === activeId);
+  const focusableId =
+    (activeInList ? activeId : undefined) ??
+    (flatPersonas.length > 0 ? flatPersonas[0].id : undefined);
 
   const handleClick = useCallback(
     (personaId: string) => {

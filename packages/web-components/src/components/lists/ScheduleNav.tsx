@@ -288,7 +288,10 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
   );
 
   const flatSchedules = groups.flatMap((g) => g.schedules);
-  const focusableId = activeId ?? (flatSchedules.length > 0 ? flatSchedules[0].id : undefined);
+  const activeInList = activeId && flatSchedules.some((s) => s.id === activeId);
+  const focusableId =
+    (activeInList ? activeId : undefined) ??
+    (flatSchedules.length > 0 ? flatSchedules[0].id : undefined);
 
   const handleClick = useCallback(
     (scheduleId: string) => {

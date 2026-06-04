@@ -300,7 +300,9 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
   );
 
   const flatEnvs = groups.flatMap((g) => g.environments);
-  const focusableId = activeId ?? (flatEnvs.length > 0 ? flatEnvs[0].id : undefined);
+  const activeInList = activeId && flatEnvs.some((e) => e.id === activeId);
+  const focusableId =
+    (activeInList ? activeId : undefined) ?? (flatEnvs.length > 0 ? flatEnvs[0].id : undefined);
 
   const handleClick = useCallback(
     (envId: string) => {
