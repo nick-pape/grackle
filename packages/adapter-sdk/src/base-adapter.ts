@@ -74,22 +74,35 @@ export abstract class BaseAdapter implements EnvironmentAdapter {
     return conn;
   }
 
-  /** Release connection resources. Idempotent — safe to call from any state. */
+  /**
+   * Release connection resources. Idempotent — safe to call from any
+   * non-locked state. Throws if a provision/reconnect is in progress to
+   * prevent tearing down resources while they are being set up.
+   */
   public async disconnect(environmentId: string): Promise<void> {
+    this.assertNotLocked(environmentId);
     await this.doDisconnect(environmentId);
     if (this.getState(environmentId) === "connected") {
       this.states.set(environmentId, "idle");
     }
   }
 
-  /** Stop the environment's compute. Idempotent — resets state to `idle`. */
+  /**
+   * Stop the environment's compute. Idempotent — resets state to `idle`.
+   * Throws if a provision/reconnect is in progress.
+   */
   public async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
+    this.assertNotLocked(environmentId);
     await this.doStop(environmentId, config);
     this.states.set(environmentId, "idle");
   }
 
-  /** Destroy the environment's compute. Idempotent — removes all state. */
+  /**
+   * Destroy the environment's compute. Idempotent — removes all state.
+   * Throws if a provision/reconnect is in progress.
+   */
   public async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
+    this.assertNotLocked(environmentId);
     await this.doDestroy(environmentId, config);
     this.states.delete(environmentId);
   }

@@ -188,10 +188,11 @@ describe("BaseAdapter", () => {
     });
   });
 
-  describe("connect mutex", () => {
-    it("throws when connect is called during provision", async () => {
-      const adapter = new TestAdapter();
-
+  describe("lock prevents concurrent operations during provision", () => {
+    function setupBlockingProvision(adapter: TestAdapter): {
+      provisionTask: Promise<ProvisionEvent[]>;
+      resolve: () => void;
+    } {
       let resolveProvision!: () => void;
       const provisionPromise = new Promise<void>((resolve) => {
         resolveProvision = resolve;
@@ -203,12 +204,48 @@ describe("BaseAdapter", () => {
       });
 
       const provisionTask = collect(adapter.provision("env-1", {}, "token"));
+      return { provisionTask, resolve: resolveProvision };
+    }
+
+    it("throws when connect is called during provision", async () => {
+      const adapter = new TestAdapter();
+      const { provisionTask, resolve } = setupBlockingProvision(adapter);
 
       await expect(adapter.connect("env-1", {}, "token")).rejects.toThrow(
         /Operation already in progress/,
       );
 
-      resolveProvision();
+      resolve();
+      await provisionTask;
+    });
+
+    it("throws when disconnect is called during provision", async () => {
+      const adapter = new TestAdapter();
+      const { provisionTask, resolve } = setupBlockingProvision(adapter);
+
+      await expect(adapter.disconnect("env-1")).rejects.toThrow(/Operation already in progress/);
+
+      resolve();
+      await provisionTask;
+    });
+
+    it("throws when stop is called during provision", async () => {
+      const adapter = new TestAdapter();
+      const { provisionTask, resolve } = setupBlockingProvision(adapter);
+
+      await expect(adapter.stop("env-1", {})).rejects.toThrow(/Operation already in progress/);
+
+      resolve();
+      await provisionTask;
+    });
+
+    it("throws when destroy is called during provision", async () => {
+      const adapter = new TestAdapter();
+      const { provisionTask, resolve } = setupBlockingProvision(adapter);
+
+      await expect(adapter.destroy("env-1", {})).rejects.toThrow(/Operation already in progress/);
+
+      resolve();
       await provisionTask;
     });
   });

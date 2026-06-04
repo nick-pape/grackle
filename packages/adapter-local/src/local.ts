@@ -65,11 +65,9 @@ export class LocalAdapter extends BaseAdapter {
       }
     }
 
-    yield {
-      stage: "error",
-      message: `Could not reach PowerLine: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
-      progress: 0,
-    };
+    throw new Error(
+      `Could not reach PowerLine: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
+    );
   }
 
   protected async doConnect(
