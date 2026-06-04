@@ -2,7 +2,8 @@
  * FilterDropdown -- small absolutely-positioned multi-select menu for sidebar
  * filter/group/sort controls.
  *
- * Reuses the click-outside + Escape-close pattern from {@link SplitButton}.
+ * Supports both flat option lists and grouped sections (e.g., filter by Status
+ * AND Type in a single dropdown with labeled sections).
  *
  * @module
  */
@@ -20,10 +21,20 @@ export interface FilterDropdownOption {
   label: string;
 }
 
+/** A labeled group of options rendered with a section header. */
+export interface FilterDropdownGroup {
+  /** Section header label. */
+  label: string;
+  /** Options within this group. */
+  options: FilterDropdownOption[];
+}
+
 /** Props for the {@link FilterDropdown} component. */
 export interface FilterDropdownProps {
-  /** Menu options. */
-  options: FilterDropdownOption[];
+  /** Flat list of options (use this OR `groups`, not both). */
+  options?: FilterDropdownOption[];
+  /** Grouped sections with labeled headers. Takes precedence over `options`. */
+  groups?: FilterDropdownGroup[];
   /** Currently selected option keys. */
   selected: ReadonlySet<string>;
   /** Toggle an option on/off. */
@@ -38,9 +49,39 @@ export interface FilterDropdownProps {
   "data-testid"?: string;
 }
 
+/** Render a single option button. */
+function OptionButton({
+  opt,
+  isSelected,
+  onToggle,
+  testId,
+}: {
+  opt: FilterDropdownOption;
+  isSelected: boolean;
+  onToggle: (key: string) => void;
+  testId: string;
+}): JSX.Element {
+  return (
+    <button
+      key={opt.key}
+      type="button"
+      className={`${styles.option} ${isSelected ? styles.optionSelected : ""}`}
+      onClick={() => onToggle(opt.key)}
+      aria-pressed={isSelected}
+      data-testid={`${testId}-option-${opt.key}`}
+    >
+      <span className={styles.check} aria-hidden="true">
+        {isSelected ? "✓" : ""}
+      </span>
+      <span className={styles.optionLabel}>{opt.label}</span>
+    </button>
+  );
+}
+
 /** Absolutely-positioned multi-select filter menu. */
 export function FilterDropdown({
   options,
+  groups,
   selected,
   onToggle,
   onClear,
@@ -74,6 +115,12 @@ export function FilterDropdown({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  const resolvedGroups: FilterDropdownGroup[] = groups
+    ? groups
+    : options
+      ? [{ label: "", options }]
+      : [];
+
   return (
     <div ref={containerRef} className={styles.dropdown} data-testid={testId}>
       {(selected.size > 0 || showClearProp) && (
@@ -87,24 +134,20 @@ export function FilterDropdown({
           Clear
         </button>
       )}
-      {options.map((opt) => {
-        const isSelected = selected.has(opt.key);
-        return (
-          <button
-            key={opt.key}
-            type="button"
-            className={`${styles.option} ${isSelected ? styles.optionSelected : ""}`}
-            onClick={() => onToggle(opt.key)}
-            aria-pressed={isSelected}
-            data-testid={`${testId}-option-${opt.key}`}
-          >
-            <span className={styles.check} aria-hidden="true">
-              {isSelected ? "✓" : ""}
-            </span>
-            <span className={styles.optionLabel}>{opt.label}</span>
-          </button>
-        );
-      })}
+      {resolvedGroups.map((group) => (
+        <div key={group.label || "__flat__"}>
+          {group.label && <div className={styles.groupLabel}>{group.label}</div>}
+          {group.options.map((opt) => (
+            <OptionButton
+              key={opt.key}
+              opt={opt}
+              isSelected={selected.has(opt.key)}
+              onToggle={onToggle}
+              testId={testId}
+            />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

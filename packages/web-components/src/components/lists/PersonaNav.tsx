@@ -12,6 +12,7 @@ import type { PersonaData } from "../../hooks/types.js";
 import { personaUrl, NEW_PERSONA_URL, useAppNavigate } from "../../utils/navigation.js";
 import { SectionHeader, type SectionHeaderAction } from "../display/SectionHeader.js";
 import { FilterDropdown } from "../display/FilterDropdown.js";
+import { useFilterGroupSort } from "../../hooks/useFilterGroupSort.js";
 import styles from "./PersonaNav.module.scss";
 
 /** Type-indicator color mapping. */
@@ -19,81 +20,6 @@ const TYPE_COLORS: Record<string, string> = {
   agent: "var(--accent-green)",
   script: "var(--accent-blue)",
 };
-
-/** localStorage keys for persisting filter/group/sort state. */
-const STORAGE_KEY_FILTER: string = "grackle-persona-nav-filter";
-const STORAGE_KEY_GROUP: string = "grackle-persona-nav-group";
-const STORAGE_KEY_SORT: string = "grackle-persona-nav-sort";
-
-/** Read persisted filter state. */
-function loadFilter(): Set<string> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_FILTER);
-    if (raw) {
-      return new Set(JSON.parse(raw) as string[]);
-    }
-  } catch {
-    /* ignore */
-  }
-  return new Set();
-}
-
-/** Persist filter state. */
-function saveFilterValues(values: Set<string>): void {
-  try {
-    if (values.size === 0) {
-      localStorage.removeItem(STORAGE_KEY_FILTER);
-    } else {
-      localStorage.setItem(STORAGE_KEY_FILTER, JSON.stringify([...values]));
-    }
-  } catch {
-    /* ignore */
-  }
-}
-
-/** Read persisted group-by. */
-function loadGroupBy(): string {
-  try {
-    return localStorage.getItem(STORAGE_KEY_GROUP) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-/** Persist group-by. */
-function saveGroupBy(value: string): void {
-  try {
-    if (value) {
-      localStorage.setItem(STORAGE_KEY_GROUP, value);
-    } else {
-      localStorage.removeItem(STORAGE_KEY_GROUP);
-    }
-  } catch {
-    /* ignore */
-  }
-}
-
-/** Read persisted sort. */
-function loadSort(): string {
-  try {
-    return localStorage.getItem(STORAGE_KEY_SORT) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-/** Persist sort. */
-function saveSort(value: string): void {
-  try {
-    if (value) {
-      localStorage.setItem(STORAGE_KEY_SORT, value);
-    } else {
-      localStorage.removeItem(STORAGE_KEY_SORT);
-    }
-  } catch {
-    /* ignore */
-  }
-}
 
 /** Props for the PersonaNav component. */
 export interface PersonaNavProps {
@@ -112,21 +38,24 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
   const rawId = detailMatch?.params.personaId;
   const activeId = rawId === "new" ? undefined : rawId;
 
-  // ── Filter state (by runtime) ───────────────────────────────────
+  const {
+    filterValues,
+    filterActive,
+    toggleFilter,
+    clearFilter,
+    groupBy,
+    groupActive,
+    toggleGroup,
+    clearGroup,
+    sortBy,
+    sortActive,
+    toggleSort,
+    clearSort,
+  } = useFilterGroupSort({ storagePrefix: "grackle-persona-nav" });
+
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filterValues, setFilterValues] = useState(loadFilter);
-
-  // ── Group-by state ──────────────────────────────────────────────
   const [groupOpen, setGroupOpen] = useState(false);
-  const [groupBy, setGroupBy] = useState(loadGroupBy);
-
-  // ── Sort state ──────────────────────────────────────────────────
   const [sortOpen, setSortOpen] = useState(false);
-  const [sortBy, setSortBy] = useState(loadSort);
-
-  const filterActive = filterValues.size > 0;
-  const groupActive = groupBy !== "";
-  const sortActive = sortBy !== "";
 
   const runtimeOptions = useMemo(() => {
     const unique = [...new Set(personas.map((p) => p.runtime).filter(Boolean))].sort();
@@ -143,42 +72,6 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
     ],
     [],
   );
-
-  const handleFilterToggle = useCallback((key: string) => {
-    setFilterValues((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      saveFilterValues(next);
-      return next;
-    });
-  }, []);
-
-  const handleFilterClear = useCallback(() => {
-    setFilterValues(new Set());
-    saveFilterValues(new Set());
-  }, []);
-
-  const handleGroupToggle = useCallback((key: string) => {
-    setGroupBy((prev) => {
-      const next = prev === key ? "" : key;
-      saveGroupBy(next);
-      setGroupOpen(false);
-      return next;
-    });
-  }, []);
-
-  const handleSortToggle = useCallback((key: string) => {
-    setSortBy((prev) => {
-      const next = prev === key ? "" : key;
-      saveSort(next);
-      setSortOpen(false);
-      return next;
-    });
-  }, []);
 
   // ── Filtered + sorted personas ──────────────────────────────────
   const processed = useMemo(() => {
@@ -336,8 +229,8 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
           <FilterDropdown
             options={runtimeOptions}
             selected={filterValues}
-            onToggle={handleFilterToggle}
-            onClear={handleFilterClear}
+            onToggle={toggleFilter}
+            onClear={clearFilter}
             onClose={() => setFilterOpen(false)}
             data-testid="persona-nav-filter-dropdown"
           />
@@ -346,10 +239,12 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
           <FilterDropdown
             options={groupOptions}
             selected={new Set(groupBy ? [groupBy] : [])}
-            onToggle={handleGroupToggle}
+            onToggle={(key) => {
+              toggleGroup(key);
+              setGroupOpen(false);
+            }}
             onClear={() => {
-              setGroupBy("");
-              saveGroupBy("");
+              clearGroup();
               setGroupOpen(false);
             }}
             onClose={() => setGroupOpen(false)}
@@ -360,10 +255,12 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
           <FilterDropdown
             options={sortOptions}
             selected={new Set(sortBy ? [sortBy] : [])}
-            onToggle={handleSortToggle}
+            onToggle={(key) => {
+              toggleSort(key);
+              setSortOpen(false);
+            }}
             onClear={() => {
-              setSortBy("");
-              saveSort("");
+              clearSort();
               setSortOpen(false);
             }}
             onClose={() => setSortOpen(false)}

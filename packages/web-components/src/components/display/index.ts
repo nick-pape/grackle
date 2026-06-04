@@ -25,4 +25,8 @@ export type { TooltipProps, TooltipPlacement } from "./Tooltip.js";
 export type { SessionAttemptSelectorProps } from "./SessionAttemptSelector.js";
 export type { McpAppWidgetProps, McpAppWidgetCallToolParams } from "./McpAppWidget.js";
 export type { SectionHeaderProps, SectionHeaderAction } from "./SectionHeader.js";
-export type { FilterDropdownProps, FilterDropdownOption } from "./FilterDropdown.js";
+export type {
+  FilterDropdownProps,
+  FilterDropdownOption,
+  FilterDropdownGroup,
+} from "./FilterDropdown.js";

@@ -12,61 +12,9 @@ import type { PersonaData, ScheduleData, Workspace } from "../../hooks/types.js"
 import { scheduleUrl, NEW_SCHEDULE_URL, useAppNavigate } from "../../utils/navigation.js";
 import { formatCountdown } from "../../utils/time.js";
 import { SectionHeader, type SectionHeaderAction } from "../display/SectionHeader.js";
-import { FilterDropdown } from "../display/FilterDropdown.js";
+import { FilterDropdown, type FilterDropdownGroup } from "../display/FilterDropdown.js";
+import { useFilterGroupSort } from "../../hooks/useFilterGroupSort.js";
 import styles from "./ScheduleNav.module.scss";
-
-/** localStorage keys for persisting filter/group state. */
-const STORAGE_KEY_FILTER: string = "grackle-schedule-nav-filter";
-const STORAGE_KEY_GROUP: string = "grackle-schedule-nav-group";
-
-/** Read persisted filter state. */
-function loadFilter(): { field: string; values: Set<string> } {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_FILTER);
-    if (raw) {
-      const parsed = JSON.parse(raw) as { field: string; values: string[] };
-      return { field: parsed.field, values: new Set(parsed.values) };
-    }
-  } catch {
-    /* ignore */
-  }
-  return { field: "", values: new Set() };
-}
-
-/** Persist filter state. */
-function saveFilter(field: string, values: Set<string>): void {
-  try {
-    if (values.size === 0) {
-      localStorage.removeItem(STORAGE_KEY_FILTER);
-    } else {
-      localStorage.setItem(STORAGE_KEY_FILTER, JSON.stringify({ field, values: [...values] }));
-    }
-  } catch {
-    /* ignore */
-  }
-}
-
-/** Read persisted group-by. */
-function loadGroupBy(): string {
-  try {
-    return localStorage.getItem(STORAGE_KEY_GROUP) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-/** Persist group-by. */
-function saveGroupBy(value: string): void {
-  try {
-    if (value) {
-      localStorage.setItem(STORAGE_KEY_GROUP, value);
-    } else {
-      localStorage.removeItem(STORAGE_KEY_GROUP);
-    }
-  } catch {
-    /* ignore */
-  }
-}
 
 /** Props for the ScheduleNav component. */
 export interface ScheduleNavProps {
@@ -90,38 +38,41 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
   const personaMap = useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas]);
   const workspaceMap = useMemo(() => new Map(workspaces.map((w) => [w.id, w])), [workspaces]);
 
-  // ── Filter state ────────────────────────────────────────────────
+  const {
+    filterValues,
+    filterActive,
+    toggleFilter,
+    clearFilter,
+    groupBy,
+    groupActive,
+    toggleGroup,
+    clearGroup,
+  } = useFilterGroupSort({ storagePrefix: "grackle-schedule-nav" });
+
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filterField, setFilterField] = useState(() => loadFilter().field);
-  const [filterValues, setFilterValues] = useState(() => loadFilter().values);
-
-  // ── Group-by state ──────────────────────────────────────────────
   const [groupOpen, setGroupOpen] = useState(false);
-  const [groupBy, setGroupBy] = useState(loadGroupBy);
 
-  const filterActive = filterValues.size > 0;
-  const groupActive = groupBy !== "";
-
-  const filterOptions = useMemo(() => {
-    if (filterField === "persona") {
-      const unique = [...new Set(schedules.map((s) => s.personaId).filter(Boolean))];
-      return unique.map((pid) => ({
-        key: pid,
-        label: personaMap.get(pid)?.name ?? pid,
-      }));
-    }
-    if (filterField === "workspace") {
-      const unique = [...new Set(schedules.map((s) => s.workspaceId).filter(Boolean))];
-      return unique.map((wid) => ({
-        key: wid,
-        label: workspaceMap.get(wid)?.name ?? wid,
-      }));
-    }
+  // ── Filter groups (single-level, all dimensions at once) ────────
+  const filterGroups = useMemo<FilterDropdownGroup[]>(() => {
+    const personaIds = [...new Set(schedules.map((s) => s.personaId).filter(Boolean))];
+    const workspaceIds = [...new Set(schedules.map((s) => s.workspaceId).filter(Boolean))];
     return [
-      { key: "persona", label: "By Persona" },
-      { key: "workspace", label: "By Workspace" },
+      {
+        label: "Persona",
+        options: personaIds.map((pid) => ({
+          key: `persona:${pid}`,
+          label: personaMap.get(pid)?.name ?? pid,
+        })),
+      },
+      {
+        label: "Workspace",
+        options: workspaceIds.map((wid) => ({
+          key: `workspace:${wid}`,
+          label: workspaceMap.get(wid)?.name ?? wid,
+        })),
+      },
     ];
-  }, [filterField, schedules, personaMap, workspaceMap]);
+  }, [schedules, personaMap, workspaceMap]);
 
   const groupOptions = useMemo(
     () => [
@@ -131,56 +82,21 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
     [],
   );
 
-  const handleFilterToggle = useCallback(
-    (key: string) => {
-      if (!filterField) {
-        setFilterField(key);
-        return;
-      }
-      setFilterValues((prev) => {
-        const next = new Set(prev);
-        if (next.has(key)) {
-          next.delete(key);
-        } else {
-          next.add(key);
-        }
-        saveFilter(filterField, next);
-        return next;
-      });
-    },
-    [filterField],
-  );
-
-  const handleFilterClear = useCallback(() => {
-    setFilterField("");
-    setFilterValues(new Set());
-    saveFilter("", new Set());
-  }, []);
-
-  const handleGroupToggle = useCallback((key: string) => {
-    setGroupBy((prev) => {
-      const next = prev === key ? "" : key;
-      saveGroupBy(next);
-      setGroupOpen(false);
-      return next;
-    });
-  }, []);
-
   // ── Filtered schedules ──────────────────────────────────────────
   const filtered = useMemo(() => {
     if (!filterActive) {
       return schedules;
     }
     return schedules.filter((s) => {
-      if (filterField === "persona") {
-        return filterValues.has(s.personaId);
-      }
-      if (filterField === "workspace") {
-        return filterValues.has(s.workspaceId);
-      }
-      return true;
+      const personaKey = `persona:${s.personaId}`;
+      const workspaceKey = `workspace:${s.workspaceId}`;
+      const hasPersonaFilters = [...filterValues].some((k) => k.startsWith("persona:"));
+      const hasWorkspaceFilters = [...filterValues].some((k) => k.startsWith("workspace:"));
+      const passesPersona = !hasPersonaFilters || filterValues.has(personaKey);
+      const passesWorkspace = !hasWorkspaceFilters || filterValues.has(workspaceKey);
+      return passesPersona && passesWorkspace;
     });
-  }, [schedules, filterActive, filterField, filterValues]);
+  }, [schedules, filterActive, filterValues]);
 
   // ── Grouped schedules ───────────────────────────────────────────
   const groups = useMemo(() => {
@@ -310,12 +226,11 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
         />
         {filterOpen && (
           <FilterDropdown
-            options={filterOptions}
-            selected={filterField ? filterValues : new Set<string>()}
-            onToggle={handleFilterToggle}
-            onClear={handleFilterClear}
+            groups={filterGroups}
+            selected={filterValues}
+            onToggle={toggleFilter}
+            onClear={clearFilter}
             onClose={() => setFilterOpen(false)}
-            showClear={!!filterField}
             data-testid="schedule-nav-filter-dropdown"
           />
         )}
@@ -323,10 +238,12 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
           <FilterDropdown
             options={groupOptions}
             selected={new Set(groupBy ? [groupBy] : [])}
-            onToggle={handleGroupToggle}
+            onToggle={(key) => {
+              toggleGroup(key);
+              setGroupOpen(false);
+            }}
             onClear={() => {
-              setGroupBy("");
-              saveGroupBy("");
+              clearGroup();
               setGroupOpen(false);
             }}
             onClose={() => setGroupOpen(false)}

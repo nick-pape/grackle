@@ -40,6 +40,18 @@
   }
 }
 
+.groupLabel {
+  @include section-label;
+  padding: var(--space-sm) var(--space-md) var(--space-xs);
+  font-size: 10px;
+
+  &:not(:first-child) {
+    margin-top: var(--space-xs);
+    border-top: 1px solid var(--border-subtle);
+    padding-top: var(--space-sm);
+  }
+}
+
 .option {
   display: flex;
   align-items: center;

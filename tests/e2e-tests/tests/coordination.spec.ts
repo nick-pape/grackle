@@ -21,7 +21,7 @@ test.describe("Coordination tab", { tag: ["@session"] }, () => {
     // Internal IPC plumbing is hidden by default.
     const toggle = page.getByTestId("coordination-show-internals");
     await expect(toggle).toBeVisible();
-    await expect(toggle).not.toBeChecked();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
   });
 
   test("Sidebar list and main graph are both visible simultaneously", async ({ appPage }) => {
@@ -74,14 +74,14 @@ test.describe("Coordination tab", { tag: ["@session"] }, () => {
       page.getByTestId("coordination-graph").or(page.getByTestId("coordination-graph-empty")),
     ).toBeVisible();
 
-    // Toggle Show Internals ON (checkbox is in the sidebar list)
+    // Toggle Show Internals ON (button in the sidebar list header)
     const toggle = page.getByTestId("coordination-show-internals");
-    await toggle.check();
-    await expect(toggle).toBeChecked();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
 
     // Toggle Show Internals OFF — this was the crash trigger
-    await toggle.uncheck();
-    await expect(toggle).not.toBeChecked();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
 
     // Graph must survive without crashing
     await expect(page.getByTestId("coordination-page")).toBeVisible();

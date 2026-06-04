@@ -11,7 +11,8 @@ import { useMatch } from "react-router";
 import type { Environment } from "../../hooks/types.js";
 import { environmentUrl, NEW_ENVIRONMENT_URL, useAppNavigate } from "../../utils/navigation.js";
 import { SectionHeader, type SectionHeaderAction } from "../display/SectionHeader.js";
-import { FilterDropdown } from "../display/FilterDropdown.js";
+import { FilterDropdown, type FilterDropdownGroup } from "../display/FilterDropdown.js";
+import { useFilterGroupSort } from "../../hooks/useFilterGroupSort.js";
 import styles from "./EnvironmentNav.module.scss";
 
 /** Status-dot color mapping using CSS custom properties. */
@@ -40,59 +41,6 @@ const TYPE_LABELS: Record<string, string> = {
   docker: "Docker",
 };
 
-/** localStorage keys for persisting filter/group state. */
-const STORAGE_KEY_FILTER: string = "grackle-env-nav-filter";
-const STORAGE_KEY_GROUP: string = "grackle-env-nav-group";
-
-/** Read persisted filter state. */
-function loadFilter(): { field: string; values: Set<string> } {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_FILTER);
-    if (raw) {
-      const parsed = JSON.parse(raw) as { field: string; values: string[] };
-      return { field: parsed.field, values: new Set(parsed.values) };
-    }
-  } catch {
-    /* ignore */
-  }
-  return { field: "", values: new Set() };
-}
-
-/** Persist filter state. */
-function saveFilter(field: string, values: Set<string>): void {
-  try {
-    if (values.size === 0) {
-      localStorage.removeItem(STORAGE_KEY_FILTER);
-    } else {
-      localStorage.setItem(STORAGE_KEY_FILTER, JSON.stringify({ field, values: [...values] }));
-    }
-  } catch {
-    /* ignore */
-  }
-}
-
-/** Read persisted group-by. */
-function loadGroupBy(): string {
-  try {
-    return localStorage.getItem(STORAGE_KEY_GROUP) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-/** Persist group-by. */
-function saveGroupBy(value: string): void {
-  try {
-    if (value) {
-      localStorage.setItem(STORAGE_KEY_GROUP, value);
-    } else {
-      localStorage.removeItem(STORAGE_KEY_GROUP);
-    }
-  } catch {
-    /* ignore */
-  }
-}
-
 /** Props for the EnvironmentNav component. */
 interface EnvironmentNavProps {
   /** List of all environments to display in the nav. */
@@ -115,32 +63,35 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
     workspaceSubMatch?.params.environmentId;
   const activeId = rawId === "new" ? undefined : rawId;
 
-  // ── Filter state ────────────────────────────────────────────────
+  const {
+    filterValues,
+    filterActive,
+    toggleFilter,
+    clearFilter,
+    groupBy,
+    groupActive,
+    toggleGroup,
+    clearGroup,
+  } = useFilterGroupSort({ storagePrefix: "grackle-env-nav" });
+
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filterField, setFilterField] = useState(() => loadFilter().field);
-  const [filterValues, setFilterValues] = useState(() => loadFilter().values);
-
-  // ── Group-by state ──────────────────────────────────────────────
   const [groupOpen, setGroupOpen] = useState(false);
-  const [groupBy, setGroupBy] = useState(loadGroupBy);
 
-  const filterActive = filterValues.size > 0;
-  const groupActive = groupBy !== "";
-
-  const filterOptions = useMemo(() => {
-    if (filterField === "status") {
-      const unique = [...new Set(environments.map((e) => e.status))].sort();
-      return unique.map((s) => ({ key: s, label: STATUS_LABELS[s] || s }));
-    }
-    if (filterField === "type") {
-      const unique = [...new Set(environments.map((e) => e.adapterType))].sort();
-      return unique.map((t) => ({ key: t, label: TYPE_LABELS[t] || t }));
-    }
+  // ── Filter groups (single-level, all dimensions at once) ────────
+  const filterGroups = useMemo<FilterDropdownGroup[]>(() => {
+    const statuses = [...new Set(environments.map((e) => e.status))].sort();
+    const types = [...new Set(environments.map((e) => e.adapterType))].sort();
     return [
-      { key: "status", label: "By Status" },
-      { key: "type", label: "By Type" },
+      {
+        label: "Status",
+        options: statuses.map((s) => ({ key: `status:${s}`, label: STATUS_LABELS[s] || s })),
+      },
+      {
+        label: "Type",
+        options: types.map((t) => ({ key: `type:${t}`, label: TYPE_LABELS[t] || t })),
+      },
     ];
-  }, [filterField, environments]);
+  }, [environments]);
 
   const groupOptions = useMemo(
     () => [
@@ -150,56 +101,21 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
     [],
   );
 
-  const handleFilterToggle = useCallback(
-    (key: string) => {
-      if (!filterField) {
-        setFilterField(key);
-        return;
-      }
-      setFilterValues((prev) => {
-        const next = new Set(prev);
-        if (next.has(key)) {
-          next.delete(key);
-        } else {
-          next.add(key);
-        }
-        saveFilter(filterField, next);
-        return next;
-      });
-    },
-    [filterField],
-  );
-
-  const handleFilterClear = useCallback(() => {
-    setFilterField("");
-    setFilterValues(new Set());
-    saveFilter("", new Set());
-  }, []);
-
-  const handleGroupToggle = useCallback((key: string) => {
-    setGroupBy((prev) => {
-      const next = prev === key ? "" : key;
-      saveGroupBy(next);
-      setGroupOpen(false);
-      return next;
-    });
-  }, []);
-
   // ── Filtered environments ───────────────────────────────────────
   const filtered = useMemo(() => {
     if (!filterActive) {
       return environments;
     }
     return environments.filter((env) => {
-      if (filterField === "status") {
-        return filterValues.has(env.status);
-      }
-      if (filterField === "type") {
-        return filterValues.has(env.adapterType);
-      }
-      return true;
+      const statusKey = `status:${env.status}`;
+      const typeKey = `type:${env.adapterType}`;
+      const hasStatusFilters = [...filterValues].some((k) => k.startsWith("status:"));
+      const hasTypeFilters = [...filterValues].some((k) => k.startsWith("type:"));
+      const passesStatus = !hasStatusFilters || filterValues.has(statusKey);
+      const passesType = !hasTypeFilters || filterValues.has(typeKey);
+      return passesStatus && passesType;
     });
-  }, [environments, filterActive, filterField, filterValues]);
+  }, [environments, filterActive, filterValues]);
 
   // ── Grouped environments ────────────────────────────────────────
   const groups = useMemo(() => {
@@ -317,12 +233,11 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
         <SectionHeader title="Environments" actions={headerActions} data-testid="env-nav-header" />
         {filterOpen && (
           <FilterDropdown
-            options={filterOptions}
-            selected={filterField ? filterValues : new Set<string>()}
-            onToggle={handleFilterToggle}
-            onClear={handleFilterClear}
+            groups={filterGroups}
+            selected={filterValues}
+            onToggle={toggleFilter}
+            onClear={clearFilter}
             onClose={() => setFilterOpen(false)}
-            showClear={!!filterField}
             data-testid="env-nav-filter-dropdown"
           />
         )}
@@ -330,10 +245,12 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
           <FilterDropdown
             options={groupOptions}
             selected={new Set(groupBy ? [groupBy] : [])}
-            onToggle={handleGroupToggle}
+            onToggle={(key) => {
+              toggleGroup(key);
+              setGroupOpen(false);
+            }}
             onClear={() => {
-              setGroupBy("");
-              saveGroupBy("");
+              clearGroup();
               setGroupOpen(false);
             }}
             onClose={() => setGroupOpen(false)}
