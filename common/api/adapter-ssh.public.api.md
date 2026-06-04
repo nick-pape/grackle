@@ -5,21 +5,21 @@
 ```ts
 
 import type { AdapterDependencies } from '@grackle-ai/adapter-sdk';
+import { BaseAdapter } from '@grackle-ai/adapter-sdk';
 import type { BaseEnvironmentConfig } from '@grackle-ai/adapter-sdk';
-import type { EnvironmentAdapter } from '@grackle-ai/adapter-sdk';
 import type { PowerLineConnection } from '@grackle-ai/adapter-sdk';
 import type { ProvisionEvent } from '@grackle-ai/adapter-sdk';
 
 // @public
-export class SshAdapter implements EnvironmentAdapter {
+export class SshAdapter extends BaseAdapter {
     constructor(deps?: AdapterDependencies);
-    connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
-    destroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
-    disconnect(environmentId: string): Promise<void>;
+    protected doConnect(environmentId: string, _config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
+    protected doDestroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
+    protected doDisconnect(environmentId: string): Promise<void>;
+    protected doProvision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+    protected doStop(environmentId: string, config: Record<string, unknown>): Promise<void>;
     healthCheck(connection: PowerLineConnection): Promise<boolean>;
-    provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
     reconnect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
-    stop(environmentId: string, config: Record<string, unknown>): Promise<void>;
     // (undocumented)
     type: string;
 }

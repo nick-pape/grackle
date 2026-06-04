@@ -5,28 +5,28 @@
 ```ts
 
 import type { AdapterDependencies } from '@grackle-ai/adapter-sdk';
+import { BaseAdapter } from '@grackle-ai/adapter-sdk';
 import type { BaseEnvironmentConfig } from '@grackle-ai/adapter-sdk';
-import type { EnvironmentAdapter } from '@grackle-ai/adapter-sdk';
 import type { PowerLineConnection } from '@grackle-ai/adapter-sdk';
 import type { ProvisionEvent } from '@grackle-ai/adapter-sdk';
 
 // @public
-export class DockerAdapter implements EnvironmentAdapter {
+export class DockerAdapter extends BaseAdapter {
     constructor(deps?: AdapterDependencies);
     buildRunArgs(containerName: string, localPort: number, image: string, cfg: DockerEnvironmentConfig, powerlineToken: string): string[];
     // (undocumented)
-    connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
+    protected doConnect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
     // (undocumented)
-    destroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
+    protected doDestroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
     // (undocumented)
-    disconnect(environmentId: string): Promise<void>;
+    protected doDisconnect(environmentId: string): Promise<void>;
+    // (undocumented)
+    protected doProvision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+    // (undocumented)
+    protected doStop(environmentId: string, config: Record<string, unknown>): Promise<void>;
     // (undocumented)
     healthCheck(connection: PowerLineConnection): Promise<boolean>;
-    // (undocumented)
-    provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
     reconnect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
-    // (undocumented)
-    stop(environmentId: string, config: Record<string, unknown>): Promise<void>;
     // (undocumented)
     type: string;
 }
