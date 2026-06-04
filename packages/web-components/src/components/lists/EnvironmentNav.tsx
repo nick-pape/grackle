@@ -72,7 +72,10 @@ export function EnvironmentNav({ environments }: EnvironmentNavProps): JSX.Eleme
     groupActive,
     toggleGroup,
     clearGroup,
-  } = useFilterGroupSort({ storagePrefix: "grackle-env-nav" });
+  } = useFilterGroupSort({
+    storagePrefix: "grackle-env-nav",
+    validGroupKeys: ["status", "type"],
+  });
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);

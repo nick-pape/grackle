@@ -51,7 +51,11 @@ export function PersonaNav({ personas, appDefaultPersonaId }: PersonaNavProps): 
     sortActive,
     toggleSort,
     clearSort,
-  } = useFilterGroupSort({ storagePrefix: "grackle-persona-nav" });
+  } = useFilterGroupSort({
+    storagePrefix: "grackle-persona-nav",
+    validGroupKeys: ["runtime"],
+    validSortKeys: ["name-asc", "name-desc", "model"],
+  });
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);

@@ -47,7 +47,10 @@ export function ScheduleNav({ schedules, personas, workspaces }: ScheduleNavProp
     groupActive,
     toggleGroup,
     clearGroup,
-  } = useFilterGroupSort({ storagePrefix: "grackle-schedule-nav" });
+  } = useFilterGroupSort({
+    storagePrefix: "grackle-schedule-nav",
+    validGroupKeys: ["persona", "workspace"],
+  });
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
