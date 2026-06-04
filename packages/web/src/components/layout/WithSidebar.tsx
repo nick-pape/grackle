@@ -122,10 +122,11 @@ export function WithScheduleSidebar(): JSX.Element {
   const {
     schedules: { schedules },
     personas: { personas },
+    workspaces: { workspaces },
   } = useGrackle();
   const sidebar = useMemo(
-    () => <ScheduleNav schedules={schedules} personas={personas} />,
-    [schedules, personas],
+    () => <ScheduleNav schedules={schedules} personas={personas} workspaces={workspaces} />,
+    [schedules, personas, workspaces],
   );
   useSidebarSlot(sidebar);
   return <Outlet />;

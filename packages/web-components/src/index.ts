@@ -30,10 +30,18 @@ export {
   Spinner,
   SplashScreen,
   Tooltip,
+  SectionHeader,
+  FilterDropdown,
 } from "./components/display/index.js";
 export type { ButtonProps, ButtonVariant, ButtonSize } from "./components/display/index.js";
 export type { TooltipProps, TooltipPlacement } from "./components/display/index.js";
 export type { McpAppWidgetProps, McpAppWidgetCallToolParams } from "./components/display/index.js";
+export type { SectionHeaderProps, SectionHeaderAction } from "./components/display/index.js";
+export type {
+  FilterDropdownProps,
+  FilterDropdownOption,
+  FilterDropdownGroup,
+} from "./components/display/index.js";
 export { grackleHostStyleVariables } from "./utils/grackleHostStyleVariables.js";
 export { EventStream } from "./components/display/EventStream.js";
 export { EventHoverRow } from "./components/display/EventHoverRow.js";

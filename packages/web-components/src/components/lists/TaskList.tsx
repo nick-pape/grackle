@@ -7,6 +7,7 @@ import { MAX_TASK_DEPTH, fuzzySearch, type FuzzyKey, type MatchIndex } from "@gr
 import { ICON_SM, ICON_MD } from "../../utils/iconSize.js";
 import { taskUrl, newTaskUrl, useAppNavigate } from "../../utils/navigation.js";
 import { getStatusStyle, resolveStatus } from "../../utils/taskStatus.js";
+import { SectionHeader, type SectionHeaderAction } from "../display/SectionHeader.js";
 import { Tooltip } from "../display/Tooltip.js";
 import {
   HighlightedText,
@@ -475,34 +476,33 @@ export function TaskList({ workspaces, tasks }: TaskListProps): JSX.Element {
 
   const tree = !groupByStatus ? buildTaskTree(visibleTasks) : [];
 
+  const headerActions = useMemo<SectionHeaderAction[]>(
+    () => [
+      {
+        key: "group",
+        icon: <List size={ICON_MD} />,
+        tooltip: groupByStatus ? "Switch to tree view" : "Group tasks by status",
+        ariaLabel: groupByStatus ? "Switch to tree view" : "Group tasks by status",
+        onClick: toggleGroupByStatus,
+        active: groupByStatus,
+        ariaPressed: groupByStatus,
+        testId: "task-group-by-status-toggle",
+      },
+      {
+        key: "add",
+        icon: <span>+</span>,
+        tooltip: "New task",
+        ariaLabel: "New task",
+        onClick: () => navigate(newTaskUrl()),
+        testId: "new-task-button",
+      },
+    ],
+    [groupByStatus, toggleGroupByStatus, navigate],
+  );
+
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <span>Tasks</span>
-        <div className={styles.headerActions}>
-          <Tooltip text={groupByStatus ? "Switch to tree view" : "Group tasks by status"}>
-            <button
-              className={`${styles.groupToggle} ${groupByStatus ? styles.groupToggleActive : ""}`}
-              onClick={toggleGroupByStatus}
-              aria-label={groupByStatus ? "Switch to tree view" : "Group tasks by status"}
-              aria-pressed={groupByStatus}
-              data-testid="task-group-by-status-toggle"
-            >
-              <List size={ICON_MD} />
-            </button>
-          </Tooltip>
-          <Tooltip text="New task">
-            <button
-              className={styles.addButton}
-              onClick={() => navigate(newTaskUrl())}
-              aria-label="New task"
-              data-testid="new-task-button"
-            >
-              +
-            </button>
-          </Tooltip>
-        </div>
-      </div>
+      <SectionHeader title="Tasks" actions={headerActions} data-testid="task-list-header" />
 
       {tasks.length > 0 && (
         <input

@@ -91,7 +91,7 @@ export const KindBadges: Story = {
 export const InternalsToggle: Story = {
   play: async ({ canvas, args }) => {
     const toggle = canvas.getByTestId("coordination-show-internals");
-    await expect(toggle).not.toBeChecked();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
     await userEvent.click(toggle);
     await expect(args.onToggleInternals).toHaveBeenCalledWith(true);
   },
