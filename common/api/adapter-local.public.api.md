@@ -5,26 +5,26 @@
 ```ts
 
 import type { AdapterDependencies } from '@grackle-ai/adapter-sdk';
+import { BaseAdapter } from '@grackle-ai/adapter-sdk';
 import type { BaseEnvironmentConfig } from '@grackle-ai/adapter-sdk';
-import type { EnvironmentAdapter } from '@grackle-ai/adapter-sdk';
 import type { PowerLineConnection } from '@grackle-ai/adapter-sdk';
 import type { ProvisionEvent } from '@grackle-ai/adapter-sdk';
 
 // @public
-export class LocalAdapter implements EnvironmentAdapter {
+export class LocalAdapter extends BaseAdapter {
     constructor(deps?: AdapterDependencies);
     // (undocumented)
-    connect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
+    protected doConnect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
     // (undocumented)
-    destroy(): Promise<void>;
+    protected doDestroy(): Promise<void>;
     // (undocumented)
-    disconnect(): Promise<void>;
+    protected doDisconnect(): Promise<void>;
+    // (undocumented)
+    protected doProvision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+    // (undocumented)
+    protected doStop(): Promise<void>;
     // (undocumented)
     healthCheck(connection: PowerLineConnection): Promise<boolean>;
-    // (undocumented)
-    provision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
-    // (undocumented)
-    stop(): Promise<void>;
     // (undocumented)
     type: string;
 }

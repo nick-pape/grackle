@@ -1,5 +1,4 @@
 import type {
-  EnvironmentAdapter,
   BaseEnvironmentConfig,
   PowerLineConnection,
   ProvisionEvent,
@@ -9,6 +8,7 @@ import type {
 import { FatalAdapterError } from "@grackle-ai/adapter-sdk";
 import { DEFAULT_POWERLINE_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import {
+  BaseAdapter,
   type RemoteExecutor,
   type TunnelProcessFactory,
   type TunnelPortProbe,
@@ -225,7 +225,7 @@ class CodespaceReverseTunnel extends ProcessTunnel {
 // ─── Adapter ────────────────────────────────────────────────
 
 /** Environment adapter that provisions and manages GitHub Codespaces running the PowerLine. */
-export class CodespaceAdapter implements EnvironmentAdapter {
+export class CodespaceAdapter extends BaseAdapter {
   public type: string = "codespace";
   private readonly execFn: ExecFunction;
   private readonly sleepFn: (ms: number) => Promise<void>;
@@ -233,6 +233,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
   private readonly resolveGitHubToken: (accountId?: string) => string | undefined;
 
   public constructor(deps: AdapterDependencies = {}) {
+    super();
     this.execFn = deps.exec ?? defaultExec;
     this.sleepFn = deps.sleep ?? defaultSleep;
     this.isGitHubProviderEnabled = deps.isGitHubProviderEnabled ?? (() => false);
@@ -240,7 +241,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
   }
 
   /** Provision the codespace: verify connectivity, bootstrap PowerLine, open port-forward. */
-  public async *provision(
+  protected async *doProvision(
     environmentId: string,
     config: Record<string, unknown>,
     powerlineToken: string,
@@ -348,6 +349,17 @@ export class CodespaceAdapter implements EnvironmentAdapter {
     config: Record<string, unknown>,
     powerlineToken: string,
   ): AsyncGenerator<ProvisionEvent> {
+    yield* this.withProvisionLock(
+      environmentId,
+      this.doReconnect(environmentId, config, powerlineToken),
+    );
+  }
+
+  private async *doReconnect(
+    environmentId: string,
+    config: Record<string, unknown>,
+    powerlineToken: string,
+  ): AsyncGenerator<ProvisionEvent> {
     const cfg = config as unknown as CodespaceEnvironmentConfig;
     if (!cfg.codespaceName) {
       throw new Error("Codespace adapter requires a 'codespaceName' in the configuration");
@@ -415,9 +427,9 @@ export class CodespaceAdapter implements EnvironmentAdapter {
   }
 
   /** Connect to the PowerLine through the port-forward tunnel. */
-  public async connect(
+  protected async doConnect(
     environmentId: string,
-    config: Record<string, unknown>,
+    _config: Record<string, unknown>,
     powerlineToken: string,
   ): Promise<PowerLineConnection> {
     const state = getTunnel(environmentId);
@@ -428,12 +440,12 @@ export class CodespaceAdapter implements EnvironmentAdapter {
   }
 
   /** Close the port-forward tunnel without stopping the remote PowerLine. */
-  public async disconnect(environmentId: string): Promise<void> {
+  protected async doDisconnect(environmentId: string): Promise<void> {
     await closeTunnel(environmentId);
   }
 
   /** Stop the remote PowerLine process and close the tunnel. */
-  public async stop(environmentId: string, config: Record<string, unknown>): Promise<void> {
+  protected async doStop(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as CodespaceEnvironmentConfig;
     const ghToken = this.resolveGitHubToken(cfg.githubAccountId || undefined);
     await remoteStop(environmentId, new CodespaceExecutor(cfg.codespaceName, this.execFn, ghToken));
@@ -443,7 +455,7 @@ export class CodespaceAdapter implements EnvironmentAdapter {
    * Stop the remote PowerLine and remove artifacts from the codespace.
    * This does NOT delete the codespace itself.
    */
-  public async destroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
+  protected async doDestroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
     const cfg = config as unknown as CodespaceEnvironmentConfig;
     const ghToken = this.resolveGitHubToken(cfg.githubAccountId || undefined);
     await remoteDestroy(
