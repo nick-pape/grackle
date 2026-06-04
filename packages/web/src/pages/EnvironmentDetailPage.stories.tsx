@@ -126,8 +126,8 @@ export const ConfigFieldsLocalAdapter: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("env-config-section")).toBeInTheDocument();
     await expect(canvas.getByTestId("env-edit-adapter-type")).toHaveTextContent("local");
-    await expect(canvas.getByTestId("env-edit-host")).toBeInTheDocument();
-    await expect(canvas.getByTestId("env-edit-port")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-host-button")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-port-button")).toBeInTheDocument();
   },
 };
 
@@ -137,10 +137,10 @@ export const ConfigFieldsSshAdapter: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("env-config-section")).toBeInTheDocument();
     await expect(canvas.getByTestId("env-edit-adapter-type")).toHaveTextContent("ssh");
-    await expect(canvas.getByTestId("env-edit-host")).toBeInTheDocument();
-    await expect(canvas.getByTestId("env-edit-user")).toBeInTheDocument();
-    await expect(canvas.getByTestId("env-edit-ssh-port")).toBeInTheDocument();
-    await expect(canvas.getByTestId("env-edit-identity-file")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-host-button")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-user-button")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-ssh-port-button")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-identity-file-button")).toBeInTheDocument();
   },
 };
 
@@ -150,8 +150,8 @@ export const ConfigFieldsDockerAdapter: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("env-config-section")).toBeInTheDocument();
     await expect(canvas.getByTestId("env-edit-adapter-type")).toHaveTextContent("docker");
-    await expect(canvas.getByTestId("env-edit-image")).toBeInTheDocument();
-    await expect(canvas.getByTestId("env-edit-repo")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-image-button")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-repo-button")).toBeInTheDocument();
   },
 };
 
@@ -161,7 +161,7 @@ export const ConfigFieldsCodespaceAdapter: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByTestId("env-config-section")).toBeInTheDocument();
     await expect(canvas.getByTestId("env-edit-adapter-type")).toHaveTextContent("codespace");
-    await expect(canvas.getByTestId("env-edit-codespace-name")).toBeInTheDocument();
+    await expect(canvas.getByTestId("env-edit-codespace-name-button")).toBeInTheDocument();
   },
 };
 
@@ -169,16 +169,16 @@ export const ConfigFieldsCodespaceAdapter: Story = {
 export const InlineEditNameSaves: Story = {
   render: () => <DetailRouteWrapper envId="env-local-01" />,
   play: async ({ canvas }) => {
-    const nameField = canvas.getByTestId("env-edit-name");
-    await expect(nameField).toBeInTheDocument();
-    await userEvent.click(nameField);
+    const nameButton = canvas.getByTestId("env-edit-name-button");
+    await expect(nameButton).toBeInTheDocument();
+    await userEvent.click(nameButton);
     const input = canvas.getByRole("textbox", { name: "Environment name" });
     await userEvent.clear(input);
     await userEvent.type(input, "Renamed Local Env");
     await userEvent.keyboard("{Enter}");
     await waitFor(() => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      expect(canvas.getByTestId("env-edit-name")).toHaveTextContent("Renamed Local Env");
+      expect(canvas.getByTestId("env-edit-name-button")).toHaveTextContent("Renamed Local Env");
     });
   },
 };

@@ -489,6 +489,12 @@ function AppShell(): JSX.Element {
   );
 }
 
+/** Redirect legacy `/environments/:id/edit` to `/environments/:id`. */
+function EditRedirect(): JSX.Element {
+  const { environmentId } = useParams<{ environmentId: string }>();
+  return <Navigate to={`/environments/${environmentId ?? ""}`} replace />;
+}
+
 /**
  * Redirect component for legacy `/workspaces/:workspaceId` URLs.
  * Looks up the workspace's environmentId and redirects to the new
@@ -666,6 +672,7 @@ function AppRoutes(): JSX.Element {
             <Route index element={<EnvironmentsEmptyPage />} />
             <Route path="new" element={<NewEnvironmentPage />} />
             <Route path=":environmentId" element={<EnvironmentDetailPage />} />
+            <Route path=":environmentId/edit" element={<EditRedirect />} />
           </Route>
         </Route>
 

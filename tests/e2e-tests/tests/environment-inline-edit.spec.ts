@@ -22,16 +22,16 @@ test.describe("Environment Detail Page — Inline Config Editing", { tag: ["@env
 
   test("environment name is inline-editable", async ({ appPage }) => {
     const page = appPage;
-    const nameField = page.getByTestId("env-edit-name");
-    await expect(nameField).toBeVisible({ timeout: 5_000 });
-    await nameField.click();
+    const nameButton = page.getByTestId("env-edit-name-button");
+    await expect(nameButton).toBeVisible({ timeout: 5_000 });
+    await nameButton.click();
 
     const input = page.getByRole("textbox", { name: "Environment name" });
     await expect(input).toBeVisible({ timeout: 3_000 });
     await input.fill("Renamed Env");
     await input.press("Enter");
 
-    await expect(nameField).toContainText("Renamed Env", { timeout: 5_000 });
+    await expect(nameButton).toContainText("Renamed Env", { timeout: 5_000 });
   });
 
   test("edit config button no longer exists", async ({ appPage }) => {
