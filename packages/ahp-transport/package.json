@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/ahp-transport",
-  "version": "0.166.0",
+  "version": "0.167.0",
   "description": "AHP (Agent Host Protocol) wire transport: WebSocket + JSON-RPC 2.0 framing primitive (JsonRpcSession, AhpServerSocket, AhpClientSocket).",
   "license": "MIT",
   "repository": {

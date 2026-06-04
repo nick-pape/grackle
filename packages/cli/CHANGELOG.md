@@ -1,6 +1,22 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 04 Jun 2026 05:06:51 GMT and should not be manually modified.
+This log was last generated on Thu, 04 Jun 2026 06:09:17 GMT and should not be manually modified.
+
+## 0.167.0
+Thu, 04 Jun 2026 06:09:17 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Add BaseAdapter lifecycle state machine to adapter-sdk with per-environment state tracking, transition guards, and provision mutex
+- Fix Coordination graph crash when toggling Show Internals (React Flow v12 + React 19 infinite update loop)
+- Upgrade vitest to 4.1.x (CVE-2026-47429)
 
 ## 0.166.0
 Thu, 04 Jun 2026 05:06:51 GMT
