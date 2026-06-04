@@ -1,5 +1,5 @@
 import type { AgentSession, AgentEvent, CreateSessionOptions } from "./runtime.js";
-import { SESSION_STATUS } from "@grackle-ai/common";
+import { SESSION_STATUS, assertTransition } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import { AsyncQueue } from "./async-queue.js";
 import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
@@ -26,7 +26,7 @@ export abstract class BaseAgentSession implements AgentSession {
   public id: string;
   public abstract runtimeName: string;
   public runtimeSessionId: string;
-  public status: SessionStatus = SESSION_STATUS.RUNNING;
+  public status: SessionStatus = SESSION_STATUS.PENDING;
 
   protected readonly eventQueue: AsyncQueue<AgentEvent> = new AsyncQueue<AgentEvent>();
   private readonly inputQueue: AsyncQueue<string> = new AsyncQueue<string>();
@@ -186,6 +186,24 @@ export abstract class BaseAgentSession implements AgentSession {
     }
   }
 
+  // ─── State machine ────────────────────────────────────────
+
+  /**
+   * Transition the session to a new lifecycle state. Validates the transition
+   * against the documented state machine and throws on illegal transitions.
+   * Same-state transitions are no-ops (idempotent).
+   */
+  protected transitionTo(target: SessionStatus): void {
+    if (this.status === target) {
+      return;
+    }
+    assertTransition(this.status, target);
+    this.status = target;
+    if (target === SESSION_STATUS.STOPPED) {
+      this.killed = true;
+    }
+  }
+
   // ─── Turn framing (AHP HR2) ───────────────────────────────
 
   /**
@@ -236,6 +254,8 @@ export abstract class BaseAgentSession implements AgentSession {
   public async *stream(): AsyncIterable<AgentEvent> {
     const ts: () => string = () => new Date().toISOString();
 
+    this.transitionTo(SESSION_STATUS.RUNNING);
+
     yield {
       type: "system",
       timestamp: ts(),
@@ -251,7 +271,7 @@ export abstract class BaseAgentSession implements AgentSession {
       this.currentTurnId = undefined;
       this.emit({ type: "error", timestamp: ts(), content: String(err) });
       this.emit({ type: "status", timestamp: ts(), content: "failed" });
-      this.status = SESSION_STATUS.STOPPED;
+      this.transitionTo(SESSION_STATUS.STOPPED);
       this.eventQueue.close();
     });
 
@@ -270,7 +290,7 @@ export abstract class BaseAgentSession implements AgentSession {
       // For resumed sessions, perform resume-specific setup and wait for input.
       if (this.resumeSessionId) {
         await this.setupForResume();
-        this.status = SESSION_STATUS.IDLE;
+        this.transitionTo(SESSION_STATUS.IDLE);
         this.emit({ type: "status", timestamp: ts(), content: "waiting_input" });
         this.startInputLoop();
         return;
@@ -296,12 +316,11 @@ export abstract class BaseAgentSession implements AgentSession {
       // Initial turn complete; session is idle — ready for follow-up input.
       // The input loop owns the eventQueue lifecycle from this point.
       this.endTurn();
-      this.status = SESSION_STATUS.IDLE;
+      this.transitionTo(SESSION_STATUS.IDLE);
       this.emit({ type: "status", timestamp: ts(), content: "waiting_input" });
       this.startInputLoop();
     } catch (err) {
-      this.killed = true;
-      this.status = SESSION_STATUS.STOPPED;
+      this.transitionTo(SESSION_STATUS.STOPPED);
       // A failed turn never completes — drop the turn id so terminal events are
       // turn-less (AHP HR2), mirroring kill().
       this.currentTurnId = undefined;
@@ -332,7 +351,7 @@ export abstract class BaseAgentSession implements AgentSession {
       if (this.killed) {
         break;
       }
-      this.status = SESSION_STATUS.RUNNING;
+      this.transitionTo(SESSION_STATUS.RUNNING);
       this.emit({ type: "status", timestamp: ts(), content: "running" });
       // Open the follow-up turn, anchored on the real input text (AHP HR2).
       this.beginTurn(text);
@@ -352,7 +371,7 @@ export abstract class BaseAgentSession implements AgentSession {
         break;
       }
       this.endTurn();
-      this.status = SESSION_STATUS.IDLE;
+      this.transitionTo(SESSION_STATUS.IDLE);
       this.emit({ type: "status", timestamp: ts(), content: "waiting_input" });
     }
 
@@ -366,7 +385,7 @@ export abstract class BaseAgentSession implements AgentSession {
     this.processInputLoop().catch((err) => {
       const ts = new Date().toISOString();
       logger.error({ err }, `Input loop crashed in ${this.runtimeDisplayName} session`);
-      this.status = SESSION_STATUS.STOPPED;
+      this.transitionTo(SESSION_STATUS.STOPPED);
       // A failed turn never completes — drop the turn id so terminal events are
       // turn-less (AHP HR2), mirroring kill().
       this.currentTurnId = undefined;
@@ -380,8 +399,7 @@ export abstract class BaseAgentSession implements AgentSession {
 
   /** Forcefully terminate the session. Emits a final status event with the given reason. */
   public kill(reason: string = "killed"): void {
-    this.killed = true;
-    this.status = SESSION_STATUS.STOPPED;
+    this.transitionTo(SESSION_STATUS.STOPPED);
     this.abortActive();
     this.inputQueue.close();
     // A killed turn never completes — drop the turn id so the final status is

@@ -149,7 +149,7 @@ describe("StubRuntime", () => {
       maxTurns: 1,
     });
 
-    expect(session.status).toBe("running");
+    expect(session.status).toBe("pending");
 
     let inputSent = false;
     const statusHistory: string[] = [];

@@ -1234,8 +1234,18 @@ export function mountAhpServer(opts: MountAhpServerOptions): AhpServerSocket {
 
   function mapAgentStatusToAhp(status: string): SessionStatusT {
     switch (status) {
+      // SessionStatus values (from session.status field)
+      case "pending":
+        return SessionStatus.InProgress;
       case "running":
         return SessionStatus.InProgress;
+      case "idle":
+        return SessionStatus.InputNeeded;
+      case "stopped":
+        return SessionStatus.Idle;
+      case "suspended":
+        return SessionStatus.Idle;
+      // Status event content strings (from event stream)
       case "waiting_input":
         return SessionStatus.InputNeeded;
       case "completed":

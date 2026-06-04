@@ -446,7 +446,7 @@ describe("AcpRuntime structural", () => {
     });
     expect(session.id).toBe("acp-1");
     expect(session.runtimeName).toBe("copilot-acp");
-    expect(session.status).toBe("running");
+    expect(session.status).toBe("pending");
   });
 
   it("resume sets runtimeSessionId from options", () => {

@@ -163,7 +163,7 @@ describe("CopilotRuntime structural", () => {
     });
     expect(session.id).toBe("cop-1");
     expect(session.runtimeName).toBe("copilot");
-    expect(session.status).toBe("running");
+    expect(session.status).toBe("pending");
   });
 
   it("resume sets runtimeSessionId from options", () => {
