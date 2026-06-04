@@ -11,6 +11,16 @@ import { useCallback, useState } from "react";
 export interface UseFilterGroupSortOptions {
   /** localStorage key prefix (e.g., "grackle-env-nav"). Keys are suffixed with "-filter", "-group", "-sort". */
   storagePrefix: string;
+  /**
+   * If provided, any persisted `groupBy` value not in this list is treated as stale,
+   * cleared from storage, and reset to "". Useful when valid group keys change between releases.
+   */
+  validGroupKeys?: ReadonlyArray<string>;
+  /**
+   * If provided, any persisted `sortBy` value not in this list is treated as stale,
+   * cleared from storage, and reset to "". Useful when valid sort keys change between releases.
+   */
+  validSortKeys?: ReadonlyArray<string>;
 }
 
 /** Return type of {@link useFilterGroupSort}. */
@@ -92,14 +102,30 @@ function saveString(key: string, value: string): void {
 /** Shared filter/group/sort state with localStorage persistence. */
 export function useFilterGroupSort({
   storagePrefix,
+  validGroupKeys,
+  validSortKeys,
 }: UseFilterGroupSortOptions): UseFilterGroupSortReturn {
   const filterKey = `${storagePrefix}-filter`;
   const groupKey = `${storagePrefix}-group`;
   const sortKey = `${storagePrefix}-sort`;
 
   const [filterValues, setFilterValues] = useState(() => loadSet(filterKey));
-  const [groupBy, setGroupBy] = useState(() => loadString(groupKey));
-  const [sortBy, setSortBy] = useState(() => loadString(sortKey));
+  const [groupBy, setGroupBy] = useState(() => {
+    const value = loadString(groupKey);
+    if (value && validGroupKeys && !validGroupKeys.includes(value)) {
+      saveString(groupKey, "");
+      return "";
+    }
+    return value;
+  });
+  const [sortBy, setSortBy] = useState(() => {
+    const value = loadString(sortKey);
+    if (value && validSortKeys && !validSortKeys.includes(value)) {
+      saveString(sortKey, "");
+      return "";
+    }
+    return value;
+  });
 
   const toggleFilter = useCallback(
     (key: string) => {
