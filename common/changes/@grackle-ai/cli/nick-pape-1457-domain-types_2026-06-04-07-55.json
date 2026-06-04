@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Decouple core from database row types with domain models (TaskModel, SessionModel, EnvironmentModel, PersonaModel, EscalationModel). Move ToolConfigSpec/McpServerSpec to common. Parse JSON-serialized fields at the domain boundary.",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
