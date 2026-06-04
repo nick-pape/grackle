@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix Coordination graph crash when toggling Show Internals (React Flow v12 + React 19 infinite update loop)",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
