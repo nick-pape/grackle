@@ -73,7 +73,7 @@
     "storybook": "8.6.18",
     "vite": "^6.4.2",
     "vite-plugin-istanbul": "~7.2.0",
-    "vitest": "^3.1.1",
+    "vitest": "^4.1.8",
     "wait-on": "^8.0.0"
   }
 }

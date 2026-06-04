@@ -42,6 +42,6 @@
     "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^3.1.1",
-    "vitest": "^3.1.1"
+    "vitest": "^4.1.8"
   }
 }
