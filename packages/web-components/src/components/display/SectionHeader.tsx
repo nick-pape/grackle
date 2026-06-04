@@ -28,6 +28,10 @@ export interface SectionHeaderAction {
   active?: boolean;
   /** aria-pressed value for toggle buttons. */
   ariaPressed?: boolean;
+  /** aria-haspopup value for buttons that open menus. */
+  ariaHasPopup?: boolean;
+  /** aria-expanded value for buttons that control a popup. */
+  ariaExpanded?: boolean;
   /** Optional data-testid for the button. */
   testId?: string;
 }
@@ -62,6 +66,8 @@ export function SectionHeader({
                 onClick={action.onClick}
                 aria-label={action.ariaLabel}
                 aria-pressed={action.ariaPressed}
+                aria-haspopup={action.ariaHasPopup}
+                aria-expanded={action.ariaExpanded}
                 data-testid={action.testId}
               >
                 {action.icon}
