@@ -1,6 +1,6 @@
 import { SESSION_STATUS, END_REASON, PreconditionError } from "@grackle-ai/common";
 import { type PowerLineConnection } from "@grackle-ai/adapter-sdk";
-import { sessionStore, taskStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { logger } from "./logger.js";
 import { emit } from "./event-bus.js";
@@ -27,6 +27,8 @@ export async function recoverSuspendedSessions(
     logger.warn({ environmentId }, "Recovery already in progress — skipping");
     return;
   }
+
+  const { sessionStore } = getDatabaseStores();
 
   // Find sessions that need recovery: SUSPENDED (normal path) plus
   // RUNNING/IDLE (server-died path where sessions were never suspended).
@@ -112,6 +114,7 @@ function emitTaskUpdated(taskId: string | undefined): void {
   if (!taskId) {
     return;
   }
+  const { taskStore } = getDatabaseStores();
   const task = taskStore.getTask(taskId);
   emit("task.updated", { taskId, workspaceId: task?.workspaceId || "" });
 }

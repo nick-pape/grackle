@@ -3,7 +3,7 @@
  * Centralizes the model-to-prompt mapping so callers don't duplicate it.
  */
 import type { PersonaModel } from "./domain/index.js";
-import { personaStore, envRegistry, taskStore, safeParseJsonArray } from "@grackle-ai/database";
+import { getDatabaseStores, safeParseJsonArray } from "@grackle-ai/database";
 import type { PersonaResolveInput, OrchestratorContextInput } from "@grackle-ai/prompt";
 
 /** Convert a PersonaModel to a PersonaResolveInput for prompt resolution. */
@@ -37,6 +37,7 @@ export function buildOrchestratorContextInput(
   workspaceId: string,
   workspace?: { name: string; description: string; repoUrl: string },
 ): OrchestratorContextInput {
+  const { personaStore, envRegistry, taskStore } = getDatabaseStores();
   return {
     workspace,
     tasks: taskStore.listTasks(workspaceId).map((t) => ({

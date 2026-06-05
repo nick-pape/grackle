@@ -8,7 +8,7 @@ import {
 } from "@grackle-ai/common";
 import { type ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
 import { join } from "node:path";
-import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
+import { getDatabaseStores, grackleHome } from "@grackle-ai/database";
 import type { SessionModel } from "./domain/index.js";
 import { toSessionModel } from "./domain/index.js";
 import * as adapterManager from "./adapter-manager.js";
@@ -27,6 +27,7 @@ import { processEventStream } from "./event-processor.js";
  *     the environment already has an active session, or the environment is offline
  */
 export function reanimateAgent(sessionId: string): SessionModel {
+  const { sessionStore, taskStore } = getDatabaseStores();
   const session = sessionStore.getSession(sessionId);
   if (!session) {
     throw new NotFoundError(`Session not found: ${sessionId}`);

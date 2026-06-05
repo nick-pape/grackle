@@ -12,7 +12,7 @@
 
 import { v4 as uuid } from "uuid";
 import { monotonicFactory } from "ulid";
-import { persistStreamMessage } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 import { isReservedStreamName, LIFECYCLE_PREFIX } from "./stream-names.js";
 import { emitStreamMessage } from "./stream-message-bus.js";
@@ -470,7 +470,7 @@ export function publish(streamId: string, senderId: string, content: string): St
   if (!isReservedStreamName(stream.name)) {
     const seq: string = nextStreamSeq();
     try {
-      persistStreamMessage({
+      getDatabaseStores().streamMessageStore.persistStreamMessage({
         seq,
         streamId: stream.id,
         senderId: msg.senderId,

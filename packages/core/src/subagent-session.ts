@@ -33,7 +33,7 @@ import {
   serverTimestamp,
 } from "@grackle-ai/common";
 import type { DelegationInfo, SessionStatus } from "@grackle-ai/common";
-import { sessionStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { recordSessionAction } from "./session-action-recorder.js";
 import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
@@ -135,6 +135,7 @@ export interface EnsureChildSessionParams {
  * @param params - Child id, parent id, and parsed delegation info.
  */
 export function ensureChildSession(params: EnsureChildSessionParams): void {
+  const { sessionStore } = getDatabaseStores();
   const { childSessionId, parentSessionId, info } = params;
   if (sessionStore.getSession(childSessionId)) {
     return; // already materialized — dedupe
@@ -177,6 +178,7 @@ export function ensureChildSession(params: EnsureChildSessionParams): void {
  * @param isError - Whether the tool result was an error.
  */
 export function closeChildSession(childSessionId: string, result: string, isError: boolean): void {
+  const { sessionStore } = getDatabaseStores();
   const session = sessionStore.getSession(childSessionId);
   if (!session) {
     return;
@@ -215,6 +217,7 @@ export function appendChildActivity(childSessionId: string, content: string): vo
   if (!content) {
     return;
   }
+  const { sessionStore } = getDatabaseStores();
   const session = sessionStore.getSession(childSessionId);
   if (!session) {
     return;
@@ -237,6 +240,7 @@ export function appendChildActivity(childSessionId: string, content: string): vo
  * @param childSessionId - The child session id.
  */
 export function interruptChildSession(childSessionId: string): void {
+  const { sessionStore } = getDatabaseStores();
   const session = sessionStore.getSession(childSessionId);
   if (!session || TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
     return;

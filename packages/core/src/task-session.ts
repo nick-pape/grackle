@@ -9,15 +9,7 @@
  * @module
  */
 
-import {
-  envRegistry,
-  sessionStore,
-  workspaceStore,
-  taskStore,
-  personaStore,
-  settingsStore,
-  grackleHome,
-} from "@grackle-ai/database";
+import { getDatabaseStores, grackleHome } from "@grackle-ai/database";
 import { GrackleError } from "@grackle-ai/common";
 import { ConnectError } from "@connectrpc/connect";
 import * as adapterManager from "./adapter-manager.js";
@@ -67,6 +59,8 @@ export async function startTaskSession(
   task: TaskModel,
   options?: { personaId?: string; environmentId?: string; notes?: string; rawPrompt?: string },
 ): Promise<string | undefined> {
+  const { envRegistry, sessionStore, workspaceStore, taskStore, personaStore, settingsStore } =
+    getDatabaseStores();
   const workspace = task.workspaceId ? workspaceStore.getWorkspace(task.workspaceId) : undefined;
   if (task.workspaceId && !workspace) {
     logger.warn({ taskId: task.id }, "startTaskSession failed: workspace not found");

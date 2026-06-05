@@ -5,7 +5,7 @@
  */
 
 import { ValidationError } from "@grackle-ai/common";
-import { sessionStore, taskStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 export const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
@@ -55,6 +55,7 @@ export function resolveAncestorEnvironmentId(parentTaskId: string): string {
   if (!parentTaskId) {
     return "";
   }
+  const { sessionStore, taskStore } = getDatabaseStores();
   const ancestors = taskStore.getAncestors(parentTaskId);
   const ancestorIds = [parentTaskId, ...[...ancestors].reverse().map((a) => a.id)];
 

@@ -1,5 +1,5 @@
 import { reconnectOrProvision, FatalAdapterError } from "@grackle-ai/adapter-sdk";
-import { envRegistry } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
 import { parseAdapterConfig } from "./adapter-config.js";
@@ -52,6 +52,7 @@ const reconnecting: Set<string> = new Set<string>();
  * Fire-and-forget for each environment — logs errors but does not throw.
  */
 export async function attemptReconnects(): Promise<void> {
+  const { envRegistry } = getDatabaseStores();
   const environments = envRegistry.listEnvironments();
 
   // ── Phase 1: Disconnected environments (exponential backoff) ──
@@ -184,6 +185,7 @@ export function _resetForTesting(): void {
  *          (environment removed, no adapter registered).
  */
 async function connectAndRecover(environmentId: string): Promise<boolean> {
+  const { envRegistry } = getDatabaseStores();
   const env = envRegistry.getEnvironment(environmentId);
   if (!env) {
     reconnectStates.delete(environmentId);
@@ -246,6 +248,7 @@ async function connectAndRecover(environmentId: string): Promise<boolean> {
  * Uses the existing `reconnectOrProvision` flow from adapter-sdk.
  */
 async function tryReconnect(environmentId: string): Promise<void> {
+  const { envRegistry } = getDatabaseStores();
   reconnecting.add(environmentId);
 
   try {
@@ -312,6 +315,7 @@ async function tryReconnect(environmentId: string): Promise<void> {
  * On failure: stays sleeping, updates lastProbeAt, logs at debug level.
  */
 async function tryProbe(environmentId: string): Promise<void> {
+  const { envRegistry } = getDatabaseStores();
   reconnecting.add(environmentId);
 
   try {
