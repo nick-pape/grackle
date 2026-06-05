@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@grackle-ai/database": "workspace:*",
-    "vitest": "4.1.0"
+    "vitest": "^4.1.0"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",

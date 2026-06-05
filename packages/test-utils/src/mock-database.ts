@@ -331,6 +331,29 @@ function createSessionActionStoreMock(): MockedStore<SessionActionStore> {
   };
 }
 
+/** Create mock store registry functions that mirror real throw-until-initialized semantics. */
+function createStoreRegistryMock(): {
+  setDatabaseStores: Mock;
+  getDatabaseStores: Mock;
+  clearDatabaseStores: Mock;
+} {
+  let stored: unknown;
+  return {
+    setDatabaseStores: vi.fn((s: unknown) => {
+      stored = s;
+    }),
+    getDatabaseStores: vi.fn(() => {
+      if (!stored) {
+        throw new Error("Database stores not initialized. Call setDatabaseStores() at startup.");
+      }
+      return stored;
+    }),
+    clearDatabaseStores: vi.fn(() => {
+      stored = undefined;
+    }),
+  };
+}
+
 /**
  * Create a complete mock of the `@grackle-ai/database` barrel export.
  *
@@ -386,19 +409,17 @@ export function createDatabaseMock(): Record<string, unknown> {
     parseCredentialProviderConfig: vi.fn(),
     isValidCredentialProviderConfig: vi.fn(() => true),
 
-    // Store registry (no-op in tests — stores are accessed via namespace imports)
-    setDatabaseStores: vi.fn(),
-    getDatabaseStores: vi.fn(),
-    clearDatabaseStores: vi.fn(),
+    // Store registry — mirrors real semantics (throws until initialized)
+    ...createStoreRegistryMock(),
 
     // Utilities
     grackleHome: "/tmp/test-grackle",
-    safeParseJsonArray: (value: unknown): string[] => {
+    safeParseJsonArray: (value: string | null | undefined): string[] => {
       if (!value) {
         return [];
       }
       try {
-        const parsed: unknown = JSON.parse(value as string);
+        const parsed: unknown = JSON.parse(value);
         return Array.isArray(parsed)
           ? parsed.filter((item: unknown): item is string => typeof item === "string")
           : [];
