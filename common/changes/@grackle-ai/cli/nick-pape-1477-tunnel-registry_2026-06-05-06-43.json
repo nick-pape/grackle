@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Scope tunnel registry into TunnelRegistry class for per-instance isolation",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
