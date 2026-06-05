@@ -29,7 +29,7 @@ export type { RemoteExecutor } from "./remote-executor.js";
 export type { RemoteTunnel, TunnelProcessFactory, TunnelPortProbe } from "./tunnel.js";
 export { ProcessTunnel, ProcessReverseTunnel, REVERSE_TUNNEL_SETTLE_MS } from "./tunnel.js";
 export type { TunnelState } from "./tunnel-registry.js";
-export { registerTunnel, getTunnel, closeTunnel, closeAllTunnels } from "./tunnel-registry.js";
+export { TunnelRegistry } from "./tunnel-registry.js";
 
 // ─── Connect ────────────────────────────────────────────────
 export type { PortProber, WaitForLocalPortOptions } from "./connect.js";

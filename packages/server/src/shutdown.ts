@@ -1,7 +1,7 @@
 import { logger, shutdownOtlpLogs } from "@grackle-ai/core";
 import { sqlite, stopWalCheckpointTimer } from "@grackle-ai/database";
 import { stopPairingCleanup, stopSessionCleanup, stopOAuthCleanup } from "@grackle-ai/auth";
-import { closeAllTunnels } from "@grackle-ai/adapter-sdk";
+import type { TunnelRegistry } from "@grackle-ai/adapter-sdk";
 
 /** Hard timeout (ms) so upgraded WS connections don't block exit. */
 const SHUTDOWN_TIMEOUT_MS: number = 5_000;
@@ -30,6 +30,8 @@ export interface ShutdownContext {
   localPowerLineManager?: { stop: () => Promise<void> };
   /** Plugin shutdown function — disposes subscribers and calls plugin teardown hooks. */
   pluginShutdown?: () => Promise<void>;
+  /** Shared tunnel registry — closed during shutdown. */
+  tunnelRegistry?: TunnelRegistry;
 }
 
 /**
@@ -60,7 +62,9 @@ export function createShutdown(context: ShutdownContext): () => Promise<void> {
       await context.localPowerLineManager.stop();
     }
 
-    await closeAllTunnels();
+    if (context.tunnelRegistry) {
+      await context.tunnelRegistry.closeAll(logger);
+    }
 
     await new Promise<void>((resolve) => {
       context.grpcServer.close((err?: Error) => {

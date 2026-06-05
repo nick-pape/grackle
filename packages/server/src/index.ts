@@ -197,7 +197,7 @@ async function main(): Promise<void> {
   const apiKey = loadOrCreateApiKey(grackleHome);
 
   // Register all built-in environment adapters
-  registerAllAdapters();
+  const tunnelRegistry = registerAllAdapters();
 
   // Bootstrap the local environment (PowerLine + provisioning)
   const { powerLineManager: localPowerLineManager } = await bootstrapLocalEnvironment(
@@ -634,6 +634,7 @@ async function main(): Promise<void> {
     reconciliationManager,
     localPowerLineManager,
     pluginShutdown: loaded.shutdown,
+    tunnelRegistry,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises

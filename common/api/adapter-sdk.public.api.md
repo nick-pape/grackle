@@ -24,6 +24,7 @@ export interface AdapterDependencies {
     logger?: AdapterLogger;
     resolveGitHubToken?: (accountId?: string) => string | undefined;
     sleep?: (ms: number) => Promise<void>;
+    tunnelRegistry?: TunnelRegistry;
 }
 
 // @public
@@ -138,13 +139,7 @@ export function buildEnvFileContent(powerlineToken: string, extraEnv?: Record<st
 export function buildRemoteKillCommand(): string;
 
 // @public
-export function closeAllTunnels(logger?: AdapterLogger): Promise<void>;
-
-// @public
-export function closeTunnel(environmentId: string): Promise<void>;
-
-// @public
-export function connectThroughTunnel(environmentId: string, localPort: number, powerlineToken: string, logger?: AdapterLogger): Promise<PowerLineConnection>;
+export function connectThroughTunnel(environmentId: string, localPort: number, powerlineToken: string, tunnelRegistry: TunnelRegistry, logger?: AdapterLogger): Promise<PowerLineConnection>;
 
 export { ContentEncoding }
 
@@ -228,9 +223,6 @@ export function findFreePort(): Promise<number>;
 
 // @public
 export function getPackageVersion(): string;
-
-// @public
-export function getTunnel(environmentId: string): TunnelState | undefined;
 
 // @public
 export interface HostSessionInfo {
@@ -334,16 +326,13 @@ export interface ReanimateParams {
 export function reconnectOrProvision(environmentId: string, adapter: EnvironmentAdapter, config: Record<string, unknown>, powerlineToken: string, bootstrapped: boolean, force?: boolean, logger?: AdapterLogger): AsyncGenerator<ProvisionEvent>;
 
 // @public
-export function registerTunnel(environmentId: string, state: TunnelState, logger?: AdapterLogger): void;
-
-// @public
 export const REMOTE_EXEC_DEFAULT_TIMEOUT_MS: number;
 
 // @public
 export const REMOTE_POWERLINE_DIRECTORY: string;
 
 // @public
-export function remoteDestroy(environmentId: string, executor: RemoteExecutor, logger?: AdapterLogger): Promise<void>;
+export function remoteDestroy(environmentId: string, executor: RemoteExecutor, tunnelRegistry: TunnelRegistry, logger?: AdapterLogger): Promise<void>;
 
 // @public
 export interface RemoteExecutor {
@@ -354,10 +343,10 @@ export interface RemoteExecutor {
 }
 
 // @public
-export function remoteHealthCheck(connection: PowerLineConnection): Promise<boolean>;
+export function remoteHealthCheck(connection: PowerLineConnection, tunnelRegistry: TunnelRegistry): Promise<boolean>;
 
 // @public
-export function remoteStop(environmentId: string, executor: RemoteExecutor, logger?: AdapterLogger): Promise<void>;
+export function remoteStop(environmentId: string, executor: RemoteExecutor, tunnelRegistry: TunnelRegistry, logger?: AdapterLogger): Promise<void>;
 
 // @public
 export interface RemoteTunnel {
@@ -408,6 +397,8 @@ export abstract class RemoteTunnelAdapter<TConfig extends RemoteTunnelConfig = R
     }>;
     // (undocumented)
     protected readonly sleepFn: (ms: number) => Promise<void>;
+    // (undocumented)
+    protected readonly tunnelRegistry: TunnelRegistry;
 }
 
 // @public
@@ -488,6 +479,14 @@ export interface TunnelPortProbe {
 // @public
 export interface TunnelProcessFactory {
     spawn(command: string, args: string[], options: SpawnOptions): ChildProcess;
+}
+
+// @public
+export class TunnelRegistry {
+    close(environmentId: string): Promise<void>;
+    closeAll(logger?: AdapterLogger): Promise<void>;
+    get(environmentId: string): TunnelState | undefined;
+    register(environmentId: string, state: TunnelState, logger?: AdapterLogger): void;
 }
 
 // @public

@@ -2,7 +2,7 @@ import { AhpClientSocket, InMemoryClientIdStore } from "@grackle-ai/ahp-transpor
 import { createConnection } from "node:net";
 import type { PowerLineConnection } from "./adapter.js";
 import { AhpHostTransport } from "./ahp-host-transport.js";
-import { closeTunnel } from "./tunnel-registry.js";
+import type { TunnelRegistry } from "./tunnel-registry.js";
 import { sleep } from "./utils.js";
 import type { AdapterLogger } from "./logger.js";
 import { defaultLogger } from "./logger.js";
@@ -92,6 +92,7 @@ export async function connectThroughTunnel(
   environmentId: string,
   localPort: number,
   powerlineToken: string,
+  tunnelRegistry: TunnelRegistry,
   logger: AdapterLogger = defaultLogger,
 ): Promise<PowerLineConnection> {
   const baseUrl = `ws://127.0.0.1:${localPort}`;
@@ -138,7 +139,7 @@ export async function connectThroughTunnel(
 
   // Clean up the tunnel so we don't leak background processes on connect failure
   try {
-    await closeTunnel(environmentId);
+    await tunnelRegistry.close(environmentId);
   } catch (err) {
     logger.error({ environmentId, err }, "Failed to close tunnel after connect failure");
   }

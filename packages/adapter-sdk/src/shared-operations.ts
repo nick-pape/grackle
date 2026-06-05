@@ -1,6 +1,6 @@
 import type { PowerLineConnection } from "./adapter.js";
 import type { RemoteExecutor } from "./remote-executor.js";
-import { closeTunnel, getTunnel } from "./tunnel-registry.js";
+import type { TunnelRegistry } from "./tunnel-registry.js";
 import { buildRemoteKillCommand } from "./bootstrap.js";
 import { REMOTE_POWERLINE_DIRECTORY } from "./utils.js";
 import type { AdapterLogger } from "./logger.js";
@@ -13,6 +13,7 @@ import { defaultLogger } from "./logger.js";
 export async function remoteStop(
   environmentId: string,
   executor: RemoteExecutor,
+  tunnelRegistry: TunnelRegistry,
   logger: AdapterLogger = defaultLogger,
 ): Promise<void> {
   try {
@@ -23,7 +24,7 @@ export async function remoteStop(
       "Failed to kill remote PowerLine (may already be stopped)",
     );
   }
-  await closeTunnel(environmentId);
+  await tunnelRegistry.close(environmentId);
 }
 
 /**
@@ -33,6 +34,7 @@ export async function remoteStop(
 export async function remoteDestroy(
   environmentId: string,
   executor: RemoteExecutor,
+  tunnelRegistry: TunnelRegistry,
   logger: AdapterLogger = defaultLogger,
 ): Promise<void> {
   try {
@@ -47,12 +49,15 @@ export async function remoteDestroy(
   } catch (err) {
     logger.debug({ environmentId, err }, "Failed to clean up remote PowerLine artifacts");
   }
-  await closeTunnel(environmentId);
+  await tunnelRegistry.close(environmentId);
 }
 
 /** Check that the tunnel is alive and the PowerLine responds to a ping. */
-export async function remoteHealthCheck(connection: PowerLineConnection): Promise<boolean> {
-  const state = getTunnel(connection.environmentId);
+export async function remoteHealthCheck(
+  connection: PowerLineConnection,
+  tunnelRegistry: TunnelRegistry,
+): Promise<boolean> {
+  const state = tunnelRegistry.get(connection.environmentId);
   if (!state?.tunnel.isAlive()) {
     return false;
   }
