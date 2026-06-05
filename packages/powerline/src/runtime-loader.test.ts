@@ -2,18 +2,6 @@ import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import type { AgentRuntime } from "@grackle-ai/runtime-sdk";
 import type { RuntimeCatalogEntry } from "@grackle-ai/common";
 
-function makeMockRuntime(name: string): AgentRuntime {
-  return {
-    name,
-    spawn: () => {
-      throw new Error("not implemented");
-    },
-    resume: () => {
-      throw new Error("not implemented");
-    },
-  };
-}
-
 class FakeSdkRuntime implements AgentRuntime {
   public name: string = "fake-sdk";
   public spawn = vi.fn();

@@ -48,13 +48,19 @@ async function instantiateRuntime(
   switch (factory.type) {
     case "sdk": {
       const mod = (await import(factory.package)) as Record<string, unknown>;
-      const Constructor = mod[factory.exportName] as new () => AgentRuntime;
+      const Constructor = mod[factory.exportName];
       if (typeof Constructor !== "function") {
         throw new Error(
           `Export "${factory.exportName}" from "${factory.package}" is not a constructor`,
         );
       }
-      return new Constructor();
+      try {
+        return new (Constructor as new () => AgentRuntime)();
+      } catch (err: unknown) {
+        throw new Error(
+          `Failed to construct "${factory.exportName}" from "${factory.package}": ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
     }
 
     case "acp": {
