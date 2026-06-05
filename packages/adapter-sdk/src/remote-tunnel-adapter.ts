@@ -15,6 +15,18 @@ import { remoteStop, remoteDestroy, remoteHealthCheck } from "./shared-operation
 import { sleep as defaultSleep, withFreePort, SSH_CONNECTIVITY_TIMEOUT_MS } from "./utils.js";
 import { exec as defaultExec } from "./exec.js";
 
+/** Parse `GRACKLE_MCP_PORT` env var, falling back to {@link DEFAULT_MCP_PORT} on missing or non-numeric values. */
+function parseMcpPort(): number {
+  const raw = process.env.GRACKLE_MCP_PORT;
+  if (raw) {
+    const parsed = parseInt(raw, 10);
+    if (!Number.isNaN(parsed) && parsed > 0 && parsed <= 65535) {
+      return parsed;
+    }
+  }
+  return DEFAULT_MCP_PORT;
+}
+
 // ─── Types ──────────────────────────────────────────────────
 
 /** Configuration fields shared by all remote-tunnel-based adapters. */
@@ -228,7 +240,7 @@ export abstract class RemoteTunnelAdapter<
     // Open reverse tunnel (remote → host MCP server) for agent tool calls.
     // Clean up the forward tunnel if the reverse tunnel fails to open.
     try {
-      const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+      const mcpPort = parseMcpPort();
       const reverseTunnel = this.createReverseTunnel(mcpPort, mcpPort, cfg);
       await reverseTunnel.open();
 
@@ -307,7 +319,7 @@ export abstract class RemoteTunnelAdapter<
     };
 
     try {
-      const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
+      const mcpPort = parseMcpPort();
       const reverseTunnel = this.createReverseTunnel(mcpPort, mcpPort, cfg);
       await reverseTunnel.open();
 
