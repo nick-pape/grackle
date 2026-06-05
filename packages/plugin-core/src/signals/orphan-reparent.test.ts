@@ -66,12 +66,12 @@ function insertTaskHierarchy(): void {
 
 /** Mark a task as complete so the subscriber treats it as terminal. */
 function completeTask(taskId: string): void {
-  taskStore.updateTask(taskId, "", "", "complete", []);
+  taskStore.updateTaskStatus(taskId, "complete");
 }
 
 /** Mark a task as failed so the subscriber treats it as terminal. */
 function failTask(taskId: string): void {
-  taskStore.updateTask(taskId, "", "", "failed", []);
+  taskStore.updateTaskStatus(taskId, "failed");
 }
 
 // ── Tests ────────────────────────────────────────────────────

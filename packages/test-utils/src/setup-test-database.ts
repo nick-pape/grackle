@@ -14,33 +14,6 @@ import {
   sqlite,
 } from "@grackle-ai/database";
 
-/**
- * Tables in reverse-dependency order for FK-safe truncation.
- * Child tables (those with REFERENCES) come before their parents.
- */
-const TRUNCATE_ORDER: readonly string[] = [
-  "session_actions",
-  "stream_messages",
-  "domain_events",
-  "dispatch_queue",
-  "channel_grants",
-  "escalations",
-  "findings",
-  "components",
-  "sessions",
-  "workspace_environment_links",
-  "schedules",
-  "tasks",
-  "agents",
-  "personas",
-  "tokens",
-  "workspaces",
-  "environments",
-  "settings",
-  "plugins",
-  "github_accounts",
-];
-
 /** Handle returned by {@link setupTestDatabase} for test lifecycle control. */
 export interface TestDatabaseHandle {
   /** Close the in-memory DB and reset the singleton. Call in `afterAll`. */
@@ -76,10 +49,16 @@ export function setupTestDatabase(): TestDatabaseHandle {
       if (!conn) {
         throw new Error("truncateAll called but database is not initialized");
       }
+      const tables = (
+        conn
+          .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+          .all() as Array<{ name: string }>
+      ).map((r) => r.name);
+
       conn.pragma("foreign_keys = OFF");
       try {
         const trx = conn.transaction(() => {
-          for (const table of TRUNCATE_ORDER) {
+          for (const table of tables) {
             conn.exec(`DELETE FROM "${table}"`);
           }
         });
