@@ -181,25 +181,25 @@ export interface PluginRegistryEntry {
 export function registerGrackleRoutes(router: ConnectRouter): void;
 
 // @public
-export function requireAgent(id: string): AgentRow;
+export function requireAgent(id: string, context?: Record<string, unknown>): AgentRow;
 
 // @public
-export function requireChannelGrant(id: string): ChannelGrantRow;
+export function requireChannelGrant(id: string, context?: Record<string, unknown>): ChannelGrantRow;
 
 // @public
-export function requireComponent(id: string): ComponentRow;
+export function requireComponent(id: string, context?: Record<string, unknown>): ComponentRow;
 
 // @public
-export function requireEnvironment(id: string): EnvironmentRow;
+export function requireEnvironment(id: string, context?: Record<string, unknown>): EnvironmentRow;
 
 // @public
-export function requireEscalation(id: string): EscalationRow;
+export function requireEscalation(id: string, context?: Record<string, unknown>): EscalationRow;
 
 // @public
 export function requireField(value: unknown, fieldName: string): asserts value;
 
 // @public
-export function requireGitHubAccount(id: string): GitHubAccountInfo;
+export function requireGitHubAccount(id: string, context?: Record<string, unknown>): GitHubAccountInfo;
 
 // @public
 export function requireJsonObject(value: string, fieldName: string): Record<string, unknown>;
@@ -211,19 +211,22 @@ export function requireNonEmpty(value: string, fieldName: string): string;
 export function requireNonNegativeBudget(tokenBudget: number | undefined, costBudgetMillicents: number | undefined): void;
 
 // @public
-export function requirePersona(id: string): PersonaRow;
+export function requireOneOf<T extends Record<string, unknown>>(fields: T): keyof T & string;
 
 // @public
-export function requireSession(id: string): SessionRow;
+export function requirePersona(id: string, context?: Record<string, unknown>): PersonaRow;
 
 // @public
-export function requireTask(id: string): TaskRow;
+export function requireSession(id: string, context?: Record<string, unknown>): SessionRow;
+
+// @public
+export function requireTask(id: string, context?: Record<string, unknown>): TaskRow;
 
 // @public
 export function requireTrimmed(value: string, fieldName: string): string;
 
 // @public
-export function requireWorkspace(id: string): WorkspaceRow;
+export function requireWorkspace(id: string, context?: Record<string, unknown>): WorkspaceRow;
 
 export { resolveAncestorEnvironmentId }
 

@@ -180,7 +180,6 @@ describe("gRPC persona handlers", () => {
       .createPersona({ name: "", systemPrompt: "missing name" })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.message).toBeTruthy();
   });
 
@@ -189,7 +188,6 @@ describe("gRPC persona handlers", () => {
       .createPersona({ name: "No Prompt", systemPrompt: "" })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.message).toBeTruthy();
   });
 
@@ -227,7 +225,6 @@ describe("gRPC persona handlers", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.message).toContain("nonexistent_tool");
   });
 

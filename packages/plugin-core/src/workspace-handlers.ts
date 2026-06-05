@@ -9,6 +9,7 @@ import { workspaceRowToProto } from "./grpc-proto-converters.js";
 import {
   requireEnvironment,
   requireField,
+  requireNonEmpty,
   requireNonNegativeBudget,
   requireWorkspace,
 } from "./require-helpers.js";
@@ -80,18 +81,13 @@ export async function updateWorkspace(
   req: grackle.UpdateWorkspaceRequest,
 ): Promise<grackle.Workspace> {
   const existing = requireWorkspace(req.id);
-  if (req.name?.trim() === "") {
-    throw new ConnectError("Workspace name cannot be empty", Code.InvalidArgument);
+  if (req.name !== undefined) {
+    requireNonEmpty(req.name, "name");
   }
   if (req.repoUrl !== undefined && req.repoUrl !== "" && !/^https?:\/\//i.test(req.repoUrl)) {
     throw new ConnectError("Repository URL must use http or https scheme", Code.InvalidArgument);
   }
-  if (
-    (req.tokenBudget !== undefined && req.tokenBudget < 0) ||
-    (req.costBudgetMillicents !== undefined && req.costBudgetMillicents < 0)
-  ) {
-    throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
-  }
+  requireNonNegativeBudget(req.tokenBudget, req.costBudgetMillicents);
   const row = workspaceStore.updateWorkspace(req.id, {
     name: req.name !== undefined ? req.name.trim() : undefined,
     description: req.description,

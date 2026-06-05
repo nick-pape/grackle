@@ -5,14 +5,14 @@
  * GrackleCore service, allowing clients to register multiple GitHub identities
  * and associate them with environments.
  */
-import { ConnectError, Code } from "@connectrpc/connect";
+import { Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, ConflictError, GrackleError } from "@grackle-ai/common";
 import { githubAccountStore } from "@grackle-ai/database";
 import { exec } from "@grackle-ai/core";
 import { emit } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
-import { requireGitHubAccount, requireTrimmed } from "./require-helpers.js";
+import { requireGitHubAccount, requireNonEmpty, requireTrimmed } from "./require-helpers.js";
 
 /** Timeout when resolving a username from the GitHub API. */
 const GH_API_TIMEOUT_MS: number = 10_000;
@@ -70,10 +70,7 @@ export async function addGitHubAccount(
   } catch (err) {
     // Translate SQLite UNIQUE constraint violation into a user-facing gRPC error.
     if (err instanceof Error && err.message.includes("UNIQUE constraint failed")) {
-      throw new ConnectError(
-        `A GitHub account with label "${req.label.trim()}" already exists`,
-        Code.AlreadyExists,
-      );
+      throw new ConflictError(`A GitHub account with label "${req.label.trim()}" already exists`);
     }
     throw err;
   }
@@ -83,7 +80,7 @@ export async function addGitHubAccount(
 
   const account = githubAccountStore.listGitHubAccounts().find((a) => a.id === id);
   if (!account) {
-    throw new ConnectError("Account was created but could not be retrieved", Code.Internal);
+    throw new GrackleError("Account was created but could not be retrieved", Code.Internal, { id });
   }
   return accountToProto(account);
 }
@@ -96,16 +93,10 @@ export async function updateGitHubAccount(
 
   const fields: githubAccountStore.UpdateGitHubAccountFields = {};
   if (req.label !== undefined) {
-    if (!req.label.trim()) {
-      throw new ConnectError("label cannot be empty", Code.InvalidArgument);
-    }
-    fields.label = req.label.trim();
+    fields.label = requireNonEmpty(req.label, "label");
   }
   if (req.token !== undefined) {
-    const trimmedToken = req.token.trim();
-    if (!trimmedToken) {
-      throw new ConnectError("token cannot be empty", Code.InvalidArgument);
-    }
+    const trimmedToken = requireNonEmpty(req.token, "token");
     fields.token = trimmedToken;
     // Re-resolve username when token changes
     fields.username = await resolveGitHubUsername(trimmedToken);

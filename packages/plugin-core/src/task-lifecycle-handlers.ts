@@ -1,7 +1,13 @@
 /** Task lifecycle handlers extracted from task-handlers.ts (#1470). @module */
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle, serverTimestamp } from "@grackle-ai/common";
+import {
+  grackle,
+  serverTimestamp,
+  GrackleError,
+  NotFoundError,
+  ValidationError,
+} from "@grackle-ai/common";
 import {
   SESSION_STATUS,
   TERMINAL_SESSION_STATUSES,
@@ -92,13 +98,13 @@ export async function setWorkpad(req: grackle.SetWorkpadRequest): Promise<grackl
   try {
     const parsed: unknown = JSON.parse(req.workpad);
     if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new ConnectError("Workpad must be a JSON object", Code.InvalidArgument);
+      throw new ValidationError("Workpad must be a JSON object");
     }
   } catch (err) {
-    if (err instanceof ConnectError) {
+    if (err instanceof GrackleError) {
       throw err;
     }
-    throw new ConnectError("Workpad must be valid JSON", Code.InvalidArgument);
+    throw new ValidationError("Workpad must be valid JSON");
   }
   const MAX_WORKPAD_BYTES = 64 * 1024; // 64 KB
   const workpadBytes = Buffer.byteLength(req.workpad, "utf8");
@@ -260,7 +266,9 @@ export async function deleteTask(req: grackle.TaskId): Promise<grackle.Empty> {
   const changes = taskStore.deleteTask(req.id);
   if (changes === 0) {
     logger.error({ taskId: req.id }, "deleteTask returned 0 changes despite task existing");
-    throw new ConnectError(`Failed to delete task ${req.id}: no rows affected`, Code.Internal);
+    throw new NotFoundError(`Failed to delete task ${req.id}: no rows affected`, {
+      taskId: req.id,
+    });
   }
   // Revoke the deleted task's scoped MCP tokens (GHSA-f9ff-5x35-7gfw F12). A
   // deleted task is never resumed, so this is permanent (until the 24h TTL prune).

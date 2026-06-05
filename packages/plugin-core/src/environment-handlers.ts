@@ -19,7 +19,7 @@ import { logger } from "@grackle-ai/core";
 import { envRowToProto } from "./grpc-proto-converters.js";
 import { killSessionAndCleanup, suspendSessionAndPublish } from "./grpc-shared.js";
 import { resolveBootstrapRuntime } from "@grackle-ai/core";
-import { requireEnvironment, requireField } from "./require-helpers.js";
+import { requireEnvironment, requireField, requireNonEmpty } from "./require-helpers.js";
 
 /** List all registered environments. */
 export async function listEnvironments(): Promise<grackle.EnvironmentList> {
@@ -55,8 +55,8 @@ export async function updateEnvironment(
 ): Promise<grackle.Environment> {
   const existing = requireEnvironment(req.id);
   const displayName = req.displayName !== undefined ? req.displayName : undefined;
-  if (displayName?.trim() === "") {
-    throw new ConnectError("Environment name cannot be empty", Code.InvalidArgument);
+  if (displayName !== undefined) {
+    requireNonEmpty(displayName, "displayName");
   }
   let adapterConfig: string | undefined;
   if (req.adapterConfig !== undefined) {

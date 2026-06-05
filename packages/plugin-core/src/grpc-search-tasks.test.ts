@@ -187,11 +187,11 @@ describe("gRPC searchTasks handler", () => {
   it("throws InvalidArgument for empty query", async () => {
     await expect(
       handlers.searchTasks({ query: "", workspaceId: WORKSPACE_ID, limit: 0, status: "" }),
-    ).rejects.toThrow(ConnectError);
+    ).rejects.toThrow();
 
     await expect(
       handlers.searchTasks({ query: "   ", workspaceId: WORKSPACE_ID, limit: 0, status: "" }),
-    ).rejects.toThrow(ConnectError);
+    ).rejects.toThrow();
   });
 
   it("returns results for an exact title match with high relevance", async () => {

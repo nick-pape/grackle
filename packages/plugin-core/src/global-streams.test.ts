@@ -73,7 +73,7 @@ describe("createStream", () => {
 
     await createStream(req);
 
-    await expect(createStream(req)).rejects.toThrow(ConnectError);
+    await expect(createStream(req)).rejects.toThrow();
     try {
       await createStream(req);
     } catch (err) {
@@ -87,7 +87,7 @@ describe("createStream", () => {
       name: "test",
     });
 
-    await expect(createStream(req)).rejects.toThrow(ConnectError);
+    await expect(createStream(req)).rejects.toThrow();
     try {
       await createStream(req);
     } catch (err) {
@@ -102,7 +102,7 @@ describe("createStream", () => {
         name,
       });
 
-      await expect(createStream(req)).rejects.toThrow(ConnectError);
+      await expect(createStream(req)).rejects.toThrow();
       try {
         await createStream(req);
       } catch (err) {
@@ -117,7 +117,7 @@ describe("createStream", () => {
       name: "",
     });
 
-    await expect(createStream(req)).rejects.toThrow(ConnectError);
+    await expect(createStream(req)).rejects.toThrow();
     try {
       await createStream(req);
     } catch (err) {
@@ -221,7 +221,7 @@ describe("attachStream", () => {
       deliveryMode: "async",
     });
 
-    await expect(attachStream(req)).rejects.toThrow(ConnectError);
+    await expect(attachStream(req)).rejects.toThrow();
     try {
       await attachStream(req);
     } catch (err) {
@@ -238,7 +238,7 @@ describe("attachStream", () => {
       deliveryMode: "async",
     });
 
-    await expect(attachStream(req)).rejects.toThrow(ConnectError);
+    await expect(attachStream(req)).rejects.toThrow();
     try {
       await attachStream(req);
     } catch (err) {
@@ -255,7 +255,7 @@ describe("attachStream", () => {
       deliveryMode: "async",
     });
 
-    await expect(attachStream(req)).rejects.toThrow(ConnectError);
+    await expect(attachStream(req)).rejects.toThrow();
     try {
       await attachStream(req);
     } catch (err) {
@@ -285,7 +285,7 @@ describe("attachStream", () => {
       deliveryMode: "async",
     });
 
-    await expect(attachStream(req)).rejects.toThrow(ConnectError);
+    await expect(attachStream(req)).rejects.toThrow();
     try {
       await attachStream(req);
     } catch (err) {
@@ -302,7 +302,7 @@ describe("attachStream", () => {
       deliveryMode: "async",
     });
 
-    await expect(attachStream(req)).rejects.toThrow(ConnectError);
+    await expect(attachStream(req)).rejects.toThrow();
     try {
       await attachStream(req);
     } catch (err) {
