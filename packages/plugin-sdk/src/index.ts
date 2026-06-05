@@ -21,3 +21,13 @@ export type {
 // ─── Loader ───────────────────────────────────────────────────
 export type { LoadedPlugins } from "./loader.js";
 export { loadPlugins } from "./loader.js";
+
+// ─── Registry ────────────────────────────────────────────────
+export type { PluginRegistration, PluginEnvOverride } from "./registry.js";
+export {
+  registerPlugin,
+  getRegisteredPlugins,
+  getRegistration,
+  resolveEnabledPlugins,
+  clearRegistry,
+} from "./registry.js";

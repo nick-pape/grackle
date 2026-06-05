@@ -18,7 +18,7 @@ export function computeNextRunAt(expr: string, lastRunAt?: string): string;
 // @public
 export function createCronPhase(deps: CronPhaseDeps): ReconciliationPhase;
 
-// @public
+// @public (undocumented)
 export function createSchedulingPlugin(): GracklePlugin;
 
 // @public

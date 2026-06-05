@@ -31,7 +31,7 @@ export { createSubagentReconciliationPhase } from "./subagent-reconciliation.js"
 export type { SubagentReconciliationDeps } from "./subagent-reconciliation.js";
 
 // ─── Plugin Registry ────────────────────────────────────────
-export { setLoadedPluginNames, PLUGIN_REGISTRY } from "./plugin-registry.js";
+export { setLoadedPluginNames, getPluginRegistry } from "./plugin-registry.js";
 export type { PluginRegistryEntry } from "./plugin-registry.js";
 
 // ─── Handler Utilities ──────────────────────────────────────

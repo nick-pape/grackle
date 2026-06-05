@@ -8,6 +8,7 @@
  */
 
 import type { GracklePlugin, PluginContext } from "@grackle-ai/plugin-sdk";
+import { registerPlugin } from "@grackle-ai/plugin-sdk";
 import { grackle } from "@grackle-ai/common";
 import { logger } from "./logger.js";
 import { initKnowledge, neo4jHealthCheck, getKnowledgeEmbedder } from "./knowledge-init.js";
@@ -41,6 +42,15 @@ import { buildRelatedPriorWork } from "./related-prior-work.js";
  *
  * @returns A GracklePlugin ready to pass to `loadPlugins()`.
  */
+registerPlugin({
+  name: "knowledge",
+  description: "Knowledge graph — semantic search and relationship mapping",
+  required: false,
+  defaultEnabled: true,
+  envOverride: { variable: "GRACKLE_KNOWLEDGE_ENABLED", semantics: "enable" },
+  create: createKnowledgePlugin,
+});
+
 export function createKnowledgePlugin(): GracklePlugin {
   let cleanup: (() => Promise<void>) | undefined;
 

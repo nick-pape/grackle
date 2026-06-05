@@ -46,15 +46,28 @@ describe("createServiceCollector", () => {
     expect(collector.getHandlers(serviceB)).toEqual({ bar: handlerB });
   });
 
-  it("later handler group overwrites earlier handler with same name (last-write-wins)", () => {
+  it("throws on handler collision for the same service", () => {
     const collector = createServiceCollector();
     const original = vi.fn();
     const replacement = vi.fn();
 
     collector.addHandlers(serviceA, { doThing: original });
-    collector.addHandlers(serviceA, { doThing: replacement });
 
-    expect(collector.getHandlers(serviceA).doThing).toBe(replacement);
+    expect(() => collector.addHandlers(serviceA, { doThing: replacement })).toThrow(
+      /handler collision.*ServiceA.*doThing/i,
+    );
+  });
+
+  it("allows the same method name on different services", () => {
+    const collector = createServiceCollector();
+    const handlerA = vi.fn();
+    const handlerB = vi.fn();
+
+    collector.addHandlers(serviceA, { doThing: handlerA });
+    collector.addHandlers(serviceB, { doThing: handlerB });
+
+    expect(collector.getHandlers(serviceA).doThing).toBe(handlerA);
+    expect(collector.getHandlers(serviceB).doThing).toBe(handlerB);
   });
 
   it("buildRoutes calls router.service() with merged handlers", () => {

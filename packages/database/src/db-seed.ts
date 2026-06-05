@@ -8,13 +8,28 @@
 import type Database from "better-sqlite3";
 import { SYSTEM_PERSONA_ID, ROOT_TASK_ID } from "@grackle-ai/common";
 
+/** Plugin seed descriptor — passed from the server's plugin registry. */
+export interface PluginSeed {
+  /** Plugin name. */
+  name: string;
+  /** Default enabled state when no DB row exists. */
+  defaultEnabled: boolean;
+  /** Optional env var override for first-run seeding. */
+  envOverride?: { variable: string; semantics: "skip" | "enable" };
+}
+
 /**
  * Seed the database with application-level defaults.
  * Call once at startup after {@link initDatabase} has applied schema migrations.
  *
  * @param conn - The raw better-sqlite3 connection to seed.
+ * @param pluginSeeds - Plugin descriptors from the plugin registry (optional;
+ *   omit in test/integration contexts where plugin rows are not needed).
  */
-export function seedDatabase(conn: InstanceType<typeof Database>): void {
+export function seedDatabase(
+  conn: InstanceType<typeof Database>,
+  pluginSeeds: ReadonlyArray<PluginSeed> = [],
+): void {
   // Capture persona count BEFORE any seed inserts so we can distinguish
   // fresh installs from upgrades in the onboarding backfill below.
   const personaCount = conn.prepare("SELECT COUNT(*) as cnt FROM personas").get() as {
@@ -194,29 +209,21 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
 
   // Seed: ensure optional plugin rows exist with correct initial enabled state.
   // Uses INSERT OR IGNORE so existing DB rows are never overwritten (DB is authoritative after first run).
-  // On first run, env vars can override the default (all plugins default to enabled=true).
-  const orchestrationEnabled = process.env["GRACKLE_SKIP_ORCHESTRATION"] === "1" ? 0 : 1;
-  const schedulingEnabled = process.env["GRACKLE_SKIP_SCHEDULING"] === "1" ? 0 : 1;
-  // GRACKLE_KNOWLEDGE_ENABLED defaults to enabled; respect "true"/"1" (enabled) and "false"/"0" (disabled).
-  const knowledgeEnv = process.env["GRACKLE_KNOWLEDGE_ENABLED"];
-  const knowledgeEnabled =
-    knowledgeEnv === undefined
-      ? 1
-      : knowledgeEnv === "1" || knowledgeEnv.toLowerCase() === "true"
-        ? 1
-        : knowledgeEnv === "0" || knowledgeEnv.toLowerCase() === "false"
-          ? 0
-          : 1;
-
-  conn
-    .prepare("INSERT OR IGNORE INTO plugins (name, enabled) VALUES (?, ?)")
-    .run("orchestration", orchestrationEnabled);
-  conn
-    .prepare("INSERT OR IGNORE INTO plugins (name, enabled) VALUES (?, ?)")
-    .run("scheduling", schedulingEnabled);
-  conn
-    .prepare("INSERT OR IGNORE INTO plugins (name, enabled) VALUES (?, ?)")
-    .run("knowledge", knowledgeEnabled);
+  // On first run, env vars can override the declared default.
+  const insertPlugin = conn.prepare("INSERT OR IGNORE INTO plugins (name, enabled) VALUES (?, ?)");
+  for (const seed of pluginSeeds) {
+    let enabled = seed.defaultEnabled;
+    if (seed.envOverride) {
+      const envVal = process.env[seed.envOverride.variable];
+      if (envVal !== undefined) {
+        enabled =
+          seed.envOverride.semantics === "skip"
+            ? envVal !== "1"
+            : envVal === "1" || envVal.toLowerCase() === "true";
+      }
+    }
+    insertPlugin.run(seed.name, enabled ? 1 : 0);
+  }
 
   // Backfill: ensure onboarding_completed setting exists.
   // Fresh installs (no pre-existing environments or personas) get "false" to trigger

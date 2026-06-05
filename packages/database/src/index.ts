@@ -19,6 +19,7 @@ export {
   default as db,
 } from "./db.js";
 export { seedDatabase } from "./db-seed.js";
+export type { PluginSeed } from "./db-seed.js";
 
 // ─── Schema ────────────────────────────────────────────────
 export * as schema from "./schema.js";
