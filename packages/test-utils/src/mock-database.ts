@@ -37,9 +37,9 @@ import type {
   SessionActionStore,
 } from "@grackle-ai/database";
 
-/** A store where every function is replaced with a vitest Mock. */
+/** A store where every function is replaced with a vitest Mock that preserves the original call signature. */
 type MockedStore<T> = {
-  [K in keyof T]: T[K] extends (...args: infer _A) => infer _R ? Mock : T[K];
+  [K in keyof T]: T[K] extends (...args: infer _A) => infer _R ? Mock<T[K]> : T[K];
 };
 
 /** Create a typed mock of the session store. */
@@ -219,7 +219,9 @@ function createCredentialProvidersMock(): MockedStore<CredentialProviderStore> {
     })),
     setCredentialProviders: vi.fn(),
     parseCredentialProviderConfig: vi.fn(),
-    isValidCredentialProviderConfig: vi.fn(() => true),
+    isValidCredentialProviderConfig: vi.fn(
+      () => true,
+    ) as unknown as MockedStore<CredentialProviderStore>["isValidCredentialProviderConfig"],
   };
 }
 
@@ -367,9 +369,11 @@ function createStoreRegistryMock(): {
  * undefined, or zero values as appropriate.
  */
 export function createDatabaseMock(): Record<string, unknown> {
-  const eventStore = createEventStoreMock();
-  const streamMessageStore = createStreamMessageStoreMock();
-  const sessionActionStore = createSessionActionStoreMock();
+  const settingsStoreMock = createSettingsStoreMock();
+  const credentialProvidersMock = createCredentialProvidersMock();
+  const eventStoreMock = createEventStoreMock();
+  const streamMessageStoreMock = createStreamMessageStoreMock();
+  const sessionActionStoreMock = createSessionActionStoreMock();
 
   return {
     db: {},
@@ -386,9 +390,9 @@ export function createDatabaseMock(): Record<string, unknown> {
     personaStore: createPersonaStoreMock(),
     agentStore: createAgentStoreMock(),
     componentStore: createComponentStoreMock(),
-    settingsStore: createSettingsStoreMock(),
+    settingsStore: settingsStoreMock,
     tokenStore: createTokenStoreMock(),
-    credentialProviders: createCredentialProvidersMock(),
+    credentialProviders: credentialProvidersMock,
     scheduleStore: createScheduleStoreMock(),
     escalationStore: createEscalationStoreMock(),
     workspaceEnvironmentLinkStore: createWorkspaceEnvironmentLinkStoreMock(),
@@ -397,22 +401,20 @@ export function createDatabaseMock(): Record<string, unknown> {
     githubAccountStore: createGitHubAccountStoreMock(),
     channelGrantStore: createChannelGrantStoreMock(),
 
-    // Direct barrel re-exports (event/stream/action stores)
-    persistEvent: eventStore.persistEvent,
-    queryDomainEvents: eventStore.queryDomainEvents,
-    persistStreamMessage: streamMessageStore.persistStreamMessage,
-    queryStreamMessages: streamMessageStore.queryStreamMessages,
-    persistSessionAction: sessionActionStore.persistSessionAction,
-    querySessionActions: sessionActionStore.querySessionActions,
-
-    // Direct barrel re-exports (constants and functions)
-    isAllowedSettingKey: vi.fn(() => true),
-    WRITABLE_SETTING_KEYS: new Set(["default_persona_id", "onboarding_completed"]),
-    VALID_PROVIDERS: ["claude", "github", "copilot", "codex", "goose"],
-    VALID_CLAUDE_VALUES: new Set(["off", "subscription", "api_key"]),
-    VALID_TOGGLE_VALUES: new Set(["off", "on"]),
-    parseCredentialProviderConfig: vi.fn(),
-    isValidCredentialProviderConfig: vi.fn(() => true),
+    // Direct barrel re-exports — same references as the namespace mocks above
+    persistEvent: eventStoreMock.persistEvent,
+    queryDomainEvents: eventStoreMock.queryDomainEvents,
+    persistStreamMessage: streamMessageStoreMock.persistStreamMessage,
+    queryStreamMessages: streamMessageStoreMock.queryStreamMessages,
+    persistSessionAction: sessionActionStoreMock.persistSessionAction,
+    querySessionActions: sessionActionStoreMock.querySessionActions,
+    isAllowedSettingKey: settingsStoreMock.isAllowedSettingKey,
+    WRITABLE_SETTING_KEYS: settingsStoreMock.WRITABLE_SETTING_KEYS,
+    VALID_PROVIDERS: credentialProvidersMock.VALID_PROVIDERS,
+    VALID_CLAUDE_VALUES: credentialProvidersMock.VALID_CLAUDE_VALUES,
+    VALID_TOGGLE_VALUES: credentialProvidersMock.VALID_TOGGLE_VALUES,
+    parseCredentialProviderConfig: credentialProvidersMock.parseCredentialProviderConfig,
+    isValidCredentialProviderConfig: credentialProvidersMock.isValidCredentialProviderConfig,
 
     // Store registry — mirrors real semantics (throws until initialized)
     ...createStoreRegistryMock(),
