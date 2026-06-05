@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Move schedule-expression utilities from plugin-scheduling to common, breaking the plugin-core to plugin-scheduling dependency",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

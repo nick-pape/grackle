@@ -5,7 +5,6 @@
 ```ts
 
 import { ActionEnvelope } from '@grackle-ai/ahp';
-import { Code } from '@connectrpc/connect';
 import type { GenEnum } from '@bufbuild/protobuf/codegenv2';
 import type { GenFile } from '@bufbuild/protobuf/codegenv2';
 import type { GenMessage } from '@bufbuild/protobuf/codegenv2';
@@ -157,11 +156,6 @@ type AuthenticateRequest = Message<"grackle.powerline.AuthenticateRequest"> & {
 
 // @public
 const AuthenticateRequestSchema: GenMessage<AuthenticateRequest>;
-
-// @public
-export class AuthError extends GrackleError {
-    constructor(message: string, context?: Record<string, unknown>);
-}
 
 // @public
 export const BUILTIN_COMPONENT_JSON_SCHEMAS: Readonly<Record<BuiltinComponentName, object>>;
@@ -387,8 +381,6 @@ type CloseFdResponse = Message<"grackle.CloseFdResponse"> & {
 // @public
 const CloseFdResponseSchema: GenMessage<CloseFdResponse>;
 
-export { Code }
-
 // @public
 type CodespaceInfo = Message<"grackle.CodespaceInfo"> & {
     name: string;
@@ -441,9 +433,7 @@ export function componentRenderToolName(name: string): string | undefined;
 const ComponentSchema: GenMessage<Component>;
 
 // @public
-export class ConflictError extends GrackleError {
-    constructor(message: string, context?: Record<string, unknown>);
-}
+export function computeNextRunAt(expr: string, lastRunAt?: string): string;
 
 // @public
 export type CopyButtonBuiltinProps = z.infer<typeof copyButtonPropsSchema>;
@@ -1732,13 +1722,6 @@ const GrackleCore: GenService<{
 }>;
 
 // @public
-export class GrackleError extends Error {
-    constructor(message: string, code?: Code, context?: Record<string, unknown>);
-    readonly code: Code;
-    readonly context: Readonly<Record<string, unknown>>;
-}
-
-// @public
 const GrackleKnowledge: GenService<{
     searchKnowledge: {
         methodKind: "unary";
@@ -2042,13 +2025,16 @@ const InputMessageSchema: GenMessage<InputMessage>;
 const InputMessageSchema_2: GenMessage<InputMessage_2>;
 
 // @public
-export class InvalidSessionTransitionError extends PreconditionError {
+export class InvalidSessionTransitionError extends Error {
     constructor(from: SessionStatus, to: SessionStatus);
     // (undocumented)
     readonly from: SessionStatus;
     // (undocumented)
     readonly to: SessionStatus;
 }
+
+// @public
+export function isIntervalExpression(expr: string): boolean;
 
 // @public
 export function isValidTransition(from: SessionStatus, to: SessionStatus): boolean;
@@ -2335,11 +2321,6 @@ const ModelSelectionSchema: GenMessage<ModelSelection>;
 export function newReverseMapperContext(): ReverseMapperContext;
 
 // @public
-export class NotFoundError extends GrackleError {
-    constructor(message: string, context?: Record<string, unknown>);
-}
-
-// @public
 type OperatorAttachTaskRequest = Message<"grackle.OperatorAttachTaskRequest"> & {
     taskId: string;
     streamId: string;
@@ -2423,6 +2404,9 @@ const PairingCodeResponseSchema: GenMessage<PairingCodeResponse>;
 
 // @public
 export function parseDelegationArgs(tool: string, args: unknown): DelegationInfo;
+
+// @public
+export function parseDuration(expr: string): number;
 
 // @public
 export interface PendingToolCall {
@@ -2539,11 +2523,6 @@ declare namespace powerline {
         DrainRequestSchema,
         GracklePowerLine
     }
-}
-
-// @public
-export class PreconditionError extends GrackleError {
-    constructor(message: string, context?: Record<string, unknown>);
 }
 
 // @public
@@ -3624,11 +3603,6 @@ export const tooltipPropsSchema: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public
-export class UnavailableError extends GrackleError {
-    constructor(message: string, context?: Record<string, unknown>);
-}
-
-// @public
 type UnlinkEnvironmentRequest = Message<"grackle.UnlinkEnvironmentRequest"> & {
     workspaceId: string;
     environmentId: string;
@@ -3768,9 +3742,7 @@ type UsageStats = Message<"grackle.UsageStats"> & {
 const UsageStatsSchema: GenMessage<UsageStats>;
 
 // @public
-export class ValidationError extends GrackleError {
-    constructor(message: string, context?: Record<string, unknown>);
-}
+export function validateExpression(expr: string): void;
 
 // @public
 type VersionStatus = Message<"grackle.VersionStatus"> & {
