@@ -230,7 +230,7 @@ describe("dependency validation", () => {
   let handlers: Record<string, (...args: any[]) => any>;
 
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
     testDb.truncateAll();
     insertBaseEntities();
     handlers = getHandlers();
@@ -302,7 +302,7 @@ describe("dependency validation", () => {
       insertTask({ id: "task-2", dependsOn: ["task-1"] });
 
       // Mock detectDependencyCycle to return a specific cycle path for assertion
-      vi.spyOn(taskStore, "detectDependencyCycle").mockReturnValue(["task-2", "task-1"]);
+      vi.spyOn(taskStore, "detectDependencyCycle").mockReturnValueOnce(["task-2", "task-1"]);
 
       const err = (await handlers
         .updateTask({
