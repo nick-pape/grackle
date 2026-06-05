@@ -60,6 +60,7 @@
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
+    "@grackle-ai/test-utils": "workspace:*",
     "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",
     "@types/uuid": "^10.0.0",

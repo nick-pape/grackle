@@ -18,7 +18,7 @@ import { writeToFd, closeFd } from "./session-handlers.js";
 // Mock the database — only sessionStore.getSession is needed; everything else is unreachable
 // by writeToFd/closeFd and can stay as vi.fn() stubs.
 vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
+  const { createDatabaseMock } = await import("@grackle-ai/test-utils");
   return createDatabaseMock();
 });
 

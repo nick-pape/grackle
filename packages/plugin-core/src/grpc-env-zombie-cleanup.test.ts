@@ -15,7 +15,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
+  const { createDatabaseMock } = await import("@grackle-ai/test-utils");
   return createDatabaseMock();
 });
 

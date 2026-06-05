@@ -206,6 +206,10 @@
     {
       "packageName": "@grackle-ai/coverage-merge",
       "projectFolder": "scripts/coverage-merge"
+    },
+    {
+      "packageName": "@grackle-ai/test-utils",
+      "projectFolder": "packages/test-utils"
     }
   ]
 }
