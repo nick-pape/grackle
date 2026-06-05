@@ -97,8 +97,8 @@ describe("KnowledgePage", () => {
 
     render(<KnowledgePage />);
 
-    expect(screen.getByTestId("knowledge-error")).toBeTruthy();
-    expect(screen.getByText(/can't be reached/i)).toBeTruthy();
+    screen.getByTestId("knowledge-error");
+    screen.getByText(/can't be reached/i);
     expect(screen.queryByText(/No knowledge nodes found/i)).toBeNull();
   });
 
@@ -107,8 +107,8 @@ describe("KnowledgePage", () => {
 
     render(<KnowledgePage />);
 
-    expect(screen.getByTestId("knowledge-error")).toBeTruthy();
-    expect(screen.getByText(/Failed to load the knowledge graph/i)).toBeTruthy();
+    screen.getByTestId("knowledge-error");
+    screen.getByText(/Failed to load the knowledge graph/i);
   });
 
   it("retries loadRecent when the Retry button is clicked", () => {
@@ -138,7 +138,7 @@ describe("KnowledgePage", () => {
 
     render(<KnowledgePage />);
 
-    expect(screen.getByText(/No knowledge nodes found/i)).toBeTruthy();
+    screen.getByText(/No knowledge nodes found/i);
     expect(screen.queryByTestId("knowledge-error")).toBeNull();
   });
 });

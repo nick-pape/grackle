@@ -252,7 +252,7 @@ describe("stream error handling", () => {
 
     const session = sessionStore.getSession("sess1");
     expect(session?.status).toBe("suspended");
-    expect(session?.suspendedAt).toBeTruthy();
+    expect(session?.suspendedAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
     expect(session?.endedAt).toBeNull();
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({ sessionId: "sess1" }),
@@ -286,7 +286,7 @@ describe("stream error handling", () => {
 
     const session = sessionStore.getSession("sess1");
     expect(session?.status).toBe("suspended");
-    expect(session?.suspendedAt).toBeTruthy();
+    expect(session?.suspendedAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
     expect(session?.endedAt).toBeNull();
   });
 

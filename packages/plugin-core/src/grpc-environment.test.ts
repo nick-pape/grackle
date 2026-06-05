@@ -94,7 +94,7 @@ describe("gRPC addEnvironment handlers", () => {
       adapterConfig: "{}",
     })) as EnvironmentInfo;
 
-    expect(response.id).toBeTruthy();
+    expect(response.id).toEqual(expect.stringMatching(/.+/));
 
     const envs = await listEnvironments();
     const added = envs.find((e) => e.displayName === "integration-test-env");
@@ -126,7 +126,7 @@ describe("gRPC addEnvironment handlers", () => {
       adapterConfig: '{"host":"localhost","port":1234}',
     })) as EnvironmentInfo;
 
-    expect(response.id).toBeTruthy();
+    expect(response.id).toEqual(expect.stringMatching(/.+/));
 
     const envs = await listEnvironments();
     const added = envs.find((e) => e.displayName === "string-config-env");

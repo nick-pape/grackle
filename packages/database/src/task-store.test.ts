@@ -672,7 +672,7 @@ describe("task-store tree operations", () => {
       taskStore.reparentTask("c", "gp");
       const after = taskStore.getTask("c")!.updatedAt;
 
-      expect(after).toBeTruthy();
+      expect(after).toMatch(/^\d{4}-\d{2}-\d{2}/);
       expect(after! >= before!).toBe(true);
     });
   });

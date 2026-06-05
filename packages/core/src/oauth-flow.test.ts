@@ -328,7 +328,7 @@ describe("OAuth flow integration", () => {
     });
     expect(res.status).toBe(201);
     const data = JSON.parse(res.body) as Record<string, unknown>;
-    expect(data.client_id).toBeDefined();
+    expect(typeof data.client_id).toBe("string");
     expect(data.redirect_uris).toEqual([REDIRECT_URI]);
     expect(data.client_name).toBe("Test App");
   });
@@ -407,10 +407,10 @@ describe("OAuth flow integration", () => {
       expires_in: number;
       refresh_token: string;
     };
-    expect(tokens.access_token).toBeDefined();
+    expect(typeof tokens.access_token).toBe("string");
     expect(tokens.token_type).toBe("Bearer");
     expect(tokens.expires_in).toBe(3600);
-    expect(tokens.refresh_token).toBeDefined();
+    expect(typeof tokens.refresh_token).toBe("string");
 
     // Step 6: Refresh token
     const refreshBody = new URLSearchParams({
@@ -428,8 +428,8 @@ describe("OAuth flow integration", () => {
       access_token: string;
       refresh_token: string;
     };
-    expect(newTokens.access_token).toBeDefined();
-    expect(newTokens.refresh_token).toBeDefined();
+    expect(typeof newTokens.access_token).toBe("string");
+    expect(typeof newTokens.refresh_token).toBe("string");
     // Old refresh token should be consumed (rotation)
     expect(newTokens.refresh_token).not.toBe(tokens.refresh_token);
   });
@@ -487,8 +487,8 @@ describe("OAuth flow integration", () => {
     });
     expect(tokenRes.status).toBe(200);
     const tokens = JSON.parse(tokenRes.body) as { access_token: string; refresh_token: string };
-    expect(tokens.access_token).toBeDefined();
-    expect(tokens.refresh_token).toBeDefined();
+    expect(typeof tokens.access_token).toBe("string");
+    expect(typeof tokens.refresh_token).toBe("string");
   });
 
   it("deny action redirects with access_denied error", async () => {

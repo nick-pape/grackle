@@ -27,7 +27,6 @@ describe("UpdateBanner", () => {
     );
 
     const banner = within(container).getByTestId("update-banner");
-    expect(banner).toBeTruthy();
     expect(banner.textContent).toContain("0.77.0");
     expect(banner.textContent).toContain("npm install");
   });
@@ -43,7 +42,6 @@ describe("UpdateBanner", () => {
     );
 
     const banner = within(container).getByTestId("update-banner");
-    expect(banner).toBeTruthy();
     expect(banner.textContent).toContain("docker pull");
   });
 

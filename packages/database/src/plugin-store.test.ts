@@ -59,7 +59,7 @@ describe("plugin-store", () => {
       const row = sqlite
         .prepare("SELECT updated_at FROM plugins WHERE name = 'orchestration'")
         .get() as { updated_at: string };
-      expect(row.updated_at).toBeTruthy();
+      expect(row.updated_at).toMatch(/^\d{4}-\d{2}-\d{2}/);
     });
   });
 

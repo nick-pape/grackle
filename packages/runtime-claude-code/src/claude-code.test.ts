@@ -878,7 +878,9 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     // The prompt argument was an AsyncIterable (the prompt queue), not a string
     const callArg = mockQuery.mock.calls[0][0] as Record<string, unknown>;
     expect(typeof callArg.prompt).not.toBe("string");
-    expect((callArg.prompt as AsyncIterable<unknown>)[Symbol.asyncIterator]).toBeDefined();
+    expect(typeof (callArg.prompt as AsyncIterable<unknown>)[Symbol.asyncIterator]).toBe(
+      "function",
+    );
 
     session.kill();
   });
@@ -1171,7 +1173,9 @@ describe("ClaudeCodeRuntime — multi-turn persistent mode", () => {
     // Verify persistent mode was used: query() called exactly once with AsyncIterable prompt
     expect(mockQuery).toHaveBeenCalledTimes(1);
     const persistentCall = mockQuery.mock.calls[0][0] as Record<string, unknown>;
-    expect((persistentCall.prompt as AsyncIterable<unknown>)[Symbol.asyncIterator]).toBeDefined();
+    expect(typeof (persistentCall.prompt as AsyncIterable<unknown>)[Symbol.asyncIterator]).toBe(
+      "function",
+    );
 
     // Follow-up triggers persistent stream throw → turnCompleteResolve fires →
     // session returns to waiting_input (does NOT hang)

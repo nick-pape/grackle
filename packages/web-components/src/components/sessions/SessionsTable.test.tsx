@@ -123,10 +123,10 @@ describe("SessionsTable", () => {
 
   it("groups sessions by environment, including a missing environment", () => {
     renderTable();
-    expect(screen.getByTestId("session-group-env-local")).toBeTruthy();
-    expect(screen.getByTestId("session-group-env-docker")).toBeTruthy();
-    expect(screen.getByTestId("session-group-env-gone")).toBeTruthy();
-    expect(screen.getByText("missing")).toBeTruthy();
+    screen.getByTestId("session-group-env-local");
+    screen.getByTestId("session-group-env-docker");
+    screen.getByTestId("session-group-env-gone");
+    screen.getByText("missing");
     // The active (running) group surfaces an active pill.
     expect(screen.getByTestId("session-group-active-env-local").textContent).toContain("active");
   });
@@ -168,10 +168,10 @@ describe("SessionsTable", () => {
 
   it("narrows the list with the status filter chips", () => {
     renderTable();
-    expect(screen.getByTestId("session-row-sess-fail")).toBeTruthy();
+    screen.getByTestId("session-row-sess-fail");
     fireEvent.click(screen.getByTestId("session-filter-success"));
     expect(screen.queryByTestId("session-row-sess-fail")).toBeNull();
-    expect(screen.getByTestId("session-row-sess-task")).toBeTruthy();
+    screen.getByTestId("session-row-sess-task");
   });
 
   it("filters by free-text search across prompt and ids", () => {
@@ -180,7 +180,7 @@ describe("SessionsTable", () => {
       target: { value: "rate limiting" },
     });
     expect(screen.queryByTestId("session-row-sess-adhoc")).toBeNull();
-    expect(screen.getByTestId("session-row-sess-fail")).toBeTruthy();
+    screen.getByTestId("session-row-sess-fail");
   });
 
   it("toggles a group's expanded state", () => {
@@ -193,8 +193,8 @@ describe("SessionsTable", () => {
 
   it("renders an empty state when there are no sessions", () => {
     renderTable({ sessions: [] });
-    expect(screen.getByTestId("sessions-empty")).toBeTruthy();
-    expect(screen.getByText("No sessions yet")).toBeTruthy();
+    screen.getByTestId("sessions-empty");
+    screen.getByText("No sessions yet");
   });
 
   it("renders a no-match empty state when filters exclude everything", () => {
@@ -202,6 +202,6 @@ describe("SessionsTable", () => {
     fireEvent.change(screen.getByTestId("sessions-search"), {
       target: { value: "zzzznomatch" },
     });
-    expect(screen.getByText("No matching sessions")).toBeTruthy();
+    screen.getByText("No matching sessions");
   });
 });
