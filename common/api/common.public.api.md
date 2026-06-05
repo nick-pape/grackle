@@ -635,6 +635,13 @@ export function detectDelegation(tool: string, args: unknown): DelegationInfo | 
 export type Disposition = "mapped" | "carried" | "dropped";
 
 // @public
+export interface DockerConfig {
+    dockerHost?: string;
+    dockerNetwork?: string;
+    dockerSocatImage: string;
+}
+
+// @public
 type DockerContainerInfo = Message<"grackle.DockerContainerInfo"> & {
     id: string;
     name: string;
@@ -707,6 +714,19 @@ export const END_REASON: {
 export type EndReason = (typeof END_REASON)[keyof typeof END_REASON];
 
 // @public
+export function envBool(name: string, fallback: boolean, env?: EnvSource): boolean;
+
+// @public
+export function envFlag(name: string, env?: EnvSource): boolean;
+
+// @public
+export function envInt(name: string, fallback: number, opts?: {
+    min?: number;
+    max?: number;
+    env?: EnvSource;
+}): number;
+
+// @public
 type Environment = Message<"grackle.Environment"> & {
     id: string;
     displayName: string;
@@ -753,6 +773,21 @@ const EnvironmentSchema: GenMessage<Environment>;
 
 // @public
 export type EnvironmentStatus = "disconnected" | "connecting" | "connected" | "sleeping" | "error";
+
+// @public
+export function envNum(name: string, fallback: number, env?: EnvSource): number;
+
+// @public
+export function envOptionalString(name: string, env?: EnvSource): string | undefined;
+
+// @public
+export function envPort(name: string, fallback: number, env?: EnvSource): number;
+
+// @public
+export type EnvSource = Record<string, string | undefined>;
+
+// @public
+export function envString(name: string, fallback: string, env?: EnvSource): string;
 
 // @public
 type Escalation = Message<"grackle.Escalation"> & {
@@ -877,6 +912,15 @@ type FdInfo = Message<"grackle.FdInfo"> & {
 
 // @public
 const FdInfoSchema: GenMessage<FdInfo>;
+
+// @public
+export interface FeatureConfig {
+    knowledgeEnabled: boolean;
+    skipLocalPowerline: boolean;
+    skipOrchestration: boolean;
+    skipRootAutostart: boolean;
+    skipScheduling: boolean;
+}
 
 // @public
 const file_grackle_grackle_core: GenFile;
@@ -1376,6 +1420,16 @@ declare namespace grackle {
 
 // @public
 export const GRACKLE_DIR: string;
+
+// @public
+export interface GrackleConfig {
+    docker: DockerConfig;
+    features: FeatureConfig;
+    log: LogConfig;
+    network: NetworkConfig;
+    paths: PathConfig;
+    tuning: TuningConfig;
+}
 
 // @public
 const GrackleCore: GenService<{
@@ -2229,6 +2283,15 @@ type ListWorkspacesRequest = Message<"grackle.ListWorkspacesRequest"> & {
 const ListWorkspacesRequestSchema: GenMessage<ListWorkspacesRequest>;
 
 // @public
+export interface LogConfig {
+    isProduction: boolean;
+    level: LogLevel;
+}
+
+// @public
+export type LogLevel = "fatal" | "error" | "warn" | "info" | "debug" | "trace" | "silent";
+
+// @public
 export const LOGS_DIR: string;
 
 // @public
@@ -2316,6 +2379,19 @@ type ModelSelection = Message<"grackle.ModelSelection"> & {
 
 // @public
 const ModelSelectionSchema: GenMessage<ModelSelection>;
+
+// @public
+export interface NetworkConfig {
+    grpcPort: number;
+    host: string;
+    mcpOrigin?: string;
+    mcpPort: number;
+    powerlinePort: number;
+    publicUrl?: string;
+    sandboxOrigin?: string;
+    sandboxPort: number;
+    webPort: number;
+}
 
 // @public
 export function newReverseMapperContext(): ReverseMapperContext;
@@ -2407,6 +2483,15 @@ export function parseDelegationArgs(tool: string, args: unknown): DelegationInfo
 
 // @public
 export function parseDuration(expr: string): number;
+
+// @public
+export interface PathConfig {
+    grackleHome?: string;
+    mcpConfig?: string;
+    webDir?: string;
+    workingDirectory?: string;
+    worktreeBase?: string;
+}
 
 // @public
 export interface PendingToolCall {
@@ -2651,6 +2736,29 @@ type ResolveComponentGraphResponse = Message<"grackle.ResolveComponentGraphRespo
 
 // @public
 const ResolveComponentGraphResponseSchema: GenMessage<ResolveComponentGraphResponse>;
+
+// @public
+export function resolveDockerConfig(env?: EnvSource): Readonly<DockerConfig>;
+
+// @public
+export function resolveFeatureConfig(env?: EnvSource): Readonly<FeatureConfig>;
+
+// @public
+export function resolveGrackleConfig(opts?: {
+    env?: EnvSource;
+}): Readonly<GrackleConfig>;
+
+// @public
+export function resolveLogConfig(env?: EnvSource): Readonly<LogConfig>;
+
+// @public
+export function resolveNetworkConfig(env?: EnvSource): Readonly<NetworkConfig>;
+
+// @public
+export function resolvePathConfig(env?: EnvSource): Readonly<PathConfig>;
+
+// @public
+export function resolveTuningConfig(env?: EnvSource): Readonly<TuningConfig>;
 
 // @public
 type ResourceContent = Message<"grackle.ResourceContent"> & {
@@ -3601,6 +3709,12 @@ export const tooltipPropsSchema: z.ZodObject<{
     }>>;
     delayMs: z.ZodOptional<z.ZodInt>;
 }, z.core.$strip>;
+
+// @public
+export interface TuningConfig {
+    kgSpawnContextTimeoutMs: number;
+    reconciliationTickMs: number;
+}
 
 // @public
 type UnlinkEnvironmentRequest = Message<"grackle.UnlinkEnvironmentRequest"> & {

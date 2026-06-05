@@ -17,6 +17,7 @@
  */
 
 import type { SpawnContextInput, SystemPromptContributor } from "@grackle-ai/plugin-sdk";
+import { envInt } from "@grackle-ai/common";
 import { logger } from "./logger.js";
 
 /** Default per-provider timeout (ms); override with `GRACKLE_KG_SPAWN_CONTEXT_TIMEOUT_MS`. */
@@ -49,8 +50,9 @@ function resolveTimeoutMs(override?: number): number {
   if (override !== undefined) {
     return override;
   }
-  const env: number = Number(process.env.GRACKLE_KG_SPAWN_CONTEXT_TIMEOUT_MS);
-  return Number.isFinite(env) && env > 0 ? env : DEFAULT_SPAWN_CONTEXT_TIMEOUT_MS;
+  return envInt("GRACKLE_KG_SPAWN_CONTEXT_TIMEOUT_MS", DEFAULT_SPAWN_CONTEXT_TIMEOUT_MS, {
+    min: 1,
+  });
 }
 
 /**

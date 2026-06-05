@@ -1,6 +1,8 @@
 export * as grackle from "./grackle-barrel.js";
 export * as powerline from "./gen/grackle/powerline/powerline_pb.js";
 export * from "./types.js";
+export * from "./env.js";
+export * from "./config.js";
 export * from "./session-state-machine.js";
 export * from "./mcp-tool-presets.js";
 export * from "./enum-converters.js";
