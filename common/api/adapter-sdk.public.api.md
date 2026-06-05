@@ -391,7 +391,7 @@ export abstract class RemoteTunnelAdapter<TConfig extends RemoteTunnelConfig = R
         workingDirectory?: string;
     }>;
     reconnect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
-    protected reconnectBootstrapOptions(_config: TConfig): Record<string, unknown>;
+    protected reconnectBootstrapOptions(_config: TConfig): Partial<StartRemotePowerLineOptions>;
     protected registerTunnelForEnvironment(environmentId: string, state: TunnelState): void;
     protected abstract resolveConfig(config: Record<string, unknown>): {
         config: TConfig;

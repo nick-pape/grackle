@@ -113,7 +113,7 @@ export abstract class RemoteTunnelAdapter<
    * Additional options merged into {@link startRemotePowerLine} during reconnect.
    * Override to supply adapter-specific options (e.g. `{ autoDetectWorkspace: true }`).
    */
-  protected reconnectBootstrapOptions(_config: TConfig): Record<string, unknown> {
+  protected reconnectBootstrapOptions(_config: TConfig): Partial<StartRemotePowerLineOptions> {
     return {};
   }
 
@@ -294,8 +294,8 @@ export abstract class RemoteTunnelAdapter<
     };
     const { alreadyRunning } = await this.runStartPowerLine(executor, powerlineToken, {
       extraEnv: cfg.env,
-      probeFirst: true,
       ...this.reconnectBootstrapOptions(cfg),
+      probeFirst: true,
     });
     if (!alreadyRunning) {
       yield { stage: "reconnecting", message: "PowerLine restarted", progress: 0.5 };

@@ -10,6 +10,7 @@ import { RemoteExecutor } from '@grackle-ai/adapter-sdk';
 import { RemoteTunnelAdapter } from '@grackle-ai/adapter-sdk';
 import type { RemoteTunnelConfig } from '@grackle-ai/adapter-sdk';
 import type { RemoteTunnelMeta } from '@grackle-ai/adapter-sdk';
+import type { StartRemotePowerLineOptions } from '@grackle-ai/adapter-sdk';
 
 // @public
 export class CodespaceAdapter extends RemoteTunnelAdapter<CodespaceEnvironmentConfig> {
@@ -19,7 +20,7 @@ export class CodespaceAdapter extends RemoteTunnelAdapter<CodespaceEnvironmentCo
     protected preBootstrap(executor: RemoteExecutor, _config: CodespaceEnvironmentConfig): Promise<{
         workingDirectory?: string;
     }>;
-    protected reconnectBootstrapOptions(_config: CodespaceEnvironmentConfig): Record<string, unknown>;
+    protected reconnectBootstrapOptions(_config: CodespaceEnvironmentConfig): Partial<StartRemotePowerLineOptions>;
     protected resolveConfig(config: Record<string, unknown>): {
         config: CodespaceEnvironmentConfig;
         meta: RemoteTunnelMeta;

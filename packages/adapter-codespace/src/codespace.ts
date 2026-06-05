@@ -1,4 +1,9 @@
-import type { RemoteTunnelConfig, RemoteTunnelMeta, ExecFunction } from "@grackle-ai/adapter-sdk";
+import type {
+  RemoteTunnelConfig,
+  RemoteTunnelMeta,
+  ExecFunction,
+  StartRemotePowerLineOptions,
+} from "@grackle-ai/adapter-sdk";
 import { FatalAdapterError } from "@grackle-ai/adapter-sdk";
 import {
   RemoteTunnelAdapter,
@@ -256,7 +261,7 @@ export class CodespaceAdapter extends RemoteTunnelAdapter<CodespaceEnvironmentCo
   /** On reconnect, auto-detect the workspace directory. */
   protected reconnectBootstrapOptions(
     _config: CodespaceEnvironmentConfig,
-  ): Record<string, unknown> {
+  ): Partial<StartRemotePowerLineOptions> {
     return { autoDetectWorkspace: true };
   }
 }
