@@ -35,6 +35,7 @@ import type {
   EventStore,
   StreamMessageStore,
   SessionActionStore,
+  CredentialProviderConfig,
 } from "@grackle-ai/database";
 
 /** A store where every function is replaced with a vitest Mock that preserves the original call signature. */
@@ -220,8 +221,10 @@ function createCredentialProvidersMock(): MockedStore<CredentialProviderStore> {
     setCredentialProviders: vi.fn(),
     parseCredentialProviderConfig: vi.fn(),
     isValidCredentialProviderConfig: vi.fn(
-      () => true,
-    ) as unknown as MockedStore<CredentialProviderStore>["isValidCredentialProviderConfig"],
+      ((_value: unknown): _value is CredentialProviderConfig => true) as (
+        value: unknown,
+      ) => value is CredentialProviderConfig,
+    ),
   };
 }
 
