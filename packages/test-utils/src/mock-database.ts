@@ -36,7 +36,16 @@ import type {
   StreamMessageStore,
   SessionActionStore,
   CredentialProviderConfig,
+  DatabaseStores,
 } from "@grackle-ai/database";
+
+/** Mocked DatabaseStores plus additional barrel exports. */
+type MockedDatabaseStores = {
+  [K in keyof DatabaseStores]: MockedStore<DatabaseStores[K]>;
+};
+
+/** Full mock return type — store namespaces are typed, extra barrel exports use an index signature. */
+type DatabaseMock = MockedDatabaseStores & Record<string, unknown>;
 
 /** A store where every function is replaced with a vitest Mock that preserves the original call signature. */
 type MockedStore<T> = {
@@ -188,7 +197,12 @@ function createComponentStoreMock(): MockedStore<ComponentStore> {
 /** Create a typed mock of the settings store. */
 function createSettingsStoreMock(): MockedStore<SettingsStore> {
   return {
-    WRITABLE_SETTING_KEYS: new Set(["default_persona_id", "onboarding_completed"]),
+    WRITABLE_SETTING_KEYS: new Set([
+      "default_persona_id",
+      "onboarding_completed",
+      "webhook_url",
+      "max_concurrent_sessions",
+    ]),
     getSetting: vi.fn(() => undefined),
     setSetting: vi.fn(),
     isAllowedSettingKey: vi.fn(() => true),
@@ -201,7 +215,10 @@ function createTokenStoreMock(): MockedStore<TokenStore> {
     setToken: vi.fn(),
     deleteToken: vi.fn(),
     listTokens: vi.fn(() => []),
-    getBundle: vi.fn(() => ({ tokens: [] })) as Mock,
+    getBundle: vi.fn<TokenStore["getBundle"]>(() => ({
+      $typeName: "grackle.powerline.TokenBundle" as const,
+      tokens: [],
+    })),
   };
 }
 
@@ -371,7 +388,7 @@ function createStoreRegistryMock(): {
  * mistyped method fails the build. Smart defaults return empty arrays,
  * undefined, or zero values as appropriate.
  */
-export function createDatabaseMock(): Record<string, unknown> {
+export function createDatabaseMock(): DatabaseMock {
   const settingsStoreMock = createSettingsStoreMock();
   const credentialProvidersMock = createCredentialProvidersMock();
   const eventStoreMock = createEventStoreMock();
@@ -403,6 +420,9 @@ export function createDatabaseMock(): Record<string, unknown> {
     pluginStore: createPluginStoreMock(),
     githubAccountStore: createGitHubAccountStoreMock(),
     channelGrantStore: createChannelGrantStoreMock(),
+    eventStore: eventStoreMock,
+    streamMessageStore: streamMessageStoreMock,
+    sessionActionStore: sessionActionStoreMock,
 
     // Direct barrel re-exports — same references as the namespace mocks above
     persistEvent: eventStoreMock.persistEvent,
