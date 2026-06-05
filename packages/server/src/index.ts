@@ -17,6 +17,7 @@ import {
   logger,
   exec,
   detectLanIp,
+  grackleErrorInterceptor,
   runWithTrace,
   isValidTraceId,
   wrapAsyncIterableWithTrace,
@@ -39,6 +40,22 @@ import {
   sqlite,
   grackleHome,
   pluginStore,
+  agentStore,
+  componentStore,
+  tokenStore,
+  credentialProviders,
+  scheduleStore,
+  escalationStore,
+  dispatchQueueStore,
+  githubAccountStore,
+  channelGrantStore,
+  persistEvent,
+  queryDomainEvents,
+  persistStreamMessage,
+  queryStreamMessages,
+  persistSessionAction,
+  querySessionActions,
+  setDatabaseStores,
 } from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { LocalPowerLineManager } from "./local-powerline-manager.js";
@@ -147,6 +164,30 @@ async function main(): Promise<void> {
 
   // Open the database, verify integrity, run schema migrations, then seed defaults
   initializeDatabase();
+
+  // Wire all store implementations into the DI registry (#1547)
+  setDatabaseStores({
+    sessionStore,
+    taskStore,
+    envRegistry,
+    workspaceStore,
+    personaStore,
+    agentStore,
+    componentStore,
+    settingsStore,
+    tokenStore,
+    credentialProviders,
+    scheduleStore,
+    escalationStore,
+    workspaceEnvironmentLinkStore,
+    dispatchQueueStore,
+    pluginStore,
+    githubAccountStore,
+    channelGrantStore,
+    eventStore: { persistEvent, queryDomainEvents },
+    streamMessageStore: { persistStreamMessage, queryStreamMessages },
+    sessionActionStore: { persistSessionAction, querySessionActions },
+  });
 
   // Configure auth logger to use the server's pino instance
   setAuthLogger(logger);
@@ -300,6 +341,8 @@ async function main(): Promise<void> {
   const grpcHandler = connectNodeAdapter({
     routes,
     interceptors: [
+      // Error interceptor: translates GrackleError → ConnectError at the boundary.
+      grackleErrorInterceptor,
       // Trace ID interceptor: extract or generate a trace ID for request correlation.
       // For streaming RPCs, wraps the response's message iterable so the generator
       // body runs within the trace context on each iteration step.
@@ -384,6 +427,7 @@ async function main(): Promise<void> {
     bindHost,
     ...(secureContext ? { secureContext } : {}),
     connectRoutes: routes,
+    connectInterceptors: [grackleErrorInterceptor],
     handleWebhook: ingestChannelMessage,
     pluginNames: loaded.pluginNames,
     sandboxPort: config.sandboxPort,

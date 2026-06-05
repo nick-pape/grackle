@@ -4,6 +4,29 @@ import { eq, and, lte, sql } from "drizzle-orm";
 
 export type { ScheduleRow };
 
+/** Contract for schedule persistence. */
+export interface ScheduleStore {
+  createSchedule(
+    id: string,
+    title: string,
+    description: string,
+    scheduleExpression: string,
+    personaId: string,
+    workspaceId: string,
+    parentTaskId: string,
+    nextRunAt: string | null,
+    taskId?: string | null,
+  ): void;
+  getSchedule(id: string): ScheduleRow | undefined;
+  listSchedules(workspaceId?: string): ScheduleRow[];
+  updateSchedule(id: string, update: ScheduleUpdate): void;
+  getHeartbeatForTask(taskId: string): ScheduleRow | undefined;
+  deleteSchedule(id: string): void;
+  getDueSchedules(): ScheduleRow[];
+  advanceSchedule(id: string, lastRunAt: string, nextRunAt: string): void;
+  setScheduleEnabled(id: string, enabled: boolean, nextRunAt: string | null): void;
+}
+
 /** Fields that can be updated on a schedule. */
 export interface ScheduleUpdate {
   title?: string;
@@ -166,3 +189,16 @@ export function setScheduleEnabled(id: string, enabled: boolean, nextRunAt: stri
     .where(eq(schedules.id, id))
     .run();
 }
+
+const _typeCheck: ScheduleStore = {
+  createSchedule,
+  getSchedule,
+  listSchedules,
+  updateSchedule,
+  getHeartbeatForTask,
+  deleteSchedule,
+  getDueSchedules,
+  advanceSchedule,
+  setScheduleEnabled,
+};
+void _typeCheck;

@@ -13,6 +13,19 @@ import { encrypt, decrypt } from "./crypto.js";
 
 export type { GitHubAccountRow };
 
+/** Contract for GitHub account credential persistence. */
+export interface GitHubAccountStore {
+  addGitHubAccount(label: string, username: string, token: string, isDefault?: boolean): string;
+  getGitHubAccount(id: string): (GitHubAccountInfo & { token: string }) | undefined;
+  listGitHubAccounts(): GitHubAccountInfo[];
+  getDefaultGitHubAccount(): (GitHubAccountInfo & { token: string }) | undefined;
+  findGitHubAccountByLabel(label: string): GitHubAccountInfo | undefined;
+  findGitHubAccountByUsername(username: string): GitHubAccountInfo | undefined;
+  updateGitHubAccount(id: string, fields: UpdateGitHubAccountFields): void;
+  removeGitHubAccount(id: string): void;
+  resolveStoredGitHubToken(githubAccountId?: string): string | undefined;
+}
+
 /** A GitHub account record as returned to callers (token is never exposed). */
 export interface GitHubAccountInfo {
   id: string;
@@ -200,3 +213,16 @@ export function resolveStoredGitHubToken(githubAccountId?: string): string | und
 
   return process.env.GH_TOKEN || process.env.GITHUB_TOKEN || undefined;
 }
+
+const _typeCheck: GitHubAccountStore = {
+  addGitHubAccount,
+  getGitHubAccount,
+  listGitHubAccounts,
+  getDefaultGitHubAccount,
+  findGitHubAccountByLabel,
+  findGitHubAccountByUsername,
+  updateGitHubAccount,
+  removeGitHubAccount,
+  resolveStoredGitHubToken,
+};
+void _typeCheck;

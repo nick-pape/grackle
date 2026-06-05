@@ -3,6 +3,14 @@ import { plugins } from "./schema.js";
 import type { PluginRow } from "./schema.js";
 import { eq, sql } from "drizzle-orm";
 
+/** Contract for plugin feature-flag persistence. */
+export interface PluginStore {
+  getPluginEnabled(name: string): boolean | undefined;
+  getPlugin(name: string): PluginRow | undefined;
+  listPlugins(): PluginRow[];
+  setPluginEnabled(name: string, enabled: boolean): void;
+}
+
 /** Retrieve whether a plugin is enabled. Returns `undefined` if no DB row exists. */
 export function getPluginEnabled(name: string): boolean | undefined {
   const row = db.select().from(plugins).where(eq(plugins.name, name)).get();
@@ -29,3 +37,6 @@ export function setPluginEnabled(name: string, enabled: boolean): void {
     })
     .run();
 }
+
+const _typeCheck: PluginStore = { getPluginEnabled, getPlugin, listPlugins, setPluginEnabled };
+void _typeCheck;

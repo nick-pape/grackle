@@ -4,6 +4,42 @@ import { eq, asc, sql } from "drizzle-orm";
 
 export type { PersonaRow };
 
+/** Contract for persona persistence. */
+export interface PersonaStore {
+  createPersona(
+    id: string,
+    name: string,
+    description: string,
+    systemPrompt: string,
+    toolConfig: string,
+    runtime: string,
+    model: string,
+    maxTurns: number,
+    mcpServers: string,
+    type?: string,
+    script?: string,
+    allowedMcpTools?: string,
+  ): void;
+  getPersona(id: string): PersonaRow | undefined;
+  getPersonaByName(name: string): PersonaRow | undefined;
+  listPersonas(): PersonaRow[];
+  updatePersona(
+    id: string,
+    name: string,
+    description: string,
+    systemPrompt: string,
+    toolConfig: string,
+    runtime: string,
+    model: string,
+    maxTurns: number,
+    mcpServers: string,
+    type?: string,
+    script?: string,
+    allowedMcpTools?: string,
+  ): void;
+  deletePersona(id: string): void;
+}
+
 /** Insert a new persona record. */
 export function createPersona(
   id: string,
@@ -90,3 +126,13 @@ export function updatePersona(
 export function deletePersona(id: string): void {
   db.delete(personas).where(eq(personas.id, id)).run();
 }
+
+const _typeCheck: PersonaStore = {
+  createPersona,
+  getPersona,
+  getPersonaByName,
+  listPersonas,
+  updatePersona,
+  deletePersona,
+};
+void _typeCheck;

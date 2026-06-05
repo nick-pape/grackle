@@ -2,6 +2,12 @@ import { and, desc, eq, gte, lt, lte, type SQL } from "drizzle-orm";
 import db from "./db.js";
 import { domainEvents, type DomainEventRow } from "./schema.js";
 
+/** Contract for domain event persistence. */
+export interface EventStore {
+  persistEvent(event: DomainEvent): void;
+  queryDomainEvents(query?: DomainEventQuery): DomainEventRow[];
+}
+
 /** A domain event to be persisted. */
 export interface DomainEvent {
   /** ULID — chronologically sortable unique identifier. */
@@ -84,3 +90,6 @@ export function queryDomainEvents(query: DomainEventQuery = {}): DomainEventRow[
   const filtered = conditions.length > 0 ? base.where(and(...conditions)) : base;
   return filtered.orderBy(desc(domainEvents.id)).limit(limit).all();
 }
+
+const _typeCheck: EventStore = { persistEvent, queryDomainEvents };
+void _typeCheck;

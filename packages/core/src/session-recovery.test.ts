@@ -54,7 +54,7 @@ import * as logWriter from "./log-writer.js";
 import { reanimateAgent } from "./reanimate-agent.js";
 import { emit } from "./event-bus.js";
 import { recoverSuspendedSessions, _resetForTesting } from "./session-recovery.js";
-import { ConnectError, Code } from "@connectrpc/connect";
+import { PreconditionError } from "@grackle-ai/common";
 import { SESSION_STATUS, grackle } from "@grackle-ai/common";
 import type { PowerLineConnection } from "@grackle-ai/adapter-sdk";
 
@@ -255,10 +255,7 @@ describe("session recovery", () => {
     sessionStore.suspendSession("sess1");
 
     vi.mocked(reanimateAgent).mockImplementationOnce(() => {
-      throw new ConnectError(
-        "Environment already has active session sess-other",
-        Code.FailedPrecondition,
-      );
+      throw new PreconditionError("Environment already has active session sess-other");
     });
 
     const conn = makeConnection([]);

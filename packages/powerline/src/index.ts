@@ -4,14 +4,10 @@ import { mountAhpServer } from "./ahp-handlers.js";
 import { registerRuntime } from "./runtime-registry.js";
 import { StubRuntime } from "./runtimes/stub.js";
 import { StubMcpRuntime } from "./runtimes/stub-mcp.js";
-import { GenAIScriptRuntime } from "@grackle-ai/runtime-genaiscript";
-import { ClaudeCodeRuntime } from "@grackle-ai/runtime-claude-code";
-import { CopilotRuntime } from "@grackle-ai/runtime-copilot";
-import { CodexRuntime } from "@grackle-ai/runtime-codex";
-import { AcpRuntime } from "@grackle-ai/runtime-acp";
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import { createRequire } from "node:module";
 import { logger } from "./logger.js";
+import { loadRuntimesFromCatalog } from "./runtime-loader.js";
 
 const esmRequire: NodeRequire = createRequire(import.meta.url);
 const { version } = esmRequire("../package.json") as { version: string };
@@ -22,7 +18,7 @@ const { version } = esmRequire("../package.json") as { version: string };
 // a Claude Code session (e.g. during development or local testing).
 delete process.env.CLAUDECODE;
 
-function main(): void {
+async function main(): Promise<void> {
   const program = new Command();
 
   program
@@ -33,7 +29,7 @@ function main(): void {
     .option("--token <token>", "Authentication token")
     .option("--no-auth", "Run without authentication (development only)")
     .option("--host <host>", "Host to bind to", "127.0.0.1")
-    .action((opts: { port: string; token?: string; auth: boolean; host: string }) => {
+    .action(async (opts: { port: string; token?: string; auth: boolean; host: string }) => {
       const port = parseInt(opts.port, 10);
       const host = opts.host;
       const powerlineToken = opts.auth
@@ -48,28 +44,12 @@ function main(): void {
         return;
       }
 
-      // Register runtimes
+      // Register stubs (PowerLine-internal test runtimes, no catalog factory).
       registerRuntime(new StubRuntime());
       registerRuntime(new StubMcpRuntime());
-      registerRuntime(new GenAIScriptRuntime());
-      registerRuntime(new ClaudeCodeRuntime());
-      registerRuntime(new CopilotRuntime());
-      registerRuntime(new CodexRuntime());
-      registerRuntime(new AcpRuntime({ name: "goose", command: "goose", args: ["acp"] }));
-      registerRuntime(new AcpRuntime({ name: "codex-acp", command: "codex-acp", args: [] }));
-      registerRuntime(
-        new AcpRuntime({ name: "copilot-acp", command: "copilot", args: ["--acp", "--stdio"] }),
-      );
-      registerRuntime(
-        new AcpRuntime({
-          name: "claude-code-acp",
-          command: "claude-agent-acp",
-          args: [],
-          // Isolate from ~/.claude so interactive-only settings (e.g.
-          // permissions.defaultMode "auto") don't crash session/new (#1366).
-          isolateClaudeConfig: true,
-        }),
-      );
+
+      // Register production runtimes from the catalog.
+      await loadRuntimesFromCatalog();
 
       // HR8d: PowerLine speaks AHP JSON-RPC over WebSocket (not gRPC).
       // AhpServerSocket handles the HTTP upgrade and Bearer-token auth.
@@ -132,7 +112,10 @@ function main(): void {
       process.on("SIGTERM", shutdown);
     });
 
-  program.parse();
+  await program.parseAsync();
 }
 
-main();
+main().catch((err: unknown) => {
+  logger.fatal({ err }, "PowerLine failed to start");
+  process.exitCode = 1;
+});

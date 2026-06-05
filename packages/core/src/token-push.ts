@@ -11,7 +11,7 @@
  * Pure persistence lives in `@grackle-ai/database` (tokenStore); credential
  * bundle building lives in {@link ./credential-bundle.ts}.
  */
-import { ConnectError, Code } from "@connectrpc/connect";
+import { PreconditionError } from "@grackle-ai/common";
 import { type AuthenticateTokenItem } from "@grackle-ai/adapter-sdk";
 import * as adapterManager from "./adapter-manager.js";
 import { credentialProviders, envRegistry, tokenStore } from "@grackle-ai/database";
@@ -40,7 +40,7 @@ export interface AuthenticateOptions {
  * the credential-provider config) is actually present — and, for OAuth-file
  * credentials, not expired-beyond-refresh. When a required credential is missing
  * or its login has expired with no refresh token, it throws a
- * `ConnectError(FailedPrecondition)` with an actionable message rather than
+ * `PreconditionError` with an actionable message rather than
  * letting the runtime fail with an opaque 401 mid-agent. (Providers that are
  * *off* are not validated.) Note this changes the function from never-throws to
  * fail-fast on a required-but-missing credential.
@@ -75,10 +75,7 @@ export async function authenticateForRuntime(
     Date.now(),
   );
   if (unsatisfied.length > 0) {
-    throw new ConnectError(
-      formatPreflightCredentialError(runtime, unsatisfied),
-      Code.FailedPrecondition,
-    );
+    throw new PreconditionError(formatPreflightCredentialError(runtime, unsatisfied));
   }
 
   // Provider credentials come last so they win over any same-target stored token.

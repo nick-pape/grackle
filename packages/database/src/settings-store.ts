@@ -2,6 +2,13 @@ import db from "./db.js";
 import { settings } from "./schema.js";
 import { eq } from "drizzle-orm";
 
+/** Contract for key-value settings persistence. */
+export interface SettingsStore {
+  isAllowedSettingKey(key: string): boolean;
+  getSetting(key: string): string | undefined;
+  setSetting(key: string, value: string): void;
+}
+
 /**
  * Setting keys that clients are allowed to read and write via the public API.
  *
@@ -33,3 +40,6 @@ export function setSetting(key: string, value: string): void {
     .onConflictDoUpdate({ target: settings.key, set: { value } })
     .run();
 }
+
+const _typeCheck: SettingsStore = { isAllowedSettingKey, getSetting, setSetting };
+void _typeCheck;

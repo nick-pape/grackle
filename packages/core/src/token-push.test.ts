@@ -4,7 +4,8 @@
  * `authenticate` RPC, scoped to the runtime, best-effort.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { ConnectError, Code } from "@connectrpc/connect";
+import { Code } from "@connectrpc/connect";
+import { PreconditionError } from "@grackle-ai/common";
 import type { CredentialProviderConfig } from "@grackle-ai/database";
 
 /** Default config with all providers off (no needs → pre-flight validation is a no-op). */
@@ -151,7 +152,7 @@ describe("authenticateForRuntime", () => {
       // buildProviderTokenBundle returns nothing → the claude need is unmet.
 
       await expect(authenticateForRuntime("env-1", "claude-code")).rejects.toBeInstanceOf(
-        ConnectError,
+        PreconditionError,
       );
       expect(conn.transport.authenticate).not.toHaveBeenCalled();
     });
@@ -204,7 +205,7 @@ describe("authenticateForRuntime", () => {
       } as never);
 
       await expect(authenticateForRuntime("env-1", "claude-code")).rejects.toBeInstanceOf(
-        ConnectError,
+        PreconditionError,
       );
       expect(conn.transport.authenticate).not.toHaveBeenCalled();
     });

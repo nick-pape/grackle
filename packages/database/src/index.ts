@@ -97,6 +97,32 @@ export type { StreamMessageRecord, StreamMessageQuery } from "./stream-message-s
 export { persistSessionAction, querySessionActions } from "./session-action-store.js";
 export type { SessionActionRecord, SessionActionQuery } from "./session-action-store.js";
 
+// ─── Store Interfaces ─────────────────────────────────────
+export type { SessionStore } from "./session-store.js";
+export type { TaskStore } from "./task-store.js";
+export type { EnvironmentRegistry } from "./env-registry.js";
+export type { WorkspaceStore } from "./workspace-store.js";
+export type { PersonaStore } from "./persona-store.js";
+export type { AgentStore } from "./agent-store.js";
+export type { ComponentStore } from "./component-store.js";
+export type { SettingsStore } from "./settings-store.js";
+export type { TokenStore } from "./token-store.js";
+export type { CredentialProviderStore } from "./credential-providers.js";
+export type { ScheduleStore } from "./schedule-store.js";
+export type { EscalationStore } from "./escalation-store.js";
+export type { WorkspaceEnvironmentLinkStore } from "./workspace-environment-link-store.js";
+export type { DispatchQueueStore } from "./dispatch-queue-store.js";
+export type { PluginStore } from "./plugin-store.js";
+export type { GitHubAccountStore } from "./github-account-store.js";
+export type { ChannelGrantStore } from "./channel-grant-store.js";
+export type { EventStore } from "./event-store.js";
+export type { StreamMessageStore } from "./stream-message-store.js";
+export type { SessionActionStore } from "./session-action-store.js";
+export type { DatabaseStores } from "./store-types.js";
+
+// ─── Store Registry ───────────────────────────────────────
+export { setDatabaseStores, getDatabaseStores, clearDatabaseStores } from "./store-registry.js";
+
 // ─── Utilities ─────────────────────────────────────────────
 export { grackleHome } from "./paths.js";
 export { encrypt, decrypt } from "./crypto.js";
