@@ -75,7 +75,9 @@ function createMockContext(overrides?: Partial<ShutdownContext>): ShutdownContex
     },
     reconciliationManager: { stop: vi.fn(async () => {}) },
     localPowerLineManager: { stop: vi.fn(async () => {}) },
-    tunnelRegistry: { closeAll: vi.fn(async () => {}) } as unknown as ShutdownContext["tunnelRegistry"],
+    tunnelRegistry: {
+      closeAll: vi.fn(async () => {}),
+    } as unknown as ShutdownContext["tunnelRegistry"],
     ...overrides,
   };
 }

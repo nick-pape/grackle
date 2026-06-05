@@ -835,7 +835,12 @@ export class DockerAdapter extends BaseAdapter {
     // Attach mode: never stop the externally-managed container. Stop the
     // in-container PowerLine and remove our connectivity sidecar only.
     if (cfg.attach) {
-      await remoteStop(environmentId, new DockerExecutor(cfg.attach, this.execFn), this.tunnelRegistry, this.logger);
+      await remoteStop(
+        environmentId,
+        new DockerExecutor(cfg.attach, this.execFn),
+        this.tunnelRegistry,
+        this.logger,
+      );
       await removeSidecar(this.execFn, `${ATTACH_SIDECAR_PREFIX}${environmentId}`, this.logger);
       this.attachConnections.delete(environmentId);
       this.containerPorts.delete(environmentId);
@@ -857,7 +862,12 @@ export class DockerAdapter extends BaseAdapter {
     // Attach mode: never remove the externally-managed container. Stop the
     // in-container PowerLine, clean up its artifacts, and remove our sidecar.
     if (cfg.attach) {
-      await remoteDestroy(environmentId, new DockerExecutor(cfg.attach, this.execFn), this.tunnelRegistry, this.logger);
+      await remoteDestroy(
+        environmentId,
+        new DockerExecutor(cfg.attach, this.execFn),
+        this.tunnelRegistry,
+        this.logger,
+      );
       await removeSidecar(this.execFn, `${ATTACH_SIDECAR_PREFIX}${environmentId}`, this.logger);
       this.attachConnections.delete(environmentId);
       this.containerPorts.delete(environmentId);
