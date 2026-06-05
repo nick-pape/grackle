@@ -436,10 +436,26 @@ export function createDatabaseMock(): DatabaseMock {
     parseCredentialProviderConfig: credentialProvidersMock.parseCredentialProviderConfig,
     isValidCredentialProviderConfig: credentialProvidersMock.isValidCredentialProviderConfig,
 
-    // Store registry — getDatabaseStores() returns the mock stores directly
-    setDatabaseStores: vi.fn(),
-    getDatabaseStores: vi.fn(() => stores),
-    clearDatabaseStores: vi.fn(),
+    // Store registry — pre-initialized with mock stores, consistent lifecycle
+    ...(() => {
+      let current: MockedDatabaseStores | undefined = stores;
+      return {
+        setDatabaseStores: vi.fn((s: MockedDatabaseStores) => {
+          current = s;
+        }),
+        getDatabaseStores: vi.fn(() => {
+          if (!current) {
+            throw new Error(
+              "Database stores not initialized. Call setDatabaseStores() at startup.",
+            );
+          }
+          return current;
+        }),
+        clearDatabaseStores: vi.fn(() => {
+          current = undefined;
+        }),
+      };
+    })(),
 
     // Utilities
     grackleHome: "/tmp/test-grackle",
