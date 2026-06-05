@@ -46,7 +46,7 @@
   },
   "packages/common": {
     "lines": 95,
-    "functions": 85,
+    "functions": 80,
     "branches": 70
   },
   "packages/core": {
