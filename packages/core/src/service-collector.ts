@@ -36,7 +36,7 @@ export function createServiceCollector(): ServiceCollector {
   return {
     addHandlers(service: DescService, handlers: HandlerGroup): void {
       const existing = registry.get(service) ?? {};
-      const collisions = Object.keys(handlers).filter((key) => key in existing);
+      const collisions = Object.keys(handlers).filter((key) => Object.hasOwn(existing, key));
       if (collisions.length > 0) {
         throw new Error(
           `Handler collision on service "${service.typeName}": ` +

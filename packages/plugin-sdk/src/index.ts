@@ -29,5 +29,4 @@ export {
   getRegisteredPlugins,
   getRegistration,
   resolveEnabledPlugins,
-  clearRegistry,
 } from "./registry.js";

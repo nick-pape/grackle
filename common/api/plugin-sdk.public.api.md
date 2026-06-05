@@ -8,9 +8,6 @@ import type { DescService } from '@bufbuild/protobuf';
 import type { Logger } from 'pino';
 
 // @public
-export function clearRegistry(): void;
-
-// @public
 interface Disposable_2 {
     dispose(): void;
 }
