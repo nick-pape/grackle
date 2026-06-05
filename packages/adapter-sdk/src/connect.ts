@@ -107,9 +107,13 @@ export async function connectThroughTunnel(
         );
         try {
           await socket.request("ping", { channel: "ahp-root://" });
-        } catch (err) {
-          await socket.close();
-          throw err;
+        } catch (pingErr) {
+          try {
+            await socket.close();
+          } catch (closeErr) {
+            logger.error({ environmentId, err: closeErr }, "Failed to close socket after attempt");
+          }
+          throw pingErr;
         }
         return {
           environmentId,
@@ -141,7 +145,10 @@ export async function connectThroughTunnel(
         "Failed to close tunnel after connect failure",
       );
     }
-    throw err;
+    throw new Error(
+      `Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
+    );
   }
 }
 

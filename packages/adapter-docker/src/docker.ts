@@ -282,7 +282,7 @@ async function waitForContainerRunning(
           "{{.State.Running}}",
           containerName,
         ]);
-        running = stdout === "true";
+        running = stdout.trim() === "true";
       } catch {
         // Container not inspectable yet — treat as not running
       }
@@ -782,40 +782,54 @@ export class DockerAdapter extends BaseAdapter {
     }
     // For attach-mode connectUrl is http:// from resolveAttachConnectivity;
     // createAhpHostTransport normalizes http(s) to ws(s).
-    return retryWithBackoff(
-      async () => {
-        const { transport, socket } = await createAhpHostTransport(
-          connectUrl,
-          powerlineToken,
-          environmentId,
-        );
-        try {
-          await socket.request("ping", { channel: "ahp-root://" });
-        } catch (err) {
-          await socket.close();
-          throw err;
-        }
-        return {
-          environmentId,
-          port,
-          transport,
-          ping: async () => {
+    try {
+      return await retryWithBackoff(
+        async () => {
+          const { transport, socket } = await createAhpHostTransport(
+            connectUrl,
+            powerlineToken,
+            environmentId,
+          );
+          try {
             await socket.request("ping", { channel: "ahp-root://" });
-          },
-          close: async () => {
-            await socket.close();
-          },
-        };
-      },
-      {
-        maxAttempts: CONNECT_MAX_RETRIES,
-        delayMs: CONNECT_RETRY_DELAY_MS,
-        onRetry: async (_attempt, err) => {
-          this.logger.debug({ environmentId, err }, "Connect attempt failed, retrying");
+          } catch (pingErr) {
+            try {
+              await socket.close();
+            } catch (closeErr) {
+              this.logger.error(
+                { environmentId, err: closeErr },
+                "Failed to close socket after attempt",
+              );
+            }
+            throw pingErr;
+          }
+          return {
+            environmentId,
+            port,
+            transport,
+            ping: async () => {
+              await socket.request("ping", { channel: "ahp-root://" });
+            },
+            close: async () => {
+              await socket.close();
+            },
+          };
         },
-        sleep: this.sleepFn,
-      },
-    );
+        {
+          maxAttempts: CONNECT_MAX_RETRIES,
+          delayMs: CONNECT_RETRY_DELAY_MS,
+          onRetry: async (_attempt, err) => {
+            this.logger.debug({ environmentId, err }, "Connect attempt failed, retrying");
+          },
+          sleep: this.sleepFn,
+        },
+      );
+    } catch (err) {
+      throw new Error(
+        `Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${err instanceof Error ? err.message : String(err)}`,
+        { cause: err },
+      );
+    }
   }
 
   protected async doDisconnect(environmentId: string): Promise<void> {

@@ -35,8 +35,12 @@ export async function retryWithBackoff<T>(
     sleep = defaultSleep,
   } = options;
 
+  if (maxAttempts < 1) {
+    throw new RangeError(`retryWithBackoff: maxAttempts must be at least 1, got ${maxAttempts}`);
+  }
+
   let lastError: unknown;
-  let currentDelay = delayMs;
+  let currentDelay = Math.min(delayMs, maxDelayMs);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {

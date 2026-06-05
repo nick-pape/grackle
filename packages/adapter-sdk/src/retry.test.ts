@@ -188,4 +188,33 @@ describe("retryWithBackoff", () => {
       retryWithBackoff(op, { maxAttempts: 2, delayMs: 50, sleep: noopSleep }),
     ).rejects.toBe("string-error");
   });
+
+  it("throws RangeError when maxAttempts is 0", async () => {
+    await expect(
+      retryWithBackoff(() => Promise.resolve("ok"), {
+        maxAttempts: 0,
+        delayMs: 100,
+        sleep: noopSleep,
+      }),
+    ).rejects.toThrow(RangeError);
+  });
+
+  it("caps first retry delay when delayMs exceeds maxDelayMs", async () => {
+    const op = vi.fn(async () => {
+      throw new Error("fail");
+    });
+
+    await expect(
+      retryWithBackoff(op, {
+        maxAttempts: 3,
+        delayMs: 1000,
+        maxDelayMs: 200,
+        sleep: noopSleep,
+      }),
+    ).rejects.toThrow("fail");
+
+    expect(noopSleep).toHaveBeenCalledTimes(2);
+    expect(noopSleep.mock.calls[0]![0]).toBe(200);
+    expect(noopSleep.mock.calls[1]![0]).toBe(200);
+  });
 });
