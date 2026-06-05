@@ -49,60 +49,11 @@ vi.mock("./reanimate-agent.js", () => ({
 
 // ── Imports (after mocks) ───────────────────────────────────
 
-import {
-  openDatabase,
-  initDatabase,
-  sqlite as _sqlite,
-  envRegistry,
-  sessionStore,
-  taskStore,
-  workspaceStore,
-  personaStore,
-  agentStore,
-  componentStore,
-  settingsStore,
-  tokenStore,
-  credentialProviders,
-  scheduleStore,
-  escalationStore,
-  workspaceEnvironmentLinkStore,
-  dispatchQueueStore,
-  pluginStore,
-  githubAccountStore,
-  channelGrantStore,
-  persistEvent,
-  queryDomainEvents,
-  persistStreamMessage,
-  queryStreamMessages,
-  persistSessionAction,
-  querySessionActions,
-  setDatabaseStores,
-  clearDatabaseStores,
-} from "@grackle-ai/database";
+import { openDatabase, initDatabase, sqlite as _sqlite, envRegistry } from "@grackle-ai/database";
+import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils";
 openDatabase(":memory:");
 initDatabase();
-setDatabaseStores({
-  sessionStore,
-  taskStore,
-  envRegistry,
-  workspaceStore,
-  personaStore,
-  agentStore,
-  componentStore,
-  settingsStore,
-  tokenStore,
-  credentialProviders,
-  scheduleStore,
-  escalationStore,
-  workspaceEnvironmentLinkStore,
-  dispatchQueueStore,
-  pluginStore,
-  githubAccountStore,
-  channelGrantStore,
-  eventStore: { persistEvent, queryDomainEvents },
-  streamMessageStore: { persistStreamMessage, queryStreamMessages },
-  sessionActionStore: { persistSessionAction, querySessionActions },
-});
+initRealDatabaseStores();
 const sqlite = _sqlite!;
 import * as adapterManager from "./adapter-manager.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";

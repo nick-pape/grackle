@@ -14,62 +14,11 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
 });
 
 // ── Imports ─────────────────────────────────────────────────
-import {
-  openDatabase,
-  initDatabase,
-  sqlite as _sqlite,
-  sessionStore,
-  setDatabaseStores,
-  clearDatabaseStores,
-  taskStore,
-  envRegistry,
-  workspaceStore,
-  personaStore,
-  agentStore,
-  componentStore,
-  settingsStore,
-  tokenStore,
-  credentialProviders,
-  scheduleStore,
-  escalationStore,
-  workspaceEnvironmentLinkStore,
-  dispatchQueueStore,
-  pluginStore,
-  githubAccountStore,
-  channelGrantStore,
-  persistEvent,
-  queryDomainEvents,
-  persistStreamMessage,
-  queryStreamMessages,
-  persistSessionAction,
-  querySessionActions,
-} from "@grackle-ai/database";
-import type { DatabaseStores } from "@grackle-ai/database";
+import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore } from "@grackle-ai/database";
+import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils";
 openDatabase(":memory:");
 initDatabase();
-// Wire real stores into the registry so cross-package getDatabaseStores() calls work
-setDatabaseStores({
-  sessionStore,
-  taskStore,
-  envRegistry,
-  workspaceStore,
-  personaStore,
-  agentStore,
-  componentStore,
-  settingsStore,
-  tokenStore,
-  credentialProviders,
-  scheduleStore,
-  escalationStore,
-  workspaceEnvironmentLinkStore,
-  dispatchQueueStore,
-  pluginStore,
-  githubAccountStore,
-  channelGrantStore,
-  eventStore: { persistEvent, queryDomainEvents },
-  streamMessageStore: { persistStreamMessage, queryStreamMessages },
-  sessionActionStore: { persistSessionAction, querySessionActions },
-} as unknown as DatabaseStores);
+initRealDatabaseStores();
 const sqlite = _sqlite!;
 import { streamRegistry, adapterManager } from "@grackle-ai/core";
 import {
