@@ -10,6 +10,7 @@ import type {
 } from "@grackle-ai/adapter-sdk";
 import {
   BaseAdapter,
+  TunnelRegistry,
   createAhpHostTransport,
   isDevMode,
   bootstrapPowerLine,
@@ -482,6 +483,7 @@ export class DockerAdapter extends BaseAdapter {
   private readonly sleepFn: (ms: number) => Promise<void>;
   private readonly logger: AdapterLogger;
   private readonly isGitHubProviderEnabled: () => boolean;
+  private readonly tunnelRegistry: TunnelRegistry;
   private readonly containerPorts: Map<string, number> = new Map<string, number>();
   private readonly attachConnections: Map<string, AttachConnection> = new Map<
     string,
@@ -494,6 +496,7 @@ export class DockerAdapter extends BaseAdapter {
     this.sleepFn = deps.sleep ?? defaultSleep;
     this.logger = deps.logger ?? defaultLogger;
     this.isGitHubProviderEnabled = deps.isGitHubProviderEnabled ?? (() => false);
+    this.tunnelRegistry = deps.tunnelRegistry ?? new TunnelRegistry();
   }
 
   protected async *doProvision(
@@ -847,7 +850,12 @@ export class DockerAdapter extends BaseAdapter {
     // Attach mode: never stop the externally-managed container. Stop the
     // in-container PowerLine and remove our connectivity sidecar only.
     if (cfg.attach) {
-      await remoteStop(environmentId, new DockerExecutor(cfg.attach, this.execFn), this.logger);
+      await remoteStop(
+        environmentId,
+        new DockerExecutor(cfg.attach, this.execFn),
+        this.tunnelRegistry,
+        this.logger,
+      );
       await removeSidecar(this.execFn, `${ATTACH_SIDECAR_PREFIX}${environmentId}`, this.logger);
       this.attachConnections.delete(environmentId);
       this.containerPorts.delete(environmentId);
@@ -869,7 +877,12 @@ export class DockerAdapter extends BaseAdapter {
     // Attach mode: never remove the externally-managed container. Stop the
     // in-container PowerLine, clean up its artifacts, and remove our sidecar.
     if (cfg.attach) {
-      await remoteDestroy(environmentId, new DockerExecutor(cfg.attach, this.execFn), this.logger);
+      await remoteDestroy(
+        environmentId,
+        new DockerExecutor(cfg.attach, this.execFn),
+        this.tunnelRegistry,
+        this.logger,
+      );
       await removeSidecar(this.execFn, `${ATTACH_SIDECAR_PREFIX}${environmentId}`, this.logger);
       this.attachConnections.delete(environmentId);
       this.containerPorts.delete(environmentId);

@@ -1,5 +1,6 @@
 import type { AdapterLogger } from "./logger.js";
 import type { ExecResult } from "./exec.js";
+import type { TunnelRegistry } from "./tunnel-registry.js";
 
 /** Function signature for executing local commands. */
 export type ExecFunction = (
@@ -25,4 +26,6 @@ export interface AdapterDependencies {
    * Returns `undefined` when no token can be resolved (caller should fall back to `gh auth token`).
    */
   resolveGitHubToken?: (accountId?: string) => string | undefined;
+  /** Shared tunnel registry for managing active tunnel state (default: new TunnelRegistry()). */
+  tunnelRegistry?: TunnelRegistry;
 }

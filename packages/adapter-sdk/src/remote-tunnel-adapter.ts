@@ -10,7 +10,7 @@ import { FatalAdapterError } from "./fatal-error.js";
 import { DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import { bootstrapPowerLine, startRemotePowerLine } from "./bootstrap.js";
 import { connectThroughTunnel } from "./connect.js";
-import { registerTunnel, getTunnel, closeTunnel } from "./tunnel-registry.js";
+import { TunnelRegistry } from "./tunnel-registry.js";
 import { remoteStop, remoteDestroy, remoteHealthCheck } from "./shared-operations.js";
 import { sleep as defaultSleep, withFreePort, SSH_CONNECTIVITY_TIMEOUT_MS } from "./utils.js";
 import { exec as defaultExec } from "./exec.js";
@@ -62,6 +62,7 @@ export abstract class RemoteTunnelAdapter<
   protected readonly sleepFn: (ms: number) => Promise<void>;
   protected readonly isGitHubProviderEnabled: () => boolean;
   protected readonly resolveGitHubToken: (accountId?: string) => string | undefined;
+  protected readonly tunnelRegistry: TunnelRegistry;
 
   public constructor(deps: AdapterDependencies = {}) {
     super();
@@ -69,6 +70,7 @@ export abstract class RemoteTunnelAdapter<
     this.sleepFn = deps.sleep ?? defaultSleep;
     this.isGitHubProviderEnabled = deps.isGitHubProviderEnabled ?? (() => false);
     this.resolveGitHubToken = deps.resolveGitHubToken ?? (() => undefined);
+    this.tunnelRegistry = deps.tunnelRegistry ?? new TunnelRegistry();
   }
 
   // ─── Abstract factories (subclasses MUST implement) ────────
@@ -151,37 +153,37 @@ export abstract class RemoteTunnelAdapter<
     localPort: number,
     powerlineToken: string,
   ): Promise<PowerLineConnection> {
-    return connectThroughTunnel(environmentId, localPort, powerlineToken);
+    return connectThroughTunnel(environmentId, localPort, powerlineToken, this.tunnelRegistry);
   }
 
   /** Close and unregister the tunnel(s) for an environment. */
   protected async closeTunnelForEnvironment(environmentId: string): Promise<void> {
-    await closeTunnel(environmentId);
+    await this.tunnelRegistry.close(environmentId);
   }
 
   /** Register an active tunnel pair for an environment. */
   protected registerTunnelForEnvironment(environmentId: string, state: TunnelState): void {
-    registerTunnel(environmentId, state);
+    this.tunnelRegistry.register(environmentId, state);
   }
 
   /** Get the tunnel state for an environment. */
   protected getTunnelForEnvironment(environmentId: string): TunnelState | undefined {
-    return getTunnel(environmentId);
+    return this.tunnelRegistry.get(environmentId);
   }
 
   /** Stop the remote PowerLine and close the tunnel. */
   protected async runRemoteStop(environmentId: string, executor: RemoteExecutor): Promise<void> {
-    await remoteStop(environmentId, executor);
+    await remoteStop(environmentId, executor, this.tunnelRegistry);
   }
 
   /** Destroy remote PowerLine artifacts and close the tunnel. */
   protected async runRemoteDestroy(environmentId: string, executor: RemoteExecutor): Promise<void> {
-    await remoteDestroy(environmentId, executor);
+    await remoteDestroy(environmentId, executor, this.tunnelRegistry);
   }
 
   /** Ping the PowerLine to check liveness. */
   protected async runHealthCheck(connection: PowerLineConnection): Promise<boolean> {
-    return remoteHealthCheck(connection);
+    return remoteHealthCheck(connection, this.tunnelRegistry);
   }
 
   // ─── Shared lifecycle ──────────────────────────────────────

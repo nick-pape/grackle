@@ -32,15 +32,10 @@ vi.mock("@grackle-ai/auth", () => ({
   stopOAuthCleanup: vi.fn(),
 }));
 
-vi.mock("@grackle-ai/adapter-sdk", () => ({
-  closeAllTunnels: vi.fn(async () => {}),
-}));
-
 import { createShutdown, type ShutdownContext } from "./shutdown.js";
 import { logger } from "@grackle-ai/core";
 import { stopWalCheckpointTimer } from "@grackle-ai/database";
 import { stopPairingCleanup, stopSessionCleanup, stopOAuthCleanup } from "@grackle-ai/auth";
-import { closeAllTunnels } from "@grackle-ai/adapter-sdk";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const { __setSqlite } = (await import("@grackle-ai/database")) as unknown as {
@@ -78,6 +73,9 @@ function createMockContext(overrides?: Partial<ShutdownContext>): ShutdownContex
     },
     reconciliationManager: { stop: vi.fn(async () => {}) },
     localPowerLineManager: { stop: vi.fn(async () => {}) },
+    tunnelRegistry: {
+      closeAll: vi.fn(async () => {}),
+    } as unknown as ShutdownContext["tunnelRegistry"],
     ...overrides,
   };
 }
@@ -143,9 +141,10 @@ describe("createShutdown", () => {
   });
 
   it("closes all tunnels", async () => {
-    const shutdown = createShutdown(createMockContext());
+    const ctx = createMockContext();
+    const shutdown = createShutdown(ctx);
     await shutdown();
-    expect(closeAllTunnels).toHaveBeenCalledOnce();
+    expect(ctx.tunnelRegistry!.closeAll).toHaveBeenCalledOnce();
   });
 
   it("closes gRPC server", async () => {
