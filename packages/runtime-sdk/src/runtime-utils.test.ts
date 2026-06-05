@@ -453,6 +453,11 @@ describe("resolveMcpServers", () => {
       { url: "http://broker/mcp", token: "t" },
     );
     expect(result.servers!.custom).toEqual({ command: "other", args: [] });
-    expect(result.servers!.grackle).toMatchObject({ type: "http", url: "http://broker/mcp" });
+    expect(result.servers!.grackle).toMatchObject({
+      type: "http",
+      url: "http://broker/mcp",
+      headers: { Authorization: "Bearer t" },
+      tools: ["*"],
+    });
   });
 });
