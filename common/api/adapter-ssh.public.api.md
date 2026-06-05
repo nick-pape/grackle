@@ -4,32 +4,29 @@
 
 ```ts
 
-import type { AdapterDependencies } from '@grackle-ai/adapter-sdk';
-import { BaseAdapter } from '@grackle-ai/adapter-sdk';
-import type { BaseEnvironmentConfig } from '@grackle-ai/adapter-sdk';
-import type { PowerLineConnection } from '@grackle-ai/adapter-sdk';
-import type { ProvisionEvent } from '@grackle-ai/adapter-sdk';
+import { ProcessTunnel } from '@grackle-ai/adapter-sdk';
+import { RemoteExecutor } from '@grackle-ai/adapter-sdk';
+import { RemoteTunnelAdapter } from '@grackle-ai/adapter-sdk';
+import type { RemoteTunnelConfig } from '@grackle-ai/adapter-sdk';
+import type { RemoteTunnelMeta } from '@grackle-ai/adapter-sdk';
 
 // @public
-export class SshAdapter extends BaseAdapter {
-    constructor(deps?: AdapterDependencies);
-    protected doConnect(environmentId: string, _config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
-    protected doDestroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
-    protected doDisconnect(environmentId: string): Promise<void>;
-    protected doProvision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
-    protected doStop(environmentId: string, config: Record<string, unknown>): Promise<void>;
-    healthCheck(connection: PowerLineConnection): Promise<boolean>;
-    reconnect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+export class SshAdapter extends RemoteTunnelAdapter<SshEnvironmentConfig> {
+    protected createExecutor(cfg: SshEnvironmentConfig): RemoteExecutor;
+    protected createForwardTunnel(localPort: number, cfg: SshEnvironmentConfig): ProcessTunnel;
+    protected createReverseTunnel(localPort: number, remotePort: number, cfg: SshEnvironmentConfig): ProcessTunnel;
+    protected resolveConfig(config: Record<string, unknown>): {
+        config: SshEnvironmentConfig;
+        meta: RemoteTunnelMeta;
+    };
     // (undocumented)
     type: string;
 }
 
 // @public
-export interface SshEnvironmentConfig extends BaseEnvironmentConfig {
-    env?: Record<string, string>;
+export interface SshEnvironmentConfig extends RemoteTunnelConfig {
     host: string;
     identityFile?: string;
-    localPort?: number;
     sshOptions?: Record<string, string>;
     sshPort?: number;
     user?: string;

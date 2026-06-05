@@ -5,6 +5,10 @@ import {
   DEFAULT_MCP_PORT,
   DEFAULT_POWERLINE_PORT,
   DEFAULT_SANDBOX_PORT,
+  envPort,
+  envFlag,
+  envString,
+  envOptionalString,
 } from "@grackle-ai/common";
 import { parsePublicOrigin } from "@grackle-ai/auth";
 
@@ -100,30 +104,6 @@ export interface ServerConfig {
    * for `docker run` ergonomics — clear it when adding TLS.
    */
   allowInsecure: boolean;
-}
-
-/**
- * Parse and validate a port number from an environment variable.
- * Returns the default if the variable is not set.
- * Throws if the value is not a valid port (integer 1-65535).
- */
-function parsePort(envName: string, defaultValue: number): number {
-  const raw = process.env[envName];
-  if (!raw) {
-    return defaultValue;
-  }
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
-    throw new Error(
-      `Invalid port for ${envName}: "${raw}". Must be an integer between 1 and 65535.`,
-    );
-  }
-  return parsed;
-}
-
-/** Parse a boolean flag from an environment variable ("1" = true, anything else = false). */
-function parseFlag(envName: string): boolean {
-  return process.env[envName] === "1";
 }
 
 /**
@@ -259,30 +239,29 @@ function validateNetworkExposure(args: {
  */
 export function resolveServerConfig(): ServerConfig {
   const tls = parseTlsConfig();
-  const host = process.env.GRACKLE_HOST || "127.0.0.1";
+  const host = envString("GRACKLE_HOST", "127.0.0.1");
   const publicUrl = parsePublicUrl("GRACKLE_PUBLIC_URL");
-  const allowInsecure = parseFlag("GRACKLE_ALLOW_INSECURE");
-  // Run the network-exposure gate (#1374) before we finish building the config
-  // so the throw fires before any caller can spin up a listener with insecure
-  // defaults. Loopback binds are always allowed (today's casual local default).
+  const allowInsecure = envFlag("GRACKLE_ALLOW_INSECURE");
   validateNetworkExposure({ host, hasTls: !!tls, publicUrl, allowInsecure });
+
+  const mcpOrigin = envOptionalString("GRACKLE_MCP_ORIGIN");
+  const sandboxOrigin = envOptionalString("GRACKLE_SANDBOX_ORIGIN");
+
   return Object.freeze({
-    grpcPort: parsePort("GRACKLE_PORT", DEFAULT_SERVER_PORT),
-    webPort: parsePort("GRACKLE_WEB_PORT", DEFAULT_WEB_PORT),
-    mcpPort: parsePort("GRACKLE_MCP_PORT", DEFAULT_MCP_PORT),
+    grpcPort: envPort("GRACKLE_PORT", DEFAULT_SERVER_PORT),
+    webPort: envPort("GRACKLE_WEB_PORT", DEFAULT_WEB_PORT),
+    mcpPort: envPort("GRACKLE_MCP_PORT", DEFAULT_MCP_PORT),
     ...(publicUrl ? { publicUrl } : {}),
-    ...(process.env.GRACKLE_MCP_ORIGIN ? { mcpOrigin: process.env.GRACKLE_MCP_ORIGIN } : {}),
-    sandboxPort: parsePort("GRACKLE_SANDBOX_PORT", DEFAULT_SANDBOX_PORT),
-    ...(process.env.GRACKLE_SANDBOX_ORIGIN
-      ? { sandboxOrigin: process.env.GRACKLE_SANDBOX_ORIGIN }
-      : {}),
-    powerlinePort: parsePort("GRACKLE_POWERLINE_PORT", DEFAULT_POWERLINE_PORT),
+    ...(mcpOrigin ? { mcpOrigin } : {}),
+    sandboxPort: envPort("GRACKLE_SANDBOX_PORT", DEFAULT_SANDBOX_PORT),
+    ...(sandboxOrigin ? { sandboxOrigin } : {}),
+    powerlinePort: envPort("GRACKLE_POWERLINE_PORT", DEFAULT_POWERLINE_PORT),
     host,
-    skipLocalPowerline: parseFlag("GRACKLE_SKIP_LOCAL_POWERLINE"),
-    skipRootAutostart: parseFlag("GRACKLE_SKIP_ROOT_AUTOSTART"),
-    workingDirectory: process.env.GRACKLE_WORKING_DIRECTORY || undefined,
-    worktreeBase: process.env.GRACKLE_WORKTREE_BASE || undefined,
-    dockerHost: process.env.GRACKLE_DOCKER_HOST || undefined,
+    skipLocalPowerline: envFlag("GRACKLE_SKIP_LOCAL_POWERLINE"),
+    skipRootAutostart: envFlag("GRACKLE_SKIP_ROOT_AUTOSTART"),
+    workingDirectory: envOptionalString("GRACKLE_WORKING_DIRECTORY"),
+    worktreeBase: envOptionalString("GRACKLE_WORKTREE_BASE"),
+    dockerHost: envOptionalString("GRACKLE_DOCKER_HOST"),
     ...(tls ? { tls } : {}),
     allowInsecure,
   });

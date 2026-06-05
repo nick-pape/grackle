@@ -280,6 +280,16 @@ export interface PowerLineConnection {
 export function probeRemotePowerLine(executor: RemoteExecutor): Promise<void>;
 
 // @public
+export abstract class ProcessReverseTunnel extends ProcessTunnel {
+    constructor(localPort: number, remotePort: number, sleepFn: (ms: number) => Promise<void>, processFactory?: TunnelProcessFactory, portProbe?: TunnelPortProbe);
+    // (undocumented)
+    protected readonly remotePort: number;
+    // (undocumented)
+    protected readonly sleepFn: (ms: number) => Promise<void>;
+    protected waitForReady(): Promise<void>;
+}
+
+// @public
 export abstract class ProcessTunnel implements RemoteTunnel {
     constructor(localPort: number, logger?: AdapterLogger, processFactory?: TunnelProcessFactory, portProbe?: TunnelPortProbe);
     close(): Promise<void>;
@@ -357,6 +367,60 @@ export interface RemoteTunnel {
     open(): Promise<void>;
 }
 
+// @public
+export abstract class RemoteTunnelAdapter<TConfig extends RemoteTunnelConfig = RemoteTunnelConfig> extends BaseAdapter {
+    constructor(deps?: AdapterDependencies);
+    protected closeTunnelForEnvironment(environmentId: string): Promise<void>;
+    protected connectToTunnel(environmentId: string, localPort: number, powerlineToken: string): Promise<PowerLineConnection>;
+    protected abstract createExecutor(config: TConfig): RemoteExecutor;
+    protected abstract createForwardTunnel(localPort: number, config: TConfig): ProcessTunnel;
+    protected abstract createReverseTunnel(localPort: number, remotePort: number, config: TConfig): ProcessTunnel;
+    protected doConnect(environmentId: string, _config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
+    protected doDestroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
+    protected doDisconnect(environmentId: string): Promise<void>;
+    protected doProvision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+    protected doStop(environmentId: string, config: Record<string, unknown>): Promise<void>;
+    // (undocumented)
+    protected readonly execFn: ExecFunction;
+    protected getTunnelForEnvironment(environmentId: string): TunnelState | undefined;
+    healthCheck(connection: PowerLineConnection): Promise<boolean>;
+    // (undocumented)
+    protected readonly isGitHubProviderEnabled: () => boolean;
+    protected openWithFreePort<T>(action: (port: number) => Promise<T>): Promise<T>;
+    protected preBootstrap(_executor: RemoteExecutor, _config: TConfig): Promise<{
+        workingDirectory?: string;
+    }>;
+    reconnect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+    protected reconnectBootstrapOptions(_config: TConfig): Partial<StartRemotePowerLineOptions>;
+    protected registerTunnelForEnvironment(environmentId: string, state: TunnelState): void;
+    protected abstract resolveConfig(config: Record<string, unknown>): {
+        config: TConfig;
+        meta: RemoteTunnelMeta;
+    };
+    // (undocumented)
+    protected readonly resolveGitHubToken: (accountId?: string) => string | undefined;
+    protected runBootstrap(executor: RemoteExecutor, powerlineToken: string, options: BootstrapOptions): AsyncGenerator<ProvisionEvent>;
+    protected runHealthCheck(connection: PowerLineConnection): Promise<boolean>;
+    protected runRemoteDestroy(environmentId: string, executor: RemoteExecutor): Promise<void>;
+    protected runRemoteStop(environmentId: string, executor: RemoteExecutor): Promise<void>;
+    protected runStartPowerLine(executor: RemoteExecutor, powerlineToken: string, options: StartRemotePowerLineOptions): Promise<{
+        alreadyRunning: boolean;
+    }>;
+    // (undocumented)
+    protected readonly sleepFn: (ms: number) => Promise<void>;
+}
+
+// @public
+export interface RemoteTunnelConfig extends BaseEnvironmentConfig {
+    env?: Record<string, string>;
+    localPort?: number;
+}
+
+// @public
+export interface RemoteTunnelMeta {
+    displayTarget: string;
+}
+
 export { ResourceChange }
 
 export { ResourceChangeType }
@@ -392,6 +456,9 @@ export interface RetryOptions {
 
 // @public
 export function retryWithBackoff<T>(operation: () => Promise<T>, options: RetryOptions): Promise<T>;
+
+// @public
+export const REVERSE_TUNNEL_SETTLE_MS: number;
 
 // @public
 export interface ServerActionEnvelope {

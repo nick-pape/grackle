@@ -5,6 +5,7 @@
  * stall detection, etc.) in a single background loop.
  */
 
+import { envInt } from "@grackle-ai/common";
 import { logger } from "./logger.js";
 
 /** Default tick interval in milliseconds. */
@@ -34,26 +35,9 @@ export class ReconciliationManager {
    */
   public constructor(phases: ReconciliationPhase[], tickIntervalMs?: number) {
     this.phases = phases;
-
-    if (tickIntervalMs !== undefined) {
-      this.tickIntervalMs = tickIntervalMs;
-    } else {
-      const envRaw = process.env.GRACKLE_RECONCILIATION_TICK_MS;
-      if (envRaw !== undefined && envRaw !== "") {
-        const parsed = parseInt(envRaw, 10);
-        if (Number.isFinite(parsed) && parsed > 0) {
-          this.tickIntervalMs = parsed;
-        } else {
-          logger.warn(
-            { envValue: envRaw, default: DEFAULT_TICK_INTERVAL_MS },
-            "Invalid GRACKLE_RECONCILIATION_TICK_MS; falling back to default",
-          );
-          this.tickIntervalMs = DEFAULT_TICK_INTERVAL_MS;
-        }
-      } else {
-        this.tickIntervalMs = DEFAULT_TICK_INTERVAL_MS;
-      }
-    }
+    this.tickIntervalMs =
+      tickIntervalMs ??
+      envInt("GRACKLE_RECONCILIATION_TICK_MS", DEFAULT_TICK_INTERVAL_MS, { min: 1 });
   }
 
   /** Start the periodic ticker. */

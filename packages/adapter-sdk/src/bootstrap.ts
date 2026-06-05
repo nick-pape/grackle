@@ -408,6 +408,8 @@ export async function* bootstrapPowerLine(
     yield { stage: "bootstrapping", message: "Creating remote directories...", progress: 0.2 };
     await executor.exec(
       `mkdir -p ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/common` +
+        ` ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/ahp` +
+        ` ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/ahp-transport` +
         ` ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/runtime-sdk` +
         ` ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/runtime-claude-code` +
         ` ${REMOTE_POWERLINE_DIRECTORY}/node_modules/@grackle-ai/runtime-copilot` +
@@ -425,6 +427,8 @@ export async function* bootstrapPowerLine(
     /** Workspace packages that PowerLine needs at runtime (besides powerline itself). */
     const workspacePackages: Array<[string, string]> = [
       ["common", resolve(sdkDistDir, "../../common")],
+      ["ahp", resolve(sdkDistDir, "../../ahp")],
+      ["ahp-transport", resolve(sdkDistDir, "../../ahp-transport")],
       ["mcp", resolve(sdkDistDir, "../../mcp")],
       ["auth", resolve(sdkDistDir, "../../auth")],
       ["runtime-sdk", resolve(sdkDistDir, "../../runtime-sdk")],

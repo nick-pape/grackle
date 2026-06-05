@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/common",
-  "version": "0.170.0",
+  "version": "0.172.0",
   "description": "Proto definitions, generated code, and shared types for Grackle",
   "license": "MIT",
   "repository": {
@@ -48,6 +48,7 @@
     "@grackle-ai/heft-buf-plugin": "workspace:*",
     "@grackle-ai/heft-rig": "workspace:*",
     "@rushstack/heft": "1.2.7",
+    "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^4.1.0",
     "vitest": "^4.1.0",
     "@vitest/spy": "^4.1.0"
