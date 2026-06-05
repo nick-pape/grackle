@@ -44,7 +44,8 @@ export function envPort(name: string, fallback: number, env?: EnvSource): number
 
 /**
  * Parse an integer env var with optional min/max bounds.
- * Returns `fallback` when unset or non-finite. Throws when outside bounds.
+ * Returns `fallback` when unset, non-finite, or outside bounds.
+ * Truncates toward zero (matching `parseInt` semantics).
  */
 export function envInt(
   name: string,
@@ -59,12 +60,12 @@ export function envInt(
   if (!Number.isFinite(parsed)) {
     return fallback;
   }
-  const value = Math.floor(parsed);
+  const value = Math.trunc(parsed);
   if (opts?.min !== undefined && value < opts.min) {
-    return opts.min;
+    return fallback;
   }
   if (opts?.max !== undefined && value > opts.max) {
-    return opts.max;
+    return fallback;
   }
   return value;
 }
@@ -92,12 +93,21 @@ export function envFlag(name: string, env?: EnvSource): boolean {
 
 /**
  * Parse a broad boolean: `"1"` / `"true"` → `true`, `"0"` / `"false"` → `false`,
- * unset/empty → `fallback`. Matches the `GRACKLE_KNOWLEDGE_ENABLED` convention.
+ * unset/empty/unrecognized → `fallback`. Matches the `GRACKLE_KNOWLEDGE_ENABLED`
+ * convention. Unrecognized values preserve the fallback so a typo doesn't
+ * silently flip a feature flag.
  */
 export function envBool(name: string, fallback: boolean, env?: EnvSource): boolean {
   const raw = resolve(name, env);
   if (raw === undefined || raw === "") {
     return fallback;
   }
-  return raw === "1" || raw.toLowerCase() === "true";
+  const lower = raw.toLowerCase();
+  if (lower === "1" || lower === "true") {
+    return true;
+  }
+  if (lower === "0" || lower === "false") {
+    return false;
+  }
+  return fallback;
 }

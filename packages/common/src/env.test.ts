@@ -78,16 +78,20 @@ describe("envInt", () => {
     expect(envInt("X", 10, { env: { X: "42" } })).toBe(42);
   });
 
-  it("floors a float", () => {
+  it("truncates a positive float toward zero", () => {
     expect(envInt("X", 10, { env: { X: "3.9" } })).toBe(3);
   });
 
-  it("clamps to min", () => {
-    expect(envInt("X", 10, { min: 5, env: { X: "2" } })).toBe(5);
+  it("truncates a negative float toward zero", () => {
+    expect(envInt("X", 10, { env: { X: "-1.2" } })).toBe(-1);
   });
 
-  it("clamps to max", () => {
-    expect(envInt("X", 10, { max: 100, env: { X: "200" } })).toBe(100);
+  it("returns fallback when below min", () => {
+    expect(envInt("X", 10, { min: 5, env: { X: "2" } })).toBe(10);
+  });
+
+  it("returns fallback when above max", () => {
+    expect(envInt("X", 10, { max: 100, env: { X: "200" } })).toBe(10);
   });
 
   it("returns fallback on NaN", () => {
@@ -179,5 +183,10 @@ describe("envBool", () => {
 
   it("returns fallback when empty", () => {
     expect(envBool("X", true, { X: "" })).toBe(true);
+  });
+
+  it("returns fallback for unrecognized values", () => {
+    expect(envBool("X", true, { X: "nope" })).toBe(true);
+    expect(envBool("X", false, { X: "yes" })).toBe(false);
   });
 });

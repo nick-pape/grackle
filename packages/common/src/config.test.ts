@@ -20,6 +20,10 @@ describe("resolveLogConfig", () => {
     expect(resolveLogConfig({ LOG_LEVEL: "debug" }).level).toBe("debug");
   });
 
+  it("falls back to 'info' for invalid LOG_LEVEL", () => {
+    expect(resolveLogConfig({ LOG_LEVEL: "verbose" }).level).toBe("info");
+  });
+
   it("detects production", () => {
     expect(resolveLogConfig({ NODE_ENV: "production" }).isProduction).toBe(true);
   });
@@ -150,13 +154,13 @@ describe("resolveTuningConfig", () => {
     expect(cfg.kgSpawnContextTimeoutMs).toBe(3000);
   });
 
-  it("clamps to min 1", () => {
+  it("returns defaults for non-positive values", () => {
     const cfg = resolveTuningConfig({
       GRACKLE_RECONCILIATION_TICK_MS: "0",
       GRACKLE_KG_SPAWN_CONTEXT_TIMEOUT_MS: "-5",
     });
-    expect(cfg.reconciliationTickMs).toBe(1);
-    expect(cfg.kgSpawnContextTimeoutMs).toBe(1);
+    expect(cfg.reconciliationTickMs).toBe(10_000);
+    expect(cfg.kgSpawnContextTimeoutMs).toBe(1_500);
   });
 });
 

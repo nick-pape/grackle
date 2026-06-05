@@ -132,10 +132,22 @@ export interface GrackleConfig {
 
 // ─── Resolvers ─────────────────────────────────────────────────
 
+const VALID_LOG_LEVELS: ReadonlySet<string> = new Set([
+  "fatal",
+  "error",
+  "warn",
+  "info",
+  "debug",
+  "trace",
+  "silent",
+]);
+
 /** Resolve logging configuration from env vars. */
 export function resolveLogConfig(env?: EnvSource): Readonly<LogConfig> {
+  const raw = envString("LOG_LEVEL", "info", env);
+  const level: LogLevel = VALID_LOG_LEVELS.has(raw) ? (raw as LogLevel) : "info";
   return Object.freeze({
-    level: envString("LOG_LEVEL", "info", env) as LogLevel,
+    level,
     isProduction: envString("NODE_ENV", "", env) === "production",
   });
 }
