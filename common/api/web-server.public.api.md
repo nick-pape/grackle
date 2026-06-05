@@ -7,6 +7,7 @@
 import type { ConnectRouter } from '@connectrpc/connect';
 import http from 'node:http';
 import http2 from 'node:http2';
+import type { Interceptor } from '@connectrpc/connect';
 
 // @public
 export function buildCspHeader(csp: SandboxCsp | undefined): string;
@@ -83,6 +84,7 @@ export interface WebhookResult {
 export interface WebServerOptions {
     apiKey: string;
     bindHost: string;
+    connectInterceptors?: Interceptor[];
     connectRoutes?: (router: ConnectRouter) => void;
     handleWebhook?: (token: string, body: WebhookBody) => Promise<WebhookResult>;
     pluginNames?: string[];

@@ -5,6 +5,7 @@ import {
   assertTransition,
   InvalidSessionTransitionError,
 } from "./session-state-machine.js";
+import { GrackleError, PreconditionError, Code } from "./errors.js";
 import { SESSION_STATUS } from "./types.js";
 import type { SessionStatus } from "./types.js";
 
@@ -91,6 +92,22 @@ describe("assertTransition", () => {
       expect(e.to).toBe(SESSION_STATUS.IDLE);
       expect(e.message).toContain("stopped");
       expect(e.message).toContain("idle");
+    }
+  });
+
+  it("error extends GrackleError and PreconditionError", () => {
+    try {
+      assertTransition(SESSION_STATUS.STOPPED, SESSION_STATUS.IDLE);
+      expect.fail("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(GrackleError);
+      expect(err).toBeInstanceOf(PreconditionError);
+      const e = err as InvalidSessionTransitionError;
+      expect(e.code).toBe(Code.FailedPrecondition);
+      expect(e.context).toEqual({
+        from: SESSION_STATUS.STOPPED,
+        to: SESSION_STATUS.IDLE,
+      });
     }
   });
 

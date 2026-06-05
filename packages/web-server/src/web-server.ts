@@ -4,7 +4,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, normalize, resolve, relative } from "node:path";
 import { createRequire } from "node:module";
 import { connectNodeAdapter } from "@connectrpc/connect-node";
-import type { ConnectRouter } from "@connectrpc/connect";
+import type { ConnectRouter, Interceptor } from "@connectrpc/connect";
 
 /**
  * Common server type returned by {@link createWebServer} and the sandbox
@@ -147,6 +147,8 @@ export interface WebServerOptions {
   secureContext?: SecureContext;
   /** ConnectRPC route registration function (injected from grpc-service). */
   connectRoutes?: (router: ConnectRouter) => void;
+  /** ConnectRPC interceptors to apply to the web Connect handler. */
+  connectInterceptors?: Interceptor[];
   /** Override the web UI dist directory (default: resolve from `grackle-ai/web`). */
   webDistDir?: string;
   /** Optional readiness probe callback. When omitted, `/readyz` returns a basic "ok". */
@@ -498,6 +500,7 @@ export function createWebServer(options: WebServerOptions): GrackleServer {
     bindHost,
     secureContext,
     connectRoutes,
+    connectInterceptors,
     webDistDir,
     readinessCheck,
     pluginNames,
@@ -532,7 +535,10 @@ export function createWebServer(options: WebServerOptions): GrackleServer {
 
   /** ConnectRPC handler for browser gRPC calls (Connect protocol over HTTP/1.1). */
   const webConnectHandler = connectRoutes
-    ? connectNodeAdapter({ routes: connectRoutes })
+    ? connectNodeAdapter({
+        routes: connectRoutes,
+        ...(connectInterceptors?.length ? { interceptors: connectInterceptors } : {}),
+      })
     : undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
