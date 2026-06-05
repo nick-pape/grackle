@@ -37,12 +37,9 @@ async function* wrapStreamErrors<T>(iterable: AsyncIterable<T>): AsyncIterable<T
  * iterable so errors thrown during iteration are also translated.
  */
 export const grackleErrorInterceptor: Interceptor = (next) => async (req) => {
-  let response;
-  try {
-    response = await next(req);
-  } catch (err) {
+  const response = await next(req).catch((err: unknown) => {
     throw translateError(err);
-  }
+  });
 
   if ("stream" in response && response.stream) {
     const original = response.message as AsyncIterable<unknown>;
