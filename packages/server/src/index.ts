@@ -65,10 +65,7 @@ import { createRequire } from "node:module";
 import { initializeDatabase } from "./database-init.js";
 import { registerAllAdapters } from "./adapter-registry.js";
 import { bootstrapLocalEnvironment } from "./local-environment.js";
-// Side-effect imports: each plugin registers itself with the global plugin registry.
-import "./core-plugin.js";
-import "@grackle-ai/plugin-orchestration";
-import "@grackle-ai/plugin-scheduling";
+import { validatePluginRegistrations } from "./plugin-registration.js";
 import {
   setLoadedPluginNames,
   setChannelConfig,
@@ -83,6 +80,9 @@ async function main(): Promise<void> {
   // Initialized to a no-op so server error handlers that fire before createShutdown()
   // don't throw. Replaced with the real shutdown function after all servers are created.
   let shutdown: () => Promise<void> = async () => {};
+
+  // Fail fast if any expected plugin failed to register (e.g. import removed or made lazy).
+  validatePluginRegistrations();
 
   // Resolve and validate all server configuration from env vars (fail fast on invalid values)
   const config = resolveServerConfig();
