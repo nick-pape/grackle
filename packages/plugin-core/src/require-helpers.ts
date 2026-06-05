@@ -87,10 +87,16 @@ export function requireOneOf<T extends Record<string, unknown>>(fields: T): keyo
     }
   }
   const keys = Object.keys(fields);
-  const label =
-    keys.length === 2
-      ? `${keys[0]} or ${keys[1]}`
-      : `${keys.slice(0, -1).join(", ")}, or ${keys[keys.length - 1]}`;
+  let label: string;
+  if (keys.length === 0) {
+    label = "a field";
+  } else if (keys.length === 1) {
+    label = keys[0];
+  } else if (keys.length === 2) {
+    label = `${keys[0]} or ${keys[1]}`;
+  } else {
+    label = `${keys.slice(0, -1).join(", ")}, or ${keys[keys.length - 1]}`;
+  }
   throw new ValidationError(`${label} is required`);
 }
 

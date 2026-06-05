@@ -5,9 +5,8 @@
  * GrackleCore service, allowing clients to register multiple GitHub identities
  * and associate them with environments.
  */
-import { Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle, ConflictError, GrackleError } from "@grackle-ai/common";
+import { grackle, ConflictError, PreconditionError } from "@grackle-ai/common";
 import { githubAccountStore } from "@grackle-ai/database";
 import { exec } from "@grackle-ai/core";
 import { emit } from "@grackle-ai/core";
@@ -80,7 +79,7 @@ export async function addGitHubAccount(
 
   const account = githubAccountStore.listGitHubAccounts().find((a) => a.id === id);
   if (!account) {
-    throw new GrackleError("Account was created but could not be retrieved", Code.Internal, { id });
+    throw new PreconditionError("Account was created but could not be retrieved", { id });
   }
   return accountToProto(account);
 }

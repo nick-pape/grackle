@@ -17,7 +17,7 @@ function translateError(err: unknown): ConnectError {
   }
   if (err instanceof GrackleError) {
     if (Object.keys(err.context).length > 0) {
-      logger.debug({ err: err.message, code: err.code, ...err.context }, "GrackleError context");
+      logger.debug({ err, context: err.context }, "GrackleError context");
     }
     return new ConnectError(err.message, err.code);
   }
