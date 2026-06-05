@@ -24,7 +24,7 @@ import * as adapterManager from "./adapter-manager.js";
 import * as tokenPush from "./token-push.js";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
-import { LOGS_DIR, DEFAULT_MCP_PORT, ROOT_TASK_ID } from "@grackle-ai/common";
+import { LOGS_DIR, DEFAULT_MCP_PORT, ROOT_TASK_ID, envPort, envString } from "@grackle-ai/common";
 import {
   resolvePersona,
   buildOrchestratorContext,
@@ -225,8 +225,8 @@ export async function startTaskSession(
     resolved.mcpServers.length > 0 ? buildMcpServersJson(resolved.mcpServers) : "";
 
   // Build MCP broker URL + scoped token so runtimes can call the MCP server.
-  const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-  const mcpDialHost = toDialableHost(process.env.GRACKLE_HOST || "127.0.0.1");
+  const mcpPort = envPort("GRACKLE_MCP_PORT", DEFAULT_MCP_PORT);
+  const mcpDialHost = toDialableHost(envString("GRACKLE_HOST", "127.0.0.1"));
   const mcpUrl = `http://${mcpDialHost}:${mcpPort}/mcp`;
   const mcpToken = createScopedToken(
     {
