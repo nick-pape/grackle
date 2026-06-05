@@ -1,6 +1,21 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 05 Jun 2026 04:25:17 GMT and should not be manually modified.
+This log was last generated on Fri, 05 Jun 2026 05:43:28 GMT and should not be manually modified.
+
+## 0.172.0
+Fri, 05 Jun 2026 05:43:28 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Extract RemoteTunnelAdapter base class from SSH/Codespace adapters, eliminating ~95% code duplication
+- Add centralized env config utilities (envPort, envFlag, envString, etc.) and typed GrackleConfig to @grackle-ai/common; refactor core and server to use shared parsing instead of scattered process.env reads
 
 ## 0.171.0
 Fri, 05 Jun 2026 04:25:17 GMT
