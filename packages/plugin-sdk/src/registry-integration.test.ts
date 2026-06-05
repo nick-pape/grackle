@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { registerPlugin, resolveEnabledPlugins, clearRegistry } from "./registry.js";
 import { loadPlugins } from "./loader.js";
-import type { PluginRegistration } from "./registry.js";
 import type { GracklePlugin, ReconciliationPhase } from "./plugin.js";
 import type { PluginContext, Disposable } from "./context.js";
 import type { DescService } from "@bufbuild/protobuf";
@@ -55,7 +54,6 @@ describe("registry → resolve → load integration", () => {
       description: "Orchestration",
       required: false,
       defaultEnabled: true,
-      dependencies: ["core"],
       create: (): GracklePlugin => ({
         name: "orchestration",
         dependencies: ["core"],
@@ -64,7 +62,7 @@ describe("registry → resolve → load integration", () => {
         },
         grpcHandlers: () => [{ service: fakeServiceB, handlers: { createTask: vi.fn() } }],
       }),
-    } as PluginRegistration & { dependencies: string[] });
+    });
 
     registerPlugin({
       name: "disabled-plugin",

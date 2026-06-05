@@ -216,10 +216,16 @@ IMPORTANT: The PR is the deliverable, but a PR with failing CI or unresolved rev
     if (seed.envOverride) {
       const envVal = process.env[seed.envOverride.variable];
       if (envVal !== undefined) {
-        enabled =
-          seed.envOverride.semantics === "skip"
-            ? envVal !== "1"
-            : envVal === "1" || envVal.toLowerCase() === "true";
+        if (seed.envOverride.semantics === "skip") {
+          enabled = envVal !== "1";
+        } else {
+          const lower = envVal.toLowerCase();
+          if (lower === "0" || lower === "false") {
+            enabled = false;
+          } else if (lower === "1" || lower === "true") {
+            enabled = true;
+          }
+        }
       }
     }
     insertPlugin.run(seed.name, enabled ? 1 : 0);

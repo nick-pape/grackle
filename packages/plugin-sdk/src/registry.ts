@@ -74,7 +74,7 @@ export function registerPlugin(registration: PluginRegistration): void {
  * The returned array is a snapshot — mutations do not affect the registry.
  */
 export function getRegisteredPlugins(): ReadonlyArray<PluginRegistration> {
-  return [...registry.values()];
+  return [...registry.values()].map((reg) => ({ ...reg }));
 }
 
 /**
