@@ -173,7 +173,7 @@ export function requireChannelGrant(id: string): ChannelGrantRow {
 
 // ── Format / Constraint Helpers ─────────────────────────────────
 
-/** Parse a string as a JSON object; throw `Code.InvalidArgument` on failure. */
+/** Parse a string as a JSON object; throw `Code.InvalidArgument` on failure. Empty/whitespace-only input defaults to `{}`. */
 export function requireJsonObject(value: string, fieldName: string): Record<string, unknown> {
   let parsed: unknown;
   try {
