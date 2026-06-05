@@ -262,7 +262,7 @@ describe("dependency validation", () => {
 
       expect(err).toBeInstanceOf(ConnectError);
       expect(err.code).toBe(Code.NotFound);
-      expect(err.message).toContain("Dependency task not found");
+      expect(err.message).toContain("Task not found");
     });
   });
 
@@ -307,7 +307,7 @@ describe("dependency validation", () => {
 
       expect(err).toBeInstanceOf(ConnectError);
       expect(err.code).toBe(Code.NotFound);
-      expect(err.message).toContain("Dependency task not found");
+      expect(err.message).toContain("Task not found");
     });
 
     it("rejects circular dependency", async () => {

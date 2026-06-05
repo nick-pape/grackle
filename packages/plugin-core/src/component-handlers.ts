@@ -7,20 +7,11 @@ import {
   BUILTIN_COMPONENTS,
   extractComponentReferenceNames,
 } from "@grackle-ai/common";
-import { componentStore, workspaceStore } from "@grackle-ai/database";
+import { componentStore } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
 import { v4 as uuid } from "uuid";
 import { componentRowToProto } from "./grpc-proto-converters.js";
-
-/** Validate that a workspace id is present and refers to a real workspace. */
-function requireWorkspace(workspaceId: string): void {
-  if (!workspaceId) {
-    throw new ConnectError("workspaceId is required", Code.InvalidArgument);
-  }
-  if (!workspaceStore.getWorkspace(workspaceId)) {
-    throw new ConnectError(`Workspace not found: ${workspaceId}`, Code.NotFound);
-  }
-}
+import { requireField, requireTrimmed, requireWorkspace } from "./require-helpers.js";
 
 /** Wrap store validation errors (e.g. body-size cap) as INVALID_ARGUMENT. */
 function asInvalidArgument(err: unknown): never {
@@ -32,12 +23,8 @@ export async function registerComponent(
   req: grackle.RegisterComponentRequest,
 ): Promise<grackle.Component> {
   requireWorkspace(req.workspaceId);
-  if (!req.name) {
-    throw new ConnectError("name is required", Code.InvalidArgument);
-  }
-  if (!req.body) {
-    throw new ConnectError("body is required", Code.InvalidArgument);
-  }
+  requireField(req.name, "name");
+  requireField(req.body, "body");
   // Full UUID (not an 8-char slice): components are addressed by their agent-chosen
   // name in practice, so a long collision-proof id avoids a UNIQUE-constraint
   // throw being surfaced to the agent as a misleading INVALID_ARGUMENT.
@@ -64,9 +51,7 @@ export async function registerComponent(
 export async function updateComponent(
   req: grackle.UpdateComponentRequest,
 ): Promise<grackle.Component> {
-  if (!req.id) {
-    throw new ConnectError("id is required", Code.InvalidArgument);
-  }
+  requireField(req.id, "id");
   const existing = componentStore.getComponent(req.id);
   // Workspace isolation: treat a component in another workspace as not found.
   if (!existing || (req.workspaceId && existing.workspaceId !== req.workspaceId)) {
@@ -161,10 +146,7 @@ interface SearchableComponent {
 export async function searchComponents(
   req: grackle.SearchComponentsRequest,
 ): Promise<grackle.SearchComponentsResponse> {
-  const query = req.query.trim();
-  if (!query) {
-    throw new ConnectError("query is required", Code.InvalidArgument);
-  }
+  const query = requireTrimmed(req.query, "query");
   const limit = req.limit > 0 ? req.limit : DEFAULT_COMPONENT_SEARCH_LIMIT;
 
   const items: SearchableComponent[] = [];

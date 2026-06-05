@@ -4,15 +4,12 @@ import { grackle } from "@grackle-ai/common";
 import { claudeProviderModeToEnum, providerToggleToEnum } from "@grackle-ai/common";
 import { tokenStore, credentialProviders } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
+import { requireField } from "./require-helpers.js";
 
 /** Store or update a token. */
 export async function setToken(req: grackle.TokenEntry): Promise<grackle.Empty> {
-  if (!req.name) {
-    throw new ConnectError("name is required", Code.InvalidArgument);
-  }
-  if (!req.value) {
-    throw new ConnectError("value is required", Code.InvalidArgument);
-  }
+  requireField(req.name, "name");
+  requireField(req.value, "value");
   tokenStore.setToken({
     name: req.name,
     type: req.type,
@@ -44,9 +41,7 @@ export async function listTokens(): Promise<grackle.TokenList> {
 
 /** Delete a token by name. */
 export async function deleteToken(req: grackle.TokenName): Promise<grackle.Empty> {
-  if (!req.name) {
-    throw new ConnectError("name is required", Code.InvalidArgument);
-  }
+  requireField(req.name, "name");
   tokenStore.deleteToken(req.name);
   emit("token.changed", {});
   return create(grackle.EmptySchema, {});

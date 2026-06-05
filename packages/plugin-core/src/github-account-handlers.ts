@@ -12,6 +12,7 @@ import { githubAccountStore } from "@grackle-ai/database";
 import { exec } from "@grackle-ai/core";
 import { emit } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
+import { requireGitHubAccount, requireTrimmed } from "./require-helpers.js";
 
 /** Timeout when resolving a username from the GitHub API. */
 const GH_API_TIMEOUT_MS: number = 10_000;
@@ -56,14 +57,8 @@ export async function listGitHubAccounts(): Promise<grackle.GitHubAccountList> {
 export async function addGitHubAccount(
   req: grackle.AddGitHubAccountRequest,
 ): Promise<grackle.GitHubAccount> {
-  if (!req.label.trim()) {
-    throw new ConnectError("label is required", Code.InvalidArgument);
-  }
-  if (!req.token.trim()) {
-    throw new ConnectError("token is required", Code.InvalidArgument);
-  }
-
-  const token = req.token.trim();
+  requireTrimmed(req.label, "label");
+  const token = requireTrimmed(req.token, "token");
   let { username } = req;
   if (!username.trim()) {
     username = await resolveGitHubUsername(token);
@@ -97,13 +92,7 @@ export async function addGitHubAccount(
 export async function updateGitHubAccount(
   req: grackle.UpdateGitHubAccountRequest,
 ): Promise<grackle.GitHubAccount> {
-  if (!req.id) {
-    throw new ConnectError("id is required", Code.InvalidArgument);
-  }
-  const existing = githubAccountStore.getGitHubAccount(req.id);
-  if (!existing) {
-    throw new ConnectError(`GitHub account not found: ${req.id}`, Code.NotFound);
-  }
+  const existing = requireGitHubAccount(req.id);
 
   const fields: githubAccountStore.UpdateGitHubAccountFields = {};
   if (req.label !== undefined) {
@@ -137,13 +126,7 @@ export async function updateGitHubAccount(
 export async function removeGitHubAccount(
   req: grackle.RemoveGitHubAccountRequest,
 ): Promise<grackle.Empty> {
-  if (!req.id) {
-    throw new ConnectError("id is required", Code.InvalidArgument);
-  }
-  const existing = githubAccountStore.getGitHubAccount(req.id);
-  if (!existing) {
-    throw new ConnectError(`GitHub account not found: ${req.id}`, Code.NotFound);
-  }
+  const existing = requireGitHubAccount(req.id);
 
   githubAccountStore.removeGitHubAccount(req.id);
   logger.info({ id: req.id, label: existing.label }, "GitHub account removed");

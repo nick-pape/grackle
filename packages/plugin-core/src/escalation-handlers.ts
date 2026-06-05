@@ -5,6 +5,7 @@ import { escalationStore } from "@grackle-ai/database";
 import { ulid } from "ulid";
 import { routeEscalation, toEscalationModel } from "@grackle-ai/core";
 import { escalationRowToProto } from "./grpc-proto-converters.js";
+import { requireEscalation, requireField } from "./require-helpers.js";
 
 /** Valid urgency values for escalations. */
 const VALID_URGENCY: ReadonlySet<string> = new Set(["low", "normal", "high"]);
@@ -13,9 +14,7 @@ const VALID_URGENCY: ReadonlySet<string> = new Set(["low", "normal", "high"]);
 export async function createEscalation(
   req: grackle.CreateEscalationRequest,
 ): Promise<grackle.Escalation> {
-  if (!req.message) {
-    throw new ConnectError("message is required", Code.InvalidArgument);
-  }
+  requireField(req.message, "message");
   const urgency = VALID_URGENCY.has(req.urgency) ? req.urgency : "normal";
   const id = ulid();
   const taskUrl = req.taskId ? `/tasks/${req.taskId}` : "";
@@ -74,13 +73,7 @@ export async function listEscalations(
 export async function acknowledgeEscalation(
   req: grackle.AcknowledgeEscalationRequest,
 ): Promise<grackle.Escalation> {
-  if (!req.id) {
-    throw new ConnectError("id is required", Code.InvalidArgument);
-  }
-  const row = escalationStore.getEscalation(req.id);
-  if (!row) {
-    throw new ConnectError(`escalation not found: ${req.id}`, Code.NotFound);
-  }
+  const row = requireEscalation(req.id);
   escalationStore.updateEscalationStatus(req.id, "acknowledged");
   const updated = escalationStore.getEscalation(req.id);
   return escalationRowToProto(updated ?? row);

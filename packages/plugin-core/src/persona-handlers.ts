@@ -7,6 +7,7 @@ import { v4 as uuid } from "uuid";
 import { slugify } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
 import { personaRowToProto } from "./grpc-proto-converters.js";
+import { requireField, requirePersona } from "./require-helpers.js";
 
 /** List all personas. */
 export async function listPersonas(): Promise<grackle.PersonaList> {
@@ -18,9 +19,7 @@ export async function listPersonas(): Promise<grackle.PersonaList> {
 
 /** Create a new persona. */
 export async function createPersona(req: grackle.CreatePersonaRequest): Promise<grackle.Persona> {
-  if (!req.name) {
-    throw new ConnectError("Persona name is required", Code.InvalidArgument);
-  }
+  requireField(req.name, "Persona name");
   const personaType = req.type || "agent";
   if (personaType !== "agent" && personaType !== "script") {
     throw new ConnectError(
@@ -97,19 +96,13 @@ export async function createPersona(req: grackle.CreatePersonaRequest): Promise<
 
 /** Get a persona by ID. */
 export async function getPersona(req: grackle.PersonaId): Promise<grackle.Persona> {
-  const row = personaStore.getPersona(req.id);
-  if (!row) {
-    throw new ConnectError(`Persona not found: ${req.id}`, Code.NotFound);
-  }
+  const row = requirePersona(req.id);
   return personaRowToProto(row);
 }
 
 /** Update an existing persona. */
 export async function updatePersona(req: grackle.UpdatePersonaRequest): Promise<grackle.Persona> {
-  const existing = personaStore.getPersona(req.id);
-  if (!existing) {
-    throw new ConnectError(`Persona not found: ${req.id}`, Code.NotFound);
-  }
+  const existing = requirePersona(req.id);
 
   // Only update toolConfig/mcpServers if the request provides non-empty values;
   // otherwise keep the existing stored value.

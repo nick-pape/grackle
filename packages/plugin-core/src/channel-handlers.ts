@@ -5,6 +5,7 @@ import { channelGrantStore, sessionStore, type ChannelGrantRow } from "@grackle-
 import { createChannelToken, verifyChannelToken } from "@grackle-ai/auth";
 import { ulid } from "ulid";
 import { getChannelConfig } from "./channel-config.js";
+import { requireChannelGrant, requireSession } from "./require-helpers.js";
 
 /** Verbs currently supported on a channel. */
 const SUPPORTED_VERBS: ReadonlySet<string> = new Set(["send_input"]);
@@ -38,9 +39,7 @@ export async function exposeChannel(
     throw new ConnectError("a session_id target is required", Code.InvalidArgument);
   }
   const sessionId = req.target.value;
-  if (!sessionStore.getSession(sessionId)) {
-    throw new ConnectError(`Session not found: ${sessionId}`, Code.NotFound);
-  }
+  requireSession(sessionId);
 
   const verbs = req.verbs.length > 0 ? req.verbs : [...DEFAULT_VERBS];
   for (const verb of verbs) {
@@ -82,12 +81,7 @@ export async function listChannelGrants(
 export async function revokeChannelGrant(
   req: grackle.RevokeChannelGrantRequest,
 ): Promise<grackle.Empty> {
-  if (!req.grantId) {
-    throw new ConnectError("grant_id is required", Code.InvalidArgument);
-  }
-  if (!channelGrantStore.getGrant(req.grantId)) {
-    throw new ConnectError(`grant not found: ${req.grantId}`, Code.NotFound);
-  }
+  requireChannelGrant(req.grantId);
   channelGrantStore.revokeGrant(req.grantId);
   return create(grackle.EmptySchema, {});
 }

@@ -5,7 +5,9 @@
 ```ts
 
 import type { AgentRow } from '@grackle-ai/database';
+import type { ChannelGrantRow } from '@grackle-ai/database';
 import { cleanupLifecycleStream } from '@grackle-ai/core';
+import type { ComponentRow } from '@grackle-ai/database';
 import type { ConnectRouter } from '@connectrpc/connect';
 import type { DispatchQueueRow } from '@grackle-ai/database';
 import type { Disposable as Disposable_2 } from '@grackle-ai/plugin-sdk';
@@ -13,7 +15,10 @@ import { ensureLifecycleStream } from '@grackle-ai/core';
 import type { EnvironmentModel } from '@grackle-ai/core';
 import type { EnvironmentRow } from '@grackle-ai/database';
 import type { EnvironmentStatus } from '@grackle-ai/common';
+import type { EscalationRow } from '@grackle-ai/database';
+import type { GitHubAccountInfo } from '@grackle-ai/database';
 import type { GrackleEventType } from '@grackle-ai/core';
+import type { PersonaRow } from '@grackle-ai/database';
 import type { PluginContext } from '@grackle-ai/plugin-sdk';
 import type { ReconciliationPhase } from '@grackle-ai/core';
 import { resolveAncestorEnvironmentId } from '@grackle-ai/core';
@@ -26,6 +31,7 @@ import type { TaskStatusResult } from '@grackle-ai/core';
 import { toDialableHost } from '@grackle-ai/core';
 import { VALID_PIPE_MODES } from '@grackle-ai/core';
 import { validatePipeInputs } from '@grackle-ai/core';
+import type { WorkspaceRow } from '@grackle-ai/database';
 
 // @public
 export interface AgentRootTaskBootDeps {
@@ -173,6 +179,51 @@ export interface PluginRegistryEntry {
 
 // @public
 export function registerGrackleRoutes(router: ConnectRouter): void;
+
+// @public
+export function requireAgent(id: string): AgentRow;
+
+// @public
+export function requireChannelGrant(id: string): ChannelGrantRow;
+
+// @public
+export function requireComponent(id: string): ComponentRow;
+
+// @public
+export function requireEnvironment(id: string): EnvironmentRow;
+
+// @public
+export function requireEscalation(id: string): EscalationRow;
+
+// @public
+export function requireField(value: unknown, fieldName: string): asserts value;
+
+// @public
+export function requireGitHubAccount(id: string): GitHubAccountInfo;
+
+// @public
+export function requireJsonObject(value: string, fieldName: string): Record<string, unknown>;
+
+// @public
+export function requireNonEmpty(value: string, fieldName: string): string;
+
+// @public
+export function requireNonNegativeBudget(tokenBudget: number | undefined, costBudgetMillicents: number | undefined): void;
+
+// @public
+export function requirePersona(id: string): PersonaRow;
+
+// @public
+export function requireSession(id: string): SessionRow;
+
+// @public
+export function requireTask(id: string): TaskRow;
+
+// @public
+export function requireTrimmed(value: string, fieldName: string): string;
+
+// @public
+export function requireWorkspace(id: string): WorkspaceRow;
 
 export { resolveAncestorEnvironmentId }
 

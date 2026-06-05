@@ -9,6 +9,7 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 import { streamRegistry, pipeDelivery, RESERVED_PREFIXES } from "@grackle-ai/core";
+import { requireField } from "./require-helpers.js";
 
 /** Valid permission values for stream subscriptions. */
 const VALID_PERMISSIONS: ReadonlySet<string> = new Set(["r", "w", "rw"]);
@@ -50,12 +51,8 @@ export function validateSubscriptionParams(permission: string, deliveryMode: str
 export async function createStream(
   req: grackle.CreateStreamRequest,
 ): Promise<grackle.CreateStreamResponse> {
-  if (!req.sessionId) {
-    throw new ConnectError("session_id is required", Code.InvalidArgument);
-  }
-  if (!req.name) {
-    throw new ConnectError("name is required", Code.InvalidArgument);
-  }
+  requireField(req.sessionId, "session_id");
+  requireField(req.name, "name");
   if (RESERVED_PREFIXES.some((prefix) => req.name.startsWith(prefix))) {
     throw new ConnectError(
       `Stream name "${req.name}" uses a reserved prefix`,
@@ -83,12 +80,8 @@ export async function createStream(
 export async function attachStream(
   req: grackle.AttachStreamRequest,
 ): Promise<grackle.AttachStreamResponse> {
-  if (!req.sessionId) {
-    throw new ConnectError("session_id is required", Code.InvalidArgument);
-  }
-  if (!req.targetSessionId) {
-    throw new ConnectError("target_session_id is required", Code.InvalidArgument);
-  }
+  requireField(req.sessionId, "session_id");
+  requireField(req.targetSessionId, "target_session_id");
 
   const callerSub = streamRegistry.getSubscription(req.sessionId, req.fd);
   if (!callerSub) {

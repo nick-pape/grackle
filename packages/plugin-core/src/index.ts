@@ -36,6 +36,23 @@ export type { PluginRegistryEntry } from "./plugin-registry.js";
 
 // ─── Handler Utilities ──────────────────────────────────────
 export { killSessionAndCleanup } from "./grpc-shared.js";
+export {
+  requireField,
+  requireTrimmed,
+  requireNonEmpty,
+  requireWorkspace,
+  requireEnvironment,
+  requireSession,
+  requireTask,
+  requireAgent,
+  requirePersona,
+  requireComponent,
+  requireEscalation,
+  requireGitHubAccount,
+  requireChannelGrant,
+  requireJsonObject,
+  requireNonNegativeBudget,
+} from "./require-helpers.js";
 
 // ─── Channel Capability I/O ─────────────────────────────────
 export { setChannelConfig } from "./channel-config.js";

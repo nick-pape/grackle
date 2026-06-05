@@ -19,6 +19,7 @@ import { logger } from "@grackle-ai/core";
 import { envRowToProto } from "./grpc-proto-converters.js";
 import { killSessionAndCleanup, suspendSessionAndPublish } from "./grpc-shared.js";
 import { resolveBootstrapRuntime } from "@grackle-ai/core";
+import { requireEnvironment, requireField } from "./require-helpers.js";
 
 /** List all registered environments. */
 export async function listEnvironments(): Promise<grackle.EnvironmentList> {
@@ -32,9 +33,8 @@ export async function listEnvironments(): Promise<grackle.EnvironmentList> {
 export async function addEnvironment(
   req: grackle.AddEnvironmentRequest,
 ): Promise<grackle.Environment> {
-  if (!req.displayName || !req.adapterType) {
-    throw new ConnectError("displayName and adapterType required", Code.InvalidArgument);
-  }
+  requireField(req.displayName, "displayName");
+  requireField(req.adapterType, "adapterType");
   const id = req.displayName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
   envRegistry.addEnvironment(
     id,
@@ -53,13 +53,7 @@ export async function addEnvironment(
 export async function updateEnvironment(
   req: grackle.UpdateEnvironmentRequest,
 ): Promise<grackle.Environment> {
-  if (!req.id) {
-    throw new ConnectError("id is required", Code.InvalidArgument);
-  }
-  const existing = envRegistry.getEnvironment(req.id);
-  if (!existing) {
-    throw new ConnectError(`Environment not found: ${req.id}`, Code.NotFound);
-  }
+  const existing = requireEnvironment(req.id);
   const displayName = req.displayName !== undefined ? req.displayName : undefined;
   if (displayName?.trim() === "") {
     throw new ConnectError("Environment name cannot be empty", Code.InvalidArgument);
@@ -277,10 +271,7 @@ export async function* provisionEnvironment(
 
 /** Stop (disconnect) an environment. */
 export async function stopEnvironment(req: grackle.EnvironmentId): Promise<grackle.Empty> {
-  const env = envRegistry.getEnvironment(req.id);
-  if (!env) {
-    throw new ConnectError(`Environment not found: ${req.id}`, Code.NotFound);
-  }
+  const env = requireEnvironment(req.id);
 
   // Suspend active sessions before tearing down the adapter. Stop is a
   // recoverable transition — re-provision will reanimate them via
@@ -303,10 +294,7 @@ export async function stopEnvironment(req: grackle.EnvironmentId): Promise<grack
 
 /** Destroy an environment and its underlying resources. */
 export async function destroyEnvironment(req: grackle.EnvironmentId): Promise<grackle.Empty> {
-  const env = envRegistry.getEnvironment(req.id);
-  if (!env) {
-    throw new ConnectError(`Environment not found: ${req.id}`, Code.NotFound);
-  }
+  const env = requireEnvironment(req.id);
 
   // Kill active sessions BEFORE tearing down the adapter so the kill signal
   // can still reach PowerLine via the live connection (#1485).

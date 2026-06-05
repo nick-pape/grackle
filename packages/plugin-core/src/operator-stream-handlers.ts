@@ -20,16 +20,14 @@ import {
   getLatestLiveSessionId,
 } from "@grackle-ai/core";
 import { validateSubscriptionParams } from "./global-stream-handlers.js";
+import { requireField, requireTask } from "./require-helpers.js";
 
 /**
  * Resolve a task's latest live (pending/running/idle) session, or throw if the
  * task is unknown. Shared by the operator attach/detach/list handlers.
  */
 function resolveLiveSessionForTask(taskId: string): string {
-  const task = taskStore.getTask(taskId);
-  if (!task) {
-    throw new ConnectError(`Task not found: ${taskId}`, Code.NotFound);
-  }
+  requireTask(taskId);
   return getLatestLiveSessionId(sessionStore.listSessionsForTask(taskId));
 }
 
@@ -56,9 +54,7 @@ function isOperatorRoom(stream: streamRegistry.Stream): boolean {
 export async function operatorCreateStream(
   req: grackle.OperatorCreateStreamRequest,
 ): Promise<grackle.OperatorCreateStreamResponse> {
-  if (!req.name) {
-    throw new ConnectError("name is required", Code.InvalidArgument);
-  }
+  requireField(req.name, "name");
   if (RESERVED_PREFIXES.some((prefix) => req.name.startsWith(prefix))) {
     throw new ConnectError(
       `Stream name "${req.name}" uses a reserved prefix`,
@@ -90,12 +86,8 @@ export async function operatorCreateStream(
 export async function operatorAttachTask(
   req: grackle.OperatorAttachTaskRequest,
 ): Promise<grackle.OperatorAttachTaskResponse> {
-  if (!req.taskId) {
-    throw new ConnectError("task_id is required", Code.InvalidArgument);
-  }
-  if (!req.streamId) {
-    throw new ConnectError("stream_id is required", Code.InvalidArgument);
-  }
+  requireField(req.taskId, "task_id");
+  requireField(req.streamId, "stream_id");
 
   const stream = streamRegistry.getStream(req.streamId);
   if (!stream) {
@@ -147,12 +139,8 @@ export async function operatorAttachTask(
 export async function operatorDetachTask(
   req: grackle.OperatorDetachTaskRequest,
 ): Promise<grackle.OperatorDetachTaskResponse> {
-  if (!req.taskId) {
-    throw new ConnectError("task_id is required", Code.InvalidArgument);
-  }
-  if (!req.streamId) {
-    throw new ConnectError("stream_id is required", Code.InvalidArgument);
-  }
+  requireField(req.taskId, "task_id");
+  requireField(req.streamId, "stream_id");
 
   const stream = streamRegistry.getStream(req.streamId);
   if (!stream) {
@@ -193,9 +181,7 @@ export async function operatorDetachTask(
 export async function listTaskAttachments(
   req: grackle.ListTaskAttachmentsRequest,
 ): Promise<grackle.ListTaskAttachmentsResponse> {
-  if (!req.taskId) {
-    throw new ConnectError("task_id is required", Code.InvalidArgument);
-  }
+  requireField(req.taskId, "task_id");
 
   const sessionId = resolveLiveSessionForTask(req.taskId);
   if (!sessionId) {
@@ -227,9 +213,7 @@ export async function listTaskAttachments(
 export async function operatorCloseStream(
   req: grackle.OperatorCloseStreamRequest,
 ): Promise<grackle.OperatorCloseStreamResponse> {
-  if (!req.streamId) {
-    throw new ConnectError("stream_id is required", Code.InvalidArgument);
-  }
+  requireField(req.streamId, "stream_id");
 
   const stream = streamRegistry.getStream(req.streamId);
   if (!stream) {
