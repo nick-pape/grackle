@@ -117,7 +117,6 @@ describe("gRPC sendInput", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
     expect(err.message).toContain("nonexistent");
   });
@@ -148,7 +147,6 @@ describe("gRPC sendInput", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("has ended");
   });
@@ -180,7 +178,6 @@ describe("gRPC sendInput", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("not connected");
   });

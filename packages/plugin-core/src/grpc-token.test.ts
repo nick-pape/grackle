@@ -144,7 +144,6 @@ describe("gRPC token handlers", () => {
       .setToken({ name: "", value: "something", type: "env_var" })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
     expect(err.message).toContain("required");
   });
@@ -154,7 +153,6 @@ describe("gRPC token handlers", () => {
       .setToken({ name: "no-value-token", value: "", type: "env_var" })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
     expect(err.message).toContain("required");
   });
@@ -162,7 +160,6 @@ describe("gRPC token handlers", () => {
   it("deleteToken without name returns error", async () => {
     const err = (await handlers.deleteToken({ name: "" }).catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
     expect(err.message).toContain("required");
   });

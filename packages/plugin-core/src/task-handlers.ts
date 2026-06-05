@@ -209,12 +209,7 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
   );
 
   // Update budget fields if explicitly set in the request (proto3 optional presence)
-  if (
-    (req.tokenBudget !== undefined && req.tokenBudget < 0) ||
-    (req.costBudgetMillicents !== undefined && req.costBudgetMillicents < 0)
-  ) {
-    throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
-  }
+  requireNonNegativeBudget(req.tokenBudget, req.costBudgetMillicents);
   if (req.tokenBudget !== undefined || req.costBudgetMillicents !== undefined) {
     taskStore.updateTaskBudget(
       req.id,

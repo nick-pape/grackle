@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Standardize error messages: switch require-helpers to GrackleError subclasses, add requireOneOf, fix wrong gRPC codes, log error context in interceptor",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "nickpape@outlook.com"
+}

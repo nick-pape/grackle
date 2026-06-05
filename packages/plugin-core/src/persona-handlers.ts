@@ -1,6 +1,5 @@
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, ConflictError, ValidationError } from "@grackle-ai/common";
 import { ALL_MCP_TOOL_NAMES } from "@grackle-ai/common";
 import { personaStore, settingsStore, envRegistry } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
@@ -19,25 +18,17 @@ export async function listPersonas(): Promise<grackle.PersonaList> {
 
 /** Create a new persona. */
 export async function createPersona(req: grackle.CreatePersonaRequest): Promise<grackle.Persona> {
-  requireField(req.name, "Persona name");
+  requireField(req.name, "name");
   const personaType = req.type || "agent";
   if (personaType !== "agent" && personaType !== "script") {
-    throw new ConnectError(
+    throw new ValidationError(
       `Invalid persona type: "${personaType}". Must be "agent" or "script".`,
-      Code.InvalidArgument,
     );
   }
   if (personaType === "script") {
-    if (!req.script) {
-      throw new ConnectError(
-        "Script content is required for script personas",
-        Code.InvalidArgument,
-      );
-    }
+    requireField(req.script, "script");
   } else {
-    if (!req.systemPrompt) {
-      throw new ConnectError("Persona system_prompt is required", Code.InvalidArgument);
-    }
+    requireField(req.systemPrompt, "systemPrompt");
   }
 
   // Enforce unique ID and unique name
@@ -46,7 +37,7 @@ export async function createPersona(req: grackle.CreatePersonaRequest): Promise<
     id = `${id}-${uuid().slice(0, 4)}`;
   }
   if (personaStore.getPersonaByName(req.name)) {
-    throw new ConnectError(`Persona with name "${req.name}" already exists`, Code.AlreadyExists);
+    throw new ConflictError(`Persona with name "${req.name}" already exists`);
   }
 
   const toolConfigJson = JSON.stringify({
@@ -67,10 +58,7 @@ export async function createPersona(req: grackle.CreatePersonaRequest): Promise<
   if (allowedMcpTools.length > 0) {
     const invalid = allowedMcpTools.filter((t) => !ALL_MCP_TOOL_NAMES.has(t));
     if (invalid.length > 0) {
-      throw new ConnectError(
-        `Invalid MCP tool name(s): ${invalid.join(", ")}`,
-        Code.InvalidArgument,
-      );
+      throw new ValidationError(`Invalid MCP tool name(s): ${invalid.join(", ")}`);
     }
   }
   const allowedMcpToolsJson = JSON.stringify(allowedMcpTools);
@@ -131,7 +119,7 @@ export async function updatePersona(req: grackle.UpdatePersonaRequest): Promise<
   // Treat empty string / 0 as "not set" and keep existing value
   const name = req.name || existing.name;
   if (name !== existing.name && personaStore.getPersonaByName(name)) {
-    throw new ConnectError(`Persona with name "${name}" already exists`, Code.AlreadyExists);
+    throw new ConflictError(`Persona with name "${name}" already exists`);
   }
   const description = req.description || existing.description;
   const systemPrompt = req.systemPrompt || existing.systemPrompt;
@@ -152,10 +140,7 @@ export async function updatePersona(req: grackle.UpdatePersonaRequest): Promise<
     if (tools.length > 0) {
       const invalid = tools.filter((t) => !ALL_MCP_TOOL_NAMES.has(t));
       if (invalid.length > 0) {
-        throw new ConnectError(
-          `Invalid MCP tool name(s): ${invalid.join(", ")}`,
-          Code.InvalidArgument,
-        );
+        throw new ValidationError(`Invalid MCP tool name(s): ${invalid.join(", ")}`);
       }
     }
     allowedMcpToolsJson = JSON.stringify(tools);

@@ -1,6 +1,6 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, ValidationError } from "@grackle-ai/common";
 import { channelGrantStore, sessionStore, type ChannelGrantRow } from "@grackle-ai/database";
 import { createChannelToken, verifyChannelToken } from "@grackle-ai/auth";
 import { ulid } from "ulid";
@@ -36,7 +36,7 @@ export async function exposeChannel(
   req: grackle.ExposeChannelRequest,
 ): Promise<grackle.ExposeChannelResponse> {
   if (req.target.case !== "sessionId" || !req.target.value) {
-    throw new ConnectError("a session_id target is required", Code.InvalidArgument);
+    throw new ValidationError("sessionId target is required");
   }
   const sessionId = req.target.value;
   requireSession(sessionId);

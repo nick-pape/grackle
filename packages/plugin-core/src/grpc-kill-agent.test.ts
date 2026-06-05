@@ -190,7 +190,6 @@ describe("gRPC killAgent", () => {
       .killAgent({ id: "nonexistent", graceful: false })
       .catch((e: unknown) => e);
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect((err as ConnectError).code).toBe(Code.NotFound);
   });
 

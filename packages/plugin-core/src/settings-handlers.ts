@@ -1,6 +1,6 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, PreconditionError, ValidationError } from "@grackle-ai/common";
 import { DEFAULT_WEB_PORT } from "@grackle-ai/common";
 import {
   settingsStore,
@@ -12,11 +12,12 @@ import { generatePairingCode as authGeneratePairingCode } from "@grackle-ai/auth
 import { checkVersionStatus } from "@grackle-ai/core";
 import { detectLanIp } from "@grackle-ai/core";
 import { emit } from "@grackle-ai/core";
+import { requirePersona } from "./require-helpers.js";
 
 /** Get the value of a setting by key. */
 export async function getSetting(req: grackle.GetSettingRequest): Promise<grackle.SettingResponse> {
   if (!isAllowedSettingKey(req.key)) {
-    throw new ConnectError(`Setting key not allowed: ${req.key}`, Code.InvalidArgument);
+    throw new ValidationError(`Setting key not allowed: ${req.key}`);
   }
   const value = settingsStore.getSetting(req.key);
   return create(grackle.SettingResponseSchema, {
@@ -28,18 +29,14 @@ export async function getSetting(req: grackle.GetSettingRequest): Promise<grackl
 /** Set the value of a setting. */
 export async function setSetting(req: grackle.SetSettingRequest): Promise<grackle.SettingResponse> {
   if (!isAllowedSettingKey(req.key)) {
-    throw new ConnectError(`Setting key not allowed: ${req.key}`, Code.InvalidArgument);
+    throw new ValidationError(`Setting key not allowed: ${req.key}`);
   }
   // Validate persona exists and has required fields when setting default_persona_id
   if (req.key === "default_persona_id" && req.value) {
-    const persona = personaStore.getPersona(req.value);
-    if (!persona) {
-      throw new ConnectError(`Persona not found: ${req.value}`, Code.NotFound);
-    }
+    const persona = requirePersona(req.value);
     if (!persona.runtime || !persona.model) {
-      throw new ConnectError(
+      throw new PreconditionError(
         `Persona "${persona.name}" must have runtime and model configured`,
-        Code.FailedPrecondition,
       );
     }
   }

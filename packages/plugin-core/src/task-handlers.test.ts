@@ -177,7 +177,6 @@ describe("startTask environment resolution", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("No environment specified");
   });
@@ -195,7 +194,6 @@ describe("startTask environment resolution", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
   });
 });
@@ -260,7 +258,6 @@ describe("dependency validation", () => {
         })
         .catch((e: unknown) => e)) as ConnectError;
 
-      expect(err).toBeInstanceOf(ConnectError);
       expect(err.code).toBe(Code.NotFound);
       expect(err.message).toContain("Task not found");
     });
@@ -281,7 +278,6 @@ describe("dependency validation", () => {
         })
         .catch((e: unknown) => e)) as ConnectError;
 
-      expect(err).toBeInstanceOf(ConnectError);
       expect(err.code).toBe(Code.InvalidArgument);
       expect(err.message).toContain("cannot depend on itself");
     });
@@ -305,7 +301,6 @@ describe("dependency validation", () => {
         })
         .catch((e: unknown) => e)) as ConnectError;
 
-      expect(err).toBeInstanceOf(ConnectError);
       expect(err.code).toBe(Code.NotFound);
       expect(err.message).toContain("Task not found");
     });
@@ -325,7 +320,6 @@ describe("dependency validation", () => {
         })
         .catch((e: unknown) => e)) as ConnectError;
 
-      expect(err).toBeInstanceOf(ConnectError);
       expect(err.code).toBe(Code.InvalidArgument);
       expect(err.message).toContain("Circular dependency detected");
     });
