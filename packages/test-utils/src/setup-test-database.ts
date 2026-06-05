@@ -74,19 +74,26 @@ export function setupTestDatabase(): TestDatabaseHandle {
     truncateAll(): void {
       const conn = sqlite;
       if (!conn) {
-        return;
+        throw new Error("truncateAll called but database is not initialized");
       }
       conn.pragma("foreign_keys = OFF");
-      for (const table of TRUNCATE_ORDER) {
-        conn.exec(`DELETE FROM "${table}"`);
+      try {
+        const trx = conn.transaction(() => {
+          for (const table of TRUNCATE_ORDER) {
+            conn.exec(`DELETE FROM "${table}"`);
+          }
+        });
+        trx();
+      } finally {
+        conn.pragma("foreign_keys = ON");
       }
-      conn.pragma("foreign_keys = ON");
     },
 
     seed(): void {
-      if (sqlite) {
-        seedDatabase(sqlite);
+      if (!sqlite) {
+        throw new Error("seed called but database is not initialized");
       }
+      seedDatabase(sqlite);
     },
   };
 }
