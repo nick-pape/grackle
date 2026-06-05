@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add store interfaces, DatabaseStores type, and DI registry for dependency injection foundation",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
