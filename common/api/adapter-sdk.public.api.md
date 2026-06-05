@@ -445,6 +445,19 @@ export interface ResourceWatchSubscription {
 }
 
 // @public
+export interface RetryOptions {
+    backoffMultiplier?: number;
+    delayMs: number;
+    maxAttempts: number;
+    maxDelayMs?: number;
+    onRetry?: (attempt: number, error: unknown) => void | Promise<void>;
+    sleep?: (ms: number) => Promise<void>;
+}
+
+// @public
+export function retryWithBackoff<T>(operation: () => Promise<T>, options: RetryOptions): Promise<T>;
+
+// @public
 export const REVERSE_TUNNEL_SETTLE_MS: number;
 
 // @public
