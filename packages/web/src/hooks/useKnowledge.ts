@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback, useRef, useMemo } from "react";
-import { ConnectError, Code } from "@connectrpc/connect";
+import { mapError } from "./grackleError.js";
 import type {
   GrackleEvent,
   GraphNode,
@@ -52,12 +52,11 @@ function safeParseJson(json: string): Record<string, unknown> | undefined {
 /**
  * Classify a failed knowledge RPC into a {@link KnowledgeLoadError}.
  *
- * The backend throws `ConnectError` with `Code.Unavailable` when Neo4j is not
- * running or unreachable; that maps to the "knowledge server can't be reached"
- * UX. Everything else is a generic `"error"`.
+ * Transport-level "unavailable" errors (e.g. Neo4j unreachable) map to the
+ * "knowledge server can't be reached" UX. Everything else is a generic `"error"`.
  */
 function classifyLoadError(err: unknown): KnowledgeLoadError {
-  return ConnectError.from(err).code === Code.Unavailable ? "unavailable" : "error";
+  return mapError(err).code === "unavailable" ? "unavailable" : "error";
 }
 
 // ---------------------------------------------------------------------------

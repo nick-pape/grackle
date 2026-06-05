@@ -8,8 +8,8 @@
  */
 
 import { useState, useCallback, useMemo } from "react";
-import { ConnectError } from "@connectrpc/connect";
 import type { Workspace, GrackleEvent, UseWorkspacesResult } from "@grackle-ai/web-components";
+import { extractErrorMessage } from "./grackleError.js";
 import type { DomainHook } from "./domainHook.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToWorkspace } from "./proto-converters.js";
@@ -22,10 +22,6 @@ export type { UseWorkspacesResult } from "@grackle-ai/web-components";
  *
  * @returns Workspace state, actions, an event handler, and a disconnect callback.
  */
-/** Extracts a user-facing message from a caught error. */
-function extractErrorMessage(err: unknown): string {
-  return err instanceof ConnectError ? err.message : "Operation failed";
-}
 
 export function useWorkspaces(): UseWorkspacesResult {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -99,7 +95,7 @@ export function useWorkspaces(): UseWorkspacesResult {
         onSuccess?.(workspace);
       } catch (err) {
         setWorkspaceCreating(false);
-        const message = err instanceof ConnectError ? err.message : "Failed to create workspace";
+        const message = extractErrorMessage(err, "Failed to create workspace");
         onError?.(message);
       }
     },
@@ -146,7 +142,7 @@ export function useWorkspaces(): UseWorkspacesResult {
         await grackleClient.linkEnvironment({ workspaceId, environmentId });
         await loadWorkspaces().catch(() => {});
       } catch (err) {
-        setLinkOperationError(extractErrorMessage(err));
+        setLinkOperationError(extractErrorMessage(err, "Operation failed"));
       }
     },
     [loadWorkspaces],
@@ -159,7 +155,7 @@ export function useWorkspaces(): UseWorkspacesResult {
         await grackleClient.unlinkEnvironment({ workspaceId, environmentId });
         await loadWorkspaces().catch(() => {});
       } catch (err) {
-        setLinkOperationError(extractErrorMessage(err));
+        setLinkOperationError(extractErrorMessage(err, "Operation failed"));
       }
     },
     [loadWorkspaces],

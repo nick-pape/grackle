@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { ConnectError, Code } from "@connectrpc/connect";
+import { mapError } from "./grackleError.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
 import type { ConnectionStatus } from "@grackle-ai/web-components";
 import { PAIR_PATH } from "@grackle-ai/web-components";
@@ -163,7 +163,7 @@ export function useEventStream(options: UseEventStreamOptions): UseEventStreamRe
       } catch (err) {
         clearTimeout(connectTimer);
         // Redirect to pairing page on unauthenticated error
-        if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
+        if (mapError(err).code === "unauthenticated") {
           window.location.href = PAIR_PATH;
           return;
         }

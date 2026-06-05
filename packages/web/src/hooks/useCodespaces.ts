@@ -7,8 +7,8 @@
  */
 
 import { useState, useCallback, useMemo } from "react";
-import { ConnectError } from "@connectrpc/connect";
 import type { Codespace, UseCodespacesResult } from "@grackle-ai/web-components";
+import { extractErrorMessage } from "./grackleError.js";
 import type { DomainHook } from "./domainHook.js";
 import { coreClient as grackleClient } from "./useGrackleClient.js";
 import { protoToCodespace } from "./proto-converters.js";
@@ -46,7 +46,7 @@ export function useCodespaces(): UseCodespacesResult {
         await listCodespaces();
       } catch (err) {
         setCodespaceCreating(false);
-        const message = err instanceof ConnectError ? err.message : "Failed to create codespace";
+        const message = extractErrorMessage(err, "Failed to create codespace");
         setCodespaceError(message);
       }
     },

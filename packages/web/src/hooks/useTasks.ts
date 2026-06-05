@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
-import { ConnectError, Code } from "@connectrpc/connect";
+import { mapError, extractErrorMessage } from "./grackleError.js";
 import type { TaskData, GrackleEvent, WsMessage, UseTasksResult } from "@grackle-ai/web-components";
 import type { DomainHook } from "./domainHook.js";
 import { orchestrationClient as grackleClient } from "./useGrackleClient.js";
@@ -190,7 +190,7 @@ export function useTasks(): UseTasksResult {
         });
         onSuccess?.();
       } catch (err) {
-        const message = err instanceof ConnectError ? err.message : "Failed to create task";
+        const message = extractErrorMessage(err, "Failed to create task");
         onError?.(message);
       }
     },
@@ -212,7 +212,7 @@ export function useTasks(): UseTasksResult {
         // loading state so the UI shows the task is "starting". The dispatch
         // tick will start it when capacity frees up, and the event-driven
         // refresh will clear the loading state naturally.
-        if (err instanceof ConnectError && err.code === Code.ResourceExhausted) {
+        if (mapError(err).code === "resource_exhausted") {
           return;
         }
         setTaskStartingId(undefined);

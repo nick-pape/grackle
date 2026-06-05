@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { useParams, useLocation } from "react-router";
-import { ConnectError } from "@connectrpc/connect";
 import { useGrackle } from "../context/GrackleContext.js";
+import { extractErrorMessage } from "../hooks/grackleError.js";
 import { useSandboxProxyUrl } from "../context/ManifestContext.js";
 import {
   ChatInput,
@@ -296,8 +296,7 @@ export function TaskPage(): JSX.Element {
             isBlocked={isTaskBlocked}
             onStart={() => {
               startTask(task.id, undefined, selectedEnvId).catch((err) => {
-                const message = err instanceof ConnectError ? err.message : "Failed to start task";
-                showToast(message, "error");
+                showToast(extractErrorMessage(err, "Failed to start task"), "error");
               });
             }}
             onResume={() => {
@@ -446,9 +445,7 @@ export function TaskPage(): JSX.Element {
                         className={styles.ctaButton}
                         onClick={() => {
                           startTask(task.id, undefined, selectedEnvId).catch((err) => {
-                            const message =
-                              err instanceof ConnectError ? err.message : "Failed to start task";
-                            showToast(message, "error");
+                            showToast(extractErrorMessage(err, "Failed to start task"), "error");
                           });
                         }}
                       >
