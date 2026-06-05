@@ -30,7 +30,7 @@ describe("listStreams", () => {
 
     expect(res.streams).toHaveLength(1);
     expect(res.streams[0].name).toBe("test-channel");
-    expect(res.streams[0].id).toEqual(expect.any(String));
+    expect(res.streams[0].id).toEqual(expect.stringMatching(/.+/));
     expect(res.streams[0].subscriberCount).toBe(1);
     expect(res.streams[0].messageBufferDepth).toBe(0);
   });

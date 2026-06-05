@@ -17,7 +17,7 @@ describe("BUILTIN_COMPONENTS", () => {
 
   it("each entry is well-formed with a JSON-Schema-shaped propsSchema", () => {
     for (const c of BUILTIN_COMPONENTS) {
-      expect(c.name).toEqual(expect.any(String));
+      expect(c.name).toEqual(expect.stringMatching(/.+/));
       expect(c.description.length, `${c.name} description`).toBeGreaterThan(0);
       expect(c.example.length, `${c.name} example`).toBeGreaterThan(0);
       const schema = JSON.parse(c.propsSchema) as Record<string, unknown>;

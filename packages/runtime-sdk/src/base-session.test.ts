@@ -187,7 +187,7 @@ describe("BaseAgentSession turn framing (AHP HR2)", () => {
 
     expect(started).toBeDefined();
     expect(started!.content).toBe("do the thing");
-    expect(started!.turnId).toEqual(expect.any(String));
+    expect(started!.turnId).toEqual(expect.stringMatching(/.+/));
     expect(text!.turnId).toBe(started!.turnId);
     expect(complete!.turnId).toBe(started!.turnId);
     // Ordering: turn_started → content → turn_complete.
@@ -216,7 +216,7 @@ describe("BaseAgentSession turn framing (AHP HR2)", () => {
     const text = after.find((e) => e.type === "text")!;
     const complete = after.find((e) => e.type === "turn_complete")!;
     expect(started.content).toBe("follow up");
-    expect(started.turnId).toEqual(expect.any(String));
+    expect(started.turnId).toEqual(expect.stringMatching(/.+/));
     expect(started.turnId).not.toBe(initialTurnId);
     expect(text.turnId).toBe(started.turnId);
     expect(complete.turnId).toBe(started.turnId);
@@ -266,7 +266,7 @@ describe("BaseAgentSession turn framing (AHP HR2)", () => {
     const drained = session.drainBufferedEvents();
 
     const started = drained.find((x) => x.type === "turn_started" && x.content === "buffered");
-    expect(started?.turnId).toEqual(expect.any(String));
+    expect(started?.turnId).toEqual(expect.stringMatching(/.+/));
     expect(drained.find((x) => x.type === "text")?.turnId).toBe(started?.turnId);
     // turn_complete is not yet emitted (executeFollowUp is gated).
     expect(drained.some((x) => x.type === "turn_complete")).toBe(false);
@@ -286,7 +286,7 @@ describe("BaseAgentSession turn framing (AHP HR2)", () => {
     const after = await drainUntilStatus(nextEvent, "waiting_input");
     const started = after.find((e) => e.type === "turn_started")!;
     expect(started.content).toBe("first after resume");
-    expect(started.turnId).toEqual(expect.any(String));
+    expect(started.turnId).toEqual(expect.stringMatching(/.+/));
 
     session.kill();
   });
@@ -309,7 +309,7 @@ describe("BaseAgentSession turn framing (AHP HR2)", () => {
 
     // The turn WAS opened (beginTurn fires before the failing query).
     expect(turnStarted).toBeDefined();
-    expect(turnStarted!.turnId).toEqual(expect.any(String));
+    expect(turnStarted!.turnId).toEqual(expect.stringMatching(/.+/));
 
     // Terminal events are turn-less — currentTurnId is cleared in the catch,
     // mirroring kill() (AHP HR2).
