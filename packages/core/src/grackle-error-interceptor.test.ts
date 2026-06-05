@@ -7,6 +7,7 @@ import {
   ValidationError,
 } from "@grackle-ai/common";
 import { grackleErrorInterceptor } from "./grackle-error-interceptor.js";
+import { wrapAsyncIterableWithTrace, getTraceId, runWithTrace } from "./trace-context.js";
 
 /**
  * Build a fake unary "next" function for the interceptor.
@@ -175,6 +176,94 @@ describe("grackleErrorInterceptor", () => {
           }
         })(),
       ).rejects.toBe(original);
+    });
+  });
+
+  describe("composition with trace-context interceptor", () => {
+    /**
+     * Simulates the real server interceptor stack: error interceptor (outermost)
+     * wraps trace interceptor (inner), which wraps the handler's stream with
+     * wrapAsyncIterableWithTrace. A GrackleError thrown mid-stream must still
+     * be translated to ConnectError even when the trace wrapper sits between.
+     */
+    it("translates GrackleError mid-stream when trace wrapper is in the middle", async () => {
+      const traceId = "test-trace-abc";
+
+      async function* handlerStream(): AsyncIterable<number> {
+        yield 1;
+        yield 2;
+        throw new NotFoundError("stream entity gone");
+      }
+
+      const traceInterceptor =
+        (next: (req: unknown) => Promise<unknown>) => async (req: unknown) => {
+          const response = await runWithTrace(traceId, () => next(req));
+          if (typeof response === "object" && response !== null && "stream" in response) {
+            const resp = response as { stream: true; message: AsyncIterable<unknown> };
+            resp.message = wrapAsyncIterableWithTrace(traceId, resp.message);
+          }
+          return response;
+        };
+
+      const composedNext = streamingNext(handlerStream);
+      const withTrace = traceInterceptor(composedNext);
+      const withError = grackleErrorInterceptor(withTrace);
+
+      const response = (await withError({} as never)) as {
+        stream: true;
+        message: AsyncIterable<number>;
+      };
+
+      const collected: number[] = [];
+      await expect(
+        (async () => {
+          for await (const item of response.message) {
+            collected.push(item as number);
+          }
+        })(),
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ConnectError);
+        const ce = err as ConnectError;
+        expect(ce.code).toBe(Code.NotFound);
+        expect(ce.rawMessage).toBe("stream entity gone");
+        return true;
+      });
+      expect(collected).toEqual([1, 2]);
+    });
+
+    it("preserves trace context through successful stream with error interceptor", async () => {
+      const traceId = "trace-preserve-123";
+      const capturedIds: (string | undefined)[] = [];
+
+      async function* handlerStream(): AsyncIterable<number> {
+        capturedIds.push(getTraceId());
+        yield 1;
+        capturedIds.push(getTraceId());
+        yield 2;
+      }
+
+      const traceInterceptor =
+        (next: (req: unknown) => Promise<unknown>) => async (req: unknown) => {
+          const response = await runWithTrace(traceId, () => next(req));
+          if (typeof response === "object" && response !== null && "stream" in response) {
+            const resp = response as { stream: true; message: AsyncIterable<unknown> };
+            resp.message = wrapAsyncIterableWithTrace(traceId, resp.message);
+          }
+          return response;
+        };
+
+      const composedNext = streamingNext(handlerStream);
+      const withTrace = traceInterceptor(composedNext);
+      const withError = grackleErrorInterceptor(withTrace);
+
+      const response = (await withError({} as never)) as {
+        stream: true;
+        message: AsyncIterable<number>;
+      };
+      const values = await collect(response.message);
+
+      expect(values).toEqual([1, 2]);
+      expect(capturedIds).toEqual([traceId, traceId]);
     });
   });
 });
