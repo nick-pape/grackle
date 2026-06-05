@@ -1,12 +1,14 @@
 import type { Interceptor } from "@connectrpc/connect";
 import { ConnectError } from "@connectrpc/connect";
 import { GrackleError } from "@grackle-ai/common";
+import { logger } from "./logger.js";
 
 /**
  * Translate a caught error into a ConnectError for the gRPC wire.
  *
  * - ConnectError → pass through unchanged
- * - GrackleError → new ConnectError with the domain error's code and message
+ * - GrackleError → new ConnectError with the domain error's code and message;
+ *   structured context is logged at debug level before being discarded
  * - Anything else → ConnectError.from (produces Code.Unknown with cause)
  */
 function translateError(err: unknown): ConnectError {
@@ -14,6 +16,9 @@ function translateError(err: unknown): ConnectError {
     return err;
   }
   if (err instanceof GrackleError) {
+    if (Object.keys(err.context).length > 0) {
+      logger.debug({ err, context: err.context }, "GrackleError context");
+    }
     return new ConnectError(err.message, err.code);
   }
   return ConnectError.from(err);

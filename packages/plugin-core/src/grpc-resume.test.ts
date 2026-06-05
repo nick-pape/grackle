@@ -177,7 +177,6 @@ describe("gRPC resumeAgent", () => {
     const err = (await handlers
       .resumeAgent({ sessionId: "no-such" })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
     expect(err.message).toContain("no-such");
   });
@@ -193,7 +192,6 @@ describe("gRPC resumeAgent", () => {
     const err = (await handlers
       .resumeAgent({ sessionId: "sess-1" })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("already active");
   });
@@ -206,7 +204,6 @@ describe("gRPC resumeAgent", () => {
     const err = (await handlers
       .resumeAgent({ sessionId: "sess-1" })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("no runtime session ID");
   });
@@ -222,7 +219,6 @@ describe("gRPC resumeAgent", () => {
     const err = (await handlers
       .resumeAgent({ sessionId: "sess-1" })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("already has active session");
   });
@@ -235,7 +231,6 @@ describe("gRPC resumeAgent", () => {
     const err = (await handlers
       .resumeAgent({ sessionId: "sess-1" })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("not connected");
   });
@@ -269,7 +264,6 @@ describe("gRPC resumeAgent", () => {
     const err = (await handlers
       .resumeAgent({ sessionId: "sess-1" })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("not connected");
   });
@@ -299,7 +293,6 @@ describe("gRPC resumeTask", () => {
     const err = (await handlers
       .resumeTask({ id: "task-1" })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
@@ -310,7 +303,6 @@ describe("gRPC resumeTask", () => {
     const err = (await handlers
       .resumeTask({ id: "task-1" })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
   });
 
@@ -323,7 +315,6 @@ describe("gRPC resumeTask", () => {
     const err = (await handlers
       .resumeTask({ id: "task-1" })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("no runtime session ID");
   });

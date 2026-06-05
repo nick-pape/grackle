@@ -106,7 +106,6 @@ describe("gRPC addEnvironment handlers", () => {
       .addEnvironment({ displayName: "", adapterType: "local" })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
     expect(err.message).toContain("displayName is required");
   });
@@ -116,7 +115,6 @@ describe("gRPC addEnvironment handlers", () => {
       .addEnvironment({ displayName: "missing-adapter", adapterType: "" })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
     expect(err.message).toContain("adapterType is required");
   });
@@ -189,9 +187,8 @@ describe("gRPC updateEnvironment handlers", () => {
       .updateEnvironment({ id: environmentId, displayName: "  " })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
-    expect(err.message).toContain("Environment name cannot be empty");
+    expect(err.message).toContain("displayName cannot be empty");
   });
 
   it("updateEnvironment rejects unknown environment ID", async () => {
@@ -199,7 +196,6 @@ describe("gRPC updateEnvironment handlers", () => {
       .updateEnvironment({ id: "nonexistent-env-id", displayName: "should-fail" })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
     expect(err.message).toContain("Environment not found");
   });
@@ -230,7 +226,6 @@ describe("gRPC removeEnvironment — agent home guard (#1418)", () => {
     const err = (await handlers.removeEnvironment({ id: envId }).catch((e: unknown) => e)) as
       | ConnectError
       | Error;
-    expect(err).toBeInstanceOf(ConnectError);
     expect((err as ConnectError).code).toBe(Code.FailedPrecondition);
     expect((err as ConnectError).message).toContain("standing agent");
     expect((err as ConnectError).message).toContain("Homed Bot");

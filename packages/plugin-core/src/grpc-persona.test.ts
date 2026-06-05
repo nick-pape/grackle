@@ -227,7 +227,6 @@ describe("gRPC persona handlers", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.message).toContain("nonexistent_tool");
   });
 

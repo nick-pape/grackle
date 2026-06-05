@@ -98,7 +98,6 @@ describe("linkEnvironment", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
@@ -113,7 +112,6 @@ describe("linkEnvironment", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
@@ -129,7 +127,6 @@ describe("linkEnvironment", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
   });
 });
@@ -176,7 +173,6 @@ describe("unlinkEnvironment", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
   });
 
@@ -190,7 +186,6 @@ describe("unlinkEnvironment", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
@@ -205,7 +200,6 @@ describe("unlinkEnvironment", () => {
       })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 });

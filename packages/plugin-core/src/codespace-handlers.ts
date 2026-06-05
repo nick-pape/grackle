@@ -1,10 +1,10 @@
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, UnavailableError } from "@grackle-ai/common";
 import { exec } from "@grackle-ai/core";
 import { githubAccountStore } from "@grackle-ai/database";
 import { formatGhError } from "./utils/format-gh-error.js";
 import { logger } from "@grackle-ai/core";
+import { requireTrimmed } from "./require-helpers.js";
 
 /** Timeout for `gh codespace list` in milliseconds. */
 const GH_CODESPACE_LIST_TIMEOUT_MS: number = 30_000;
@@ -60,10 +60,7 @@ export async function listCodespaces(
 export async function createCodespace(
   req: grackle.CreateCodespaceRequest,
 ): Promise<grackle.CreateCodespaceResponse> {
-  if (!req.repo.trim()) {
-    throw new ConnectError("repo is required", Code.InvalidArgument);
-  }
-  const trimmedRepo = req.repo.trim();
+  const trimmedRepo = requireTrimmed(req.repo, "repo");
   const createArgs = ["codespace", "create", "--repo", trimmedRepo];
   if (req.machine.trim()) {
     createArgs.push("--machine", req.machine.trim());
@@ -78,6 +75,6 @@ export async function createCodespace(
     });
   } catch (err) {
     logger.error({ err, repo: trimmedRepo }, "Failed to create codespace");
-    throw new ConnectError(formatGhError(err, "create codespace"), Code.Internal);
+    throw new UnavailableError(formatGhError(err, "create codespace"));
   }
 }

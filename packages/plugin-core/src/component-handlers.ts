@@ -1,4 +1,3 @@
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import {
   grackle,
@@ -6,16 +5,18 @@ import {
   type FuzzyKey,
   BUILTIN_COMPONENTS,
   extractComponentReferenceNames,
+  NotFoundError,
+  ValidationError,
 } from "@grackle-ai/common";
 import { componentStore } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
 import { v4 as uuid } from "uuid";
 import { componentRowToProto } from "./grpc-proto-converters.js";
-import { requireField, requireTrimmed, requireWorkspace } from "./require-helpers.js";
+import { requireField, requireOneOf, requireTrimmed, requireWorkspace } from "./require-helpers.js";
 
 /** Wrap store validation errors (e.g. body-size cap) as INVALID_ARGUMENT. */
 function asInvalidArgument(err: unknown): never {
-  throw new ConnectError(err instanceof Error ? err.message : String(err), Code.InvalidArgument);
+  throw new ValidationError(err instanceof Error ? err.message : String(err));
 }
 
 /** Register a new agent-authored component in the caller's workspace. */
@@ -55,7 +56,7 @@ export async function updateComponent(
   const existing = componentStore.getComponent(req.id);
   // Workspace isolation: treat a component in another workspace as not found.
   if (!existing || (req.workspaceId && existing.workspaceId !== req.workspaceId)) {
-    throw new ConnectError(`Component not found: ${req.id}`, Code.NotFound);
+    throw new NotFoundError(`Component not found: ${req.id}`, { id: req.id });
   }
   try {
     componentStore.updateComponent(req.id, {
@@ -87,17 +88,18 @@ export async function getComponent(req: grackle.GetComponentRequest): Promise<gr
     }
   } else if (req.name) {
     if (!req.workspaceId) {
-      throw new ConnectError(
-        "workspaceId is required to resolve a component by name",
-        Code.InvalidArgument,
-      );
+      throw new ValidationError("workspaceId is required to resolve a component by name");
     }
     row = componentStore.findComponentByName(req.workspaceId, req.name);
   } else {
-    throw new ConnectError("id or name is required", Code.InvalidArgument);
+    requireOneOf({ id: req.id, name: req.name });
   }
   if (!row) {
-    throw new ConnectError("Component not found", Code.NotFound);
+    throw new NotFoundError("Component not found", {
+      id: req.id,
+      name: req.name,
+      workspaceId: req.workspaceId,
+    });
   }
   return componentRowToProto(row);
 }
@@ -212,10 +214,14 @@ export async function setComponentPromotion(
   } else if (req.name) {
     row = componentStore.findComponentByName(req.workspaceId, req.name);
   } else {
-    throw new ConnectError("id or name is required", Code.InvalidArgument);
+    requireOneOf({ id: req.id, name: req.name });
   }
   if (!row) {
-    throw new ConnectError("Component not found", Code.NotFound);
+    throw new NotFoundError("Component not found", {
+      id: req.id,
+      name: req.name,
+      workspaceId: req.workspaceId,
+    });
   }
   // `promoted` is optional on the wire so unset is distinguishable from false;
   // an unset value means "promote" (matches the component_promote tool default).
@@ -264,11 +270,16 @@ export async function resolveComponentGraph(
       root = undefined; // workspace isolation
     }
     if (!root) {
-      throw new ConnectError("Component not found", Code.NotFound);
+      throw new NotFoundError("Component not found", {
+        id: req.id,
+        name: req.name,
+        workspaceId: req.workspaceId,
+      });
     }
     rootBody = root.body;
   } else {
-    throw new ConnectError("id, name, or source is required", Code.InvalidArgument);
+    requireOneOf({ source: req.source, id: req.id, name: req.name });
+    rootBody = ""; // unreachable — requireOneOf throws
   }
 
   const ordered: componentStore.ComponentRow[] = [];

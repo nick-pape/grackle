@@ -135,7 +135,6 @@ describe("gRPC getSession", () => {
     const err = (await handlers
       .getSession({ id: "nonexistent" })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
     expect(err.message).toContain("nonexistent");
   });

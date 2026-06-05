@@ -40,6 +40,7 @@ export {
   requireField,
   requireTrimmed,
   requireNonEmpty,
+  requireOneOf,
   requireWorkspace,
   requireEnvironment,
   requireSession,
