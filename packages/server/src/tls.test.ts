@@ -43,8 +43,8 @@ describe("loadSecureContext (#1373)", () => {
     const firstCall = infoSpy.mock.calls[0]!;
     const meta = firstCall[0] as { subject?: string; validFrom?: string; validTo?: string };
     expect(meta.subject).toContain("CN=localhost");
-    expect(meta.validFrom).toMatch(/^\d{4}-\d{2}-\d{2}/);
-    expect(meta.validTo).toMatch(/^\d{4}-\d{2}-\d{2}/);
+    expect(new Date(meta.validFrom!).getTime()).not.toBeNaN();
+    expect(new Date(meta.validTo!).getTime()).not.toBeNaN();
   });
 
   it("wraps cert-read errors with a clear message", () => {

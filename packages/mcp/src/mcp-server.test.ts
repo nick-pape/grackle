@@ -411,7 +411,7 @@ describe("MCP session cleanup on SSE disconnect", () => {
 
     // 1. Initialize a session
     const sessionId = await initialize(server!);
-    expect(typeof sessionId).toBe("string");
+    expect(sessionId).toEqual(expect.stringMatching(/.+/));
 
     // 2. Verify session is alive
     const alive = await postToSession(server!, sessionId);

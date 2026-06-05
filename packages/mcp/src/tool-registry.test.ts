@@ -177,11 +177,11 @@ describe("Full tool registry", () => {
   it("every tool has all required fields", () => {
     const registry = createToolRegistry();
     for (const tool of registry.list()) {
-      expect(tool.name).toEqual(expect.any(String));
-      expect(tool.group).toEqual(expect.any(String));
+      expect(tool.name).toEqual(expect.stringMatching(/.+/));
+      expect(tool.group).toEqual(expect.stringMatching(/.+/));
       expect(tool.description.length).toBeGreaterThanOrEqual(20);
       expect(tool.inputSchema).toEqual(expect.any(Object));
-      expect(tool.rpcMethod).toEqual(expect.any(String));
+      expect(tool.rpcMethod).toEqual(expect.stringMatching(/.+/));
       expect(typeof tool.mutating).toBe("boolean");
       expect(typeof tool.handler).toBe("function");
     }
