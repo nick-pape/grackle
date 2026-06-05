@@ -6,6 +6,7 @@ export type { ComponentRow };
 
 /** Contract for component registry persistence. */
 export interface ComponentStore {
+  readonly MAX_COMPONENT_BODY_CHARS: number;
   registerComponent(fields: RegisterComponentFields): void;
   updateComponent(id: string, fields: UpdateComponentFields): boolean;
   getComponent(id: string): ComponentRow | undefined;
@@ -141,6 +142,7 @@ export function setPromoted(id: string, promoted: boolean): boolean {
 }
 
 const _typeCheck: ComponentStore = {
+  MAX_COMPONENT_BODY_CHARS,
   registerComponent,
   updateComponent,
   getComponent,

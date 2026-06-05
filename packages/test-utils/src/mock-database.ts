@@ -173,6 +173,7 @@ function createAgentStoreMock(): MockedStore<AgentStore> {
 /** Create a typed mock of the component store. */
 function createComponentStoreMock(): MockedStore<ComponentStore> {
   return {
+    MAX_COMPONENT_BODY_CHARS: 256 * 1024,
     registerComponent: vi.fn(),
     updateComponent: vi.fn(() => false),
     getComponent: vi.fn(() => undefined),
@@ -186,6 +187,7 @@ function createComponentStoreMock(): MockedStore<ComponentStore> {
 /** Create a typed mock of the settings store. */
 function createSettingsStoreMock(): MockedStore<SettingsStore> {
   return {
+    WRITABLE_SETTING_KEYS: new Set(["default_persona_id", "onboarding_completed"]),
     getSetting: vi.fn(() => undefined),
     setSetting: vi.fn(),
     isAllowedSettingKey: vi.fn(() => true),
@@ -205,6 +207,9 @@ function createTokenStoreMock(): MockedStore<TokenStore> {
 /** Create a typed mock of the credential provider store. */
 function createCredentialProvidersMock(): MockedStore<CredentialProviderStore> {
   return {
+    VALID_PROVIDERS: ["claude", "github", "copilot", "codex", "goose"],
+    VALID_CLAUDE_VALUES: new Set(["off", "subscription", "api_key"]),
+    VALID_TOGGLE_VALUES: new Set(["off", "on"]),
     getCredentialProviders: vi.fn(() => ({
       claude: "off" as const,
       github: "off" as const,
@@ -381,17 +386,9 @@ export function createDatabaseMock(): Record<string, unknown> {
     personaStore: createPersonaStoreMock(),
     agentStore: createAgentStoreMock(),
     componentStore: createComponentStoreMock(),
-    settingsStore: {
-      ...createSettingsStoreMock(),
-      WRITABLE_SETTING_KEYS: new Set(["default_persona_id", "onboarding_completed"]),
-    },
+    settingsStore: createSettingsStoreMock(),
     tokenStore: createTokenStoreMock(),
-    credentialProviders: {
-      ...createCredentialProvidersMock(),
-      VALID_PROVIDERS: ["claude", "github", "copilot", "codex", "goose"],
-      VALID_CLAUDE_VALUES: new Set(["off", "subscription", "api_key"]),
-      VALID_TOGGLE_VALUES: new Set(["off", "on"]),
-    },
+    credentialProviders: createCredentialProvidersMock(),
     scheduleStore: createScheduleStoreMock(),
     escalationStore: createEscalationStoreMock(),
     workspaceEnvironmentLinkStore: createWorkspaceEnvironmentLinkStoreMock(),
