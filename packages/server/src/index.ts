@@ -27,8 +27,8 @@ import {
   publishDocumentShow,
   setSpawnContextProviders,
 } from "@grackle-ai/core";
-import { createKnowledgePlugin, getKnowledgeReadinessCheck } from "@grackle-ai/plugin-knowledge";
-import { loadPlugins, type PluginContext } from "@grackle-ai/plugin-sdk";
+import { getKnowledgeReadinessCheck } from "@grackle-ai/plugin-knowledge";
+import { loadPlugins, resolveEnabledPlugins, type PluginContext } from "@grackle-ai/plugin-sdk";
 import {
   envRegistry,
   sessionStore,
@@ -82,9 +82,7 @@ import { createRequire } from "node:module";
 import { initializeDatabase } from "./database-init.js";
 import { registerAllAdapters } from "./adapter-registry.js";
 import { bootstrapLocalEnvironment } from "./local-environment.js";
-import { createCorePlugin } from "./core-plugin.js";
-import { createSchedulingPlugin } from "@grackle-ai/plugin-scheduling";
-import { createOrchestrationPlugin } from "@grackle-ai/plugin-orchestration";
+import { validatePluginRegistrations } from "./plugin-registration.js";
 import {
   setLoadedPluginNames,
   setChannelConfig,
@@ -99,6 +97,9 @@ async function main(): Promise<void> {
   // Initialized to a no-op so server error handlers that fire before createShutdown()
   // don't throw. Replaced with the real shutdown function after all servers are created.
   let shutdown: () => Promise<void> = async () => {};
+
+  // Fail fast if any expected plugin failed to register (e.g. import removed or made lazy).
+  validatePluginRegistrations();
 
   // Resolve and validate all server configuration from env vars (fail fast on invalid values)
   const config = resolveServerConfig();
@@ -303,18 +304,10 @@ async function main(): Promise<void> {
     },
   };
 
-  // DB is the sole authority on plugin enabled state after initial seeding.
-  // The ?? true fallback is defense-in-depth: should never trigger after seedDatabase() runs.
-  const plugins = [createCorePlugin()];
-  if (pluginStore.getPluginEnabled("orchestration") ?? true) {
-    plugins.push(createOrchestrationPlugin());
-  }
-  if (pluginStore.getPluginEnabled("scheduling") ?? true) {
-    plugins.push(createSchedulingPlugin());
-  }
-  if (pluginStore.getPluginEnabled("knowledge") ?? true) {
-    plugins.push(createKnowledgePlugin());
-  }
+  // Resolve which plugins are enabled from the DB-persisted state. Required
+  // plugins are always included; optional ones respect the DB (falling back to
+  // their declared defaultEnabled when no DB row exists).
+  const plugins = resolveEnabledPlugins(pluginStore.getPluginEnabled);
   const loaded = await loadPlugins(plugins, pluginContext);
   setLoadedPluginNames(new Set(loaded.pluginNames));
   // Expose plugin-contributed system-prompt sections to the spawn paths (#1259).

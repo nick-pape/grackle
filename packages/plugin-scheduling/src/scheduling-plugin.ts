@@ -8,6 +8,7 @@
  */
 
 import type { GracklePlugin, PluginContext } from "@grackle-ai/plugin-sdk";
+import { registerPlugin } from "@grackle-ai/plugin-sdk";
 import { grackle } from "@grackle-ai/common";
 import {
   scheduleStore,
@@ -54,6 +55,15 @@ export function resolveEnvironmentForHeartbeat(task: TaskModel): string | undefi
  *
  * @returns A GracklePlugin ready to pass to `loadPlugins()`.
  */
+registerPlugin({
+  name: "scheduling",
+  description: "Scheduled triggers — cron and interval-based task automation",
+  required: false,
+  defaultEnabled: true,
+  envOverride: { variable: "GRACKLE_SKIP_SCHEDULING", semantics: "skip" },
+  create: createSchedulingPlugin,
+});
+
 export function createSchedulingPlugin(): GracklePlugin {
   return {
     name: "scheduling",

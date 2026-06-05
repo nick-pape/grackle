@@ -4,6 +4,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const callOrder: string[] = [];
 
+vi.mock("@grackle-ai/plugin-sdk", () => ({
+  getRegisteredPlugins: vi.fn(() => [
+    { name: "orchestration", required: false, defaultEnabled: true },
+    { name: "scheduling", required: false, defaultEnabled: true },
+    { name: "core", required: true, defaultEnabled: true },
+  ]),
+}));
+
 vi.mock("@grackle-ai/database", () => ({
   openDatabase: vi.fn(() => {
     callOrder.push("openDatabase");
@@ -60,9 +68,12 @@ describe("initializeDatabase", () => {
     expect(initDatabase).toHaveBeenCalledOnce();
   });
 
-  it("passes sqlite to seedDatabase", () => {
+  it("passes sqlite and plugin seeds to seedDatabase", () => {
     initializeDatabase();
-    expect(seedDatabase).toHaveBeenCalledWith(sqlite);
+    expect(seedDatabase).toHaveBeenCalledWith(sqlite, [
+      { name: "orchestration", defaultEnabled: true, envOverride: undefined },
+      { name: "scheduling", defaultEnabled: true, envOverride: undefined },
+    ]);
   });
 
   it("calls startWalCheckpointTimer", () => {

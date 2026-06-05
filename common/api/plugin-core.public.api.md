@@ -126,6 +126,9 @@ export interface EnvironmentReconciliationDeps {
 }
 
 // @public
+export function getPluginRegistry(): ReadonlyArray<PluginRegistryEntry>;
+
+// @public
 export function handleAgentCreated(deps: AgentRootTaskBootDeps, payload: {
     agentId: string;
 }): void;
@@ -159,9 +162,6 @@ export interface OrphanPhaseDeps {
     listAllTasks: () => TaskRow[];
     reparentTask: (taskId: string, newParentTaskId: string) => void;
 }
-
-// @public
-export const PLUGIN_REGISTRY: ReadonlyArray<PluginRegistryEntry>;
 
 // @public
 export interface PluginRegistryEntry {

@@ -9,6 +9,7 @@
  */
 
 import type { GracklePlugin } from "@grackle-ai/plugin-sdk";
+import { registerPlugin } from "@grackle-ai/plugin-sdk";
 import { grackle } from "@grackle-ai/common";
 import { createCoreCollector } from "@grackle-ai/plugin-core";
 import { createCoreReconciliationPhases } from "./reconciliation-setup.js";
@@ -25,6 +26,14 @@ import { createEventSubscribers } from "./event-subscribers.js";
  *
  * @returns A GracklePlugin ready to pass to `loadPlugins()`.
  */
+registerPlugin({
+  name: "core",
+  description: "Core infrastructure — environments, sessions, workspaces, tokens, settings",
+  required: true,
+  defaultEnabled: true,
+  create: createCorePlugin,
+});
+
 export function createCorePlugin(): GracklePlugin {
   return {
     name: "core",

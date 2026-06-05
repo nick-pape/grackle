@@ -1,9 +1,11 @@
 /**
- * Server-side plugin registry — static metadata for all known plugins, plus
- * runtime tracking of which plugins are currently loaded.
+ * Server-side plugin registry — delegates to the plugin-sdk global registry
+ * for metadata, plus runtime tracking of which plugins are currently loaded.
  *
  * @module
  */
+
+import { getRegisteredPlugins } from "@grackle-ai/plugin-sdk";
 
 /** Metadata for a single plugin known to the server. */
 export interface PluginRegistryEntry {
@@ -18,36 +20,19 @@ export interface PluginRegistryEntry {
 }
 
 /**
- * Static registry of all plugins known to the server.
+ * Get all registered plugin metadata from the global plugin registry.
  *
- * The order determines display order in list outputs.
+ * Returns entries in registration order (deterministic — set by import order
+ * in the server). Replaces the old static `PLUGIN_REGISTRY` array.
  */
-export const PLUGIN_REGISTRY: ReadonlyArray<PluginRegistryEntry> = [
-  {
-    name: "core",
-    description: "Core infrastructure — environments, sessions, workspaces, tokens, settings",
-    required: true,
-    defaultEnabled: true,
-  },
-  {
-    name: "orchestration",
-    description: "Task orchestration — tasks, personas, findings, escalations",
-    required: false,
-    defaultEnabled: true,
-  },
-  {
-    name: "scheduling",
-    description: "Scheduled triggers — cron and interval-based task automation",
-    required: false,
-    defaultEnabled: true,
-  },
-  {
-    name: "knowledge",
-    description: "Knowledge graph — semantic search and relationship mapping",
-    required: false,
-    defaultEnabled: true,
-  },
-];
+export function getPluginRegistry(): ReadonlyArray<PluginRegistryEntry> {
+  return getRegisteredPlugins().map((reg) => ({
+    name: reg.name,
+    description: reg.description,
+    required: reg.required,
+    defaultEnabled: reg.defaultEnabled,
+  }));
+}
 
 /** Set of plugin names that are currently loaded (running) in this server instance. */
 let loadedPluginNames: Set<string> = new Set();
