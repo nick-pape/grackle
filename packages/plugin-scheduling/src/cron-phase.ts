@@ -12,7 +12,12 @@ import { computeNextRunAt } from "./schedule-expression.js";
 import type { ScheduleRow, SessionRow } from "@grackle-ai/database";
 import type { GrackleEventType, TaskModel } from "@grackle-ai/core";
 import type { ReconciliationPhase } from "@grackle-ai/plugin-sdk";
-import { ROOT_TASK_ID, SESSION_STATUS, type SessionStatus } from "@grackle-ai/common";
+import {
+  ROOT_TASK_ID,
+  SESSION_STATUS,
+  type SessionStatus,
+  serverTimestamp,
+} from "@grackle-ai/common";
 
 /**
  * Session statuses considered "alive" — a heartbeat tick whose target task
@@ -143,7 +148,7 @@ function computeNextOrDisable(deps: CronPhaseDeps, schedule: ScheduleRow): strin
 
 /** Fire a heartbeat-style schedule (#1438): reanimate target session, or fresh-spawn. */
 async function fireScheduleAsHeartbeat(deps: CronPhaseDeps, schedule: ScheduleRow): Promise<void> {
-  const now = new Date().toISOString();
+  const now = serverTimestamp();
   const nextRunAt = computeNextOrDisable(deps, schedule);
   if (!nextRunAt) {
     return;
@@ -236,7 +241,7 @@ async function fireScheduleAsHeartbeat(deps: CronPhaseDeps, schedule: ScheduleRo
 
 /** Fire a fresh-task schedule (today's behavior): create new task, enqueue, advance. */
 function fireScheduleAsTask(deps: CronPhaseDeps, schedule: ScheduleRow): void {
-  const now = new Date().toISOString();
+  const now = serverTimestamp();
   const nextRunAt = computeNextOrDisable(deps, schedule);
   if (!nextRunAt) {
     return;

@@ -9,6 +9,7 @@ import {
   delegationIdentityKey,
   deriveChildSessionId,
   readAgentResultStatus,
+  serverTimestamp,
 } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import type { ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
@@ -97,7 +98,7 @@ export function publishWidgetEvent(sessionId: string, payload: WidgetEventPayloa
     const event = create(grackle.SessionEventSchema, {
       sessionId,
       type: grackle.EventType.WIDGET,
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
       content: JSON.stringify(payload),
       raw: JSON.stringify({ widget: true, toolName: payload.toolName }),
     });
@@ -205,7 +206,7 @@ export function processEventStream(
         const sysCtxEvent = create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.SYSTEM,
-          timestamp: new Date().toISOString(),
+          timestamp: serverTimestamp(),
           content: options.systemContext,
           raw: JSON.stringify({ systemContext: true }),
         });
@@ -238,7 +239,7 @@ export function processEventStream(
         // (when consumer received it, not when producer emitted), which is
         // acceptable for display purposes — events still arrive in causal
         // order via the action stream's serverSeq monotonicity.
-        const eventTimestamp: string = event.timestamp || new Date().toISOString();
+        const eventTimestamp: string = event.timestamp || serverTimestamp();
         const eventRaw: string = event.raw ?? "";
         const eventToolCallId: string = event.toolCallId ?? "";
         const eventTurnId: string = event.turnId ?? "";
@@ -558,7 +559,7 @@ export function processEventStream(
         const suspendedEvent = create(grackle.SessionEventSchema, {
           sessionId,
           type: grackle.EventType.STATUS,
-          timestamp: new Date().toISOString(),
+          timestamp: serverTimestamp(),
           content: SESSION_STATUS.SUSPENDED,
         });
         suspendedEvent.serverSeq = recordSessionAction(suspendedEvent) ?? "";

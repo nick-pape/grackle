@@ -10,7 +10,7 @@
  */
 
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, serverTimestamp } from "@grackle-ai/common";
 import {
   ROOT_TASK_ID,
   SESSION_STATUS,
@@ -60,7 +60,7 @@ export function suspendSessionAndPublish(session: SessionRow): void {
     create(grackle.SessionEventSchema, {
       sessionId: session.id,
       type: grackle.EventType.STATUS,
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
       content: SESSION_STATUS.SUSPENDED,
       raw: "",
     }),
@@ -93,7 +93,7 @@ export function killSessionAndCleanup(session: SessionRow): void {
       create(grackle.SessionEventSchema, {
         sessionId: session.id,
         type: grackle.EventType.STATUS,
-        timestamp: new Date().toISOString(),
+        timestamp: serverTimestamp(),
         content: END_REASON.KILLED,
         raw: "",
       }),

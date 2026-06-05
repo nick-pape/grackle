@@ -10,6 +10,7 @@ import {
 import { accessSync, mkdirSync, copyFileSync, chmodSync, constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
+import { serverTimestamp } from "@grackle-ai/common";
 
 // Dynamic import — try @anthropic-ai/claude-agent-sdk first, then @anthropic-ai/claude-code
 type QueryFn = (opts: Record<string, unknown>) => Promise<unknown>;
@@ -90,7 +91,7 @@ function parseUsageFromMessage(msg: Record<string, unknown>): {
 
 /** @internal Map a raw Claude Agent SDK message to Grackle AgentEvent(s). Exported for testing. */
 export function mapMessage(msg: Record<string, unknown>): AgentEvent[] {
-  const ts = new Date().toISOString();
+  const ts = serverTimestamp();
   const type = msg.type as string | undefined;
 
   // SDK streaming format: { type: "assistant", message: { role, content: [...] } }
@@ -503,7 +504,7 @@ class ClaudeCodeSession extends BaseAgentSession {
   private async consumePersistentStream(
     conversation: AsyncIterable<Record<string, unknown>>,
   ): Promise<void> {
-    const ts: () => string = () => new Date().toISOString();
+    const ts: () => string = () => serverTimestamp();
 
     for await (const msg of conversation) {
       if (this.killed) {
@@ -636,7 +637,7 @@ class ClaudeCodeSession extends BaseAgentSession {
    */
   private async consumeQuery(prompt: string, sdkOptions: Record<string, unknown>): Promise<number> {
     const query: QueryFn = await getQuery();
-    const ts: () => string = () => new Date().toISOString();
+    const ts: () => string = () => serverTimestamp();
 
     // Reset cumulative usage baseline for this query() call. In resume-per-input
     // mode, each query() call reports usage cumulative within that call only (not

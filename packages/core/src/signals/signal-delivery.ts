@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle, SESSION_STATUS, END_REASON } from "@grackle-ai/common";
+import { grackle, SESSION_STATUS, END_REASON, serverTimestamp } from "@grackle-ai/common";
 import { sessionStore } from "@grackle-ai/database";
 import * as adapterManager from "../adapter-manager.js";
 import { reanimateAgent } from "../reanimate-agent.js";
@@ -128,7 +128,7 @@ export async function sendInputToSession(
     const signalEvent = create(grackle.SessionEventSchema, {
       sessionId,
       type: grackle.EventType.SIGNAL,
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
       content: text,
     });
     // Stamp the ULID before persisting + broadcasting so the UI can dedup the

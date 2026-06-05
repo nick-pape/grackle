@@ -1,7 +1,7 @@
 /** Task lifecycle handlers extracted from task-handlers.ts (#1470). @module */
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, serverTimestamp } from "@grackle-ai/common";
 import {
   SESSION_STATUS,
   TERMINAL_SESSION_STATUSES,
@@ -63,7 +63,7 @@ export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
         create(grackle.SessionEventSchema, {
           sessionId: "",
           type: grackle.EventType.SYSTEM,
-          timestamp: new Date().toISOString(),
+          timestamp: serverTimestamp(),
           content: JSON.stringify({
             type: "task_unblocked",
             taskId: t.id,
@@ -218,7 +218,7 @@ export async function stopTask(req: grackle.TaskId): Promise<grackle.Task> {
         create(grackle.SessionEventSchema, {
           sessionId: activeSession.id,
           type: grackle.EventType.STATUS,
-          timestamp: new Date().toISOString(),
+          timestamp: serverTimestamp(),
           content: END_REASON.INTERRUPTED,
           raw: "",
         }),

@@ -1,6 +1,7 @@
 import db from "./db.js";
 import { schedules, type ScheduleRow } from "./schema.js";
 import { eq, and, lte, sql } from "drizzle-orm";
+import { serverTimestamp } from "@grackle-ai/common";
 
 export type { ScheduleRow };
 
@@ -145,7 +146,7 @@ export function deleteSchedule(id: string): void {
  * These are the schedules that should fire on the current tick.
  */
 export function getDueSchedules(): ScheduleRow[] {
-  const now = new Date().toISOString();
+  const now = serverTimestamp();
   return db
     .select()
     .from(schedules)

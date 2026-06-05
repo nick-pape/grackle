@@ -3105,6 +3105,9 @@ export interface SequencedLogOptions<T> {
 }
 
 // @public
+export function serverEpochMs(): number;
+
+// @public
 type ServerEvent = Message<"grackle.ServerEvent"> & {
     event: {
         value: SessionEvent;
@@ -3123,6 +3126,9 @@ type ServerEvent = Message<"grackle.ServerEvent"> & {
 
 // @public
 const ServerEventSchema: GenMessage<ServerEvent>;
+
+// @public
+export function serverTimestamp(): string;
 
 // @public
 type Session = Message<"grackle.Session"> & {

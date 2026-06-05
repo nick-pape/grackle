@@ -30,6 +30,7 @@ import {
   END_REASON,
   TERMINAL_SESSION_STATUSES,
   SUBAGENT_RUNTIME,
+  serverTimestamp,
 } from "@grackle-ai/common";
 import type { DelegationInfo, SessionStatus } from "@grackle-ai/common";
 import { sessionStore } from "@grackle-ai/database";
@@ -89,7 +90,7 @@ function recordChildEvent(
   const event = create(grackle.SessionEventSchema, {
     sessionId: childSessionId,
     type,
-    timestamp: new Date().toISOString(),
+    timestamp: serverTimestamp(),
     content: clamp(content),
   });
   // serverSeq first so the durable log, JSONL, and live push share a dedup key.

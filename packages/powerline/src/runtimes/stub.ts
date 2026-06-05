@@ -7,7 +7,7 @@ import type {
   SpawnOptions,
   ResumeOptions,
 } from "@grackle-ai/runtime-sdk";
-import { SESSION_STATUS, assertTransition } from "@grackle-ai/common";
+import { SESSION_STATUS, assertTransition, serverTimestamp } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import {
   parseScenario,
@@ -108,7 +108,7 @@ export class StubSession implements AgentSession {
 
   /** Original hardcoded echo behavior, preserved for backward compatibility. */
   private async *runLegacy(): AsyncIterable<AgentEvent> {
-    const ts: () => string = () => new Date().toISOString();
+    const ts: () => string = () => serverTimestamp();
     this.transitionTo(SESSION_STATUS.RUNNING);
 
     yield { type: "system", timestamp: ts(), content: "Stub runtime initialized" };
@@ -191,7 +191,7 @@ export class StubSession implements AgentSession {
 
   /** Execute a parsed JSON scenario step by step. */
   private async *runScenario(): AsyncIterable<AgentEvent> {
-    const ts: () => string = () => new Date().toISOString();
+    const ts: () => string = () => serverTimestamp();
     this.transitionTo(SESSION_STATUS.RUNNING);
     const steps = this.scenario!.steps;
     let lastToolUseId: string | undefined;

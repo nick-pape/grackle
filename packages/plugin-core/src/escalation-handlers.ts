@@ -1,6 +1,6 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, serverTimestamp } from "@grackle-ai/common";
 import { escalationStore } from "@grackle-ai/database";
 import { ulid } from "ulid";
 import { routeEscalation, toEscalationModel } from "@grackle-ai/core";
@@ -48,7 +48,7 @@ export async function createEscalation(
         source: "explicit",
         urgency: req.urgency || "normal",
         status: "pending",
-        createdAt: new Date().toISOString(),
+        createdAt: serverTimestamp(),
         deliveredAt: null,
         acknowledgedAt: null,
         taskUrl,

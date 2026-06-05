@@ -5,6 +5,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { ensureWorktree, validateGitBranchName } from "./worktree.js";
 import { logger } from "./logger.js";
+import { serverTimestamp } from "@grackle-ai/common";
 
 // ─── Injectable interfaces ──────────────────────────────────
 
@@ -195,7 +196,7 @@ export async function resolveWorkingDirectory(
     git = NODE_GIT_REPOSITORY,
     locator = NODE_WORKSPACE_LOCATOR,
   } = options;
-  const ts = (): string => new Date().toISOString();
+  const ts = (): string => serverTimestamp();
 
   if (branch && workingDirectory && useWorktrees) {
     // Worktrees enabled — create a worktree for the branch.

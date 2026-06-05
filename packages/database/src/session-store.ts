@@ -1,7 +1,7 @@
 import db from "./db.js";
 import { sessions, type SessionRow } from "./schema.js";
 import { eq, and, inArray, desc, asc, ne, sql } from "drizzle-orm";
-import { SESSION_STATUS, SUBAGENT_RUNTIME } from "@grackle-ai/common";
+import { SESSION_STATUS, SUBAGENT_RUNTIME, serverTimestamp } from "@grackle-ai/common";
 import type { SessionStatus, PipeMode, EndReason } from "@grackle-ai/common";
 
 export type { SessionRow };
@@ -94,7 +94,7 @@ export function createSession(
       // We always set startedAt explicitly (ISO 8601 format with milliseconds).
       // The schema default also produces ISO format via strftime, but we set it
       // here for consistency. ISO format sorts lexicographically correctly.
-      startedAt: new Date().toISOString(),
+      startedAt: serverTimestamp(),
     })
     .run();
 }
@@ -148,7 +148,7 @@ export function updateSession(
   error?: string,
   endReason?: EndReason,
 ): void {
-  const endedAt = status === SESSION_STATUS.STOPPED ? new Date().toISOString() : null;
+  const endedAt = status === SESSION_STATUS.STOPPED ? serverTimestamp() : null;
   const patch: Partial<typeof sessions.$inferInsert> = {
     status,
     endedAt,
@@ -163,10 +163,7 @@ export function updateSession(
 
 /** Record that a SIGTERM signal was sent to a session. */
 export function setSigtermSentAt(id: string): void {
-  db.update(sessions)
-    .set({ sigtermSentAt: new Date().toISOString() })
-    .where(eq(sessions.id, id))
-    .run();
+  db.update(sessions).set({ sigtermSentAt: serverTimestamp() }).where(eq(sessions.id, id)).run();
 }
 
 /** Clear the SIGTERM sent flag (e.g. when delivery fails after optimistic set). */
@@ -294,7 +291,7 @@ export function suspendSession(id: string): void {
   db.update(sessions)
     .set({
       status: SESSION_STATUS.SUSPENDED,
-      suspendedAt: new Date().toISOString(),
+      suspendedAt: serverTimestamp(),
       error: null,
     })
     .where(eq(sessions.id, id))
