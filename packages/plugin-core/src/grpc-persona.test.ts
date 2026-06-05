@@ -181,7 +181,7 @@ describe("gRPC persona handlers", () => {
       .catch((e: unknown) => e)) as ConnectError;
 
     expect(err).toBeInstanceOf(ConnectError);
-    expect(err.message).toBeTruthy();
+    expect(err.message).toContain("Persona name is required");
   });
 
   it("createPersona without systemPrompt returns error", async () => {
@@ -190,7 +190,7 @@ describe("gRPC persona handlers", () => {
       .catch((e: unknown) => e)) as ConnectError;
 
     expect(err).toBeInstanceOf(ConnectError);
-    expect(err.message).toBeTruthy();
+    expect(err.message).toContain("system_prompt is required");
   });
 
   it("deletePersona for non-existent ID does not crash", async () => {

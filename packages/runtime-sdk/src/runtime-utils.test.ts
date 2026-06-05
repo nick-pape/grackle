@@ -452,7 +452,7 @@ describe("resolveMcpServers", () => {
       { custom: { command: "other", args: [] } },
       { url: "http://broker/mcp", token: "t" },
     );
-    expect(result.servers!.custom).toBeDefined();
-    expect(result.servers!.grackle).toBeDefined();
+    expect(result.servers!.custom).toEqual({ command: "other", args: [] });
+    expect(result.servers!.grackle).toMatchObject({ type: "http", url: "http://broker/mcp" });
   });
 });

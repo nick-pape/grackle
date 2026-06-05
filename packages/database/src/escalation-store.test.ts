@@ -155,7 +155,7 @@ describe("escalation-store", () => {
 
     const row = escalationStore.getEscalation("esc1");
     expect(row!.status).toBe("delivered");
-    expect(row!.deliveredAt).toBeTruthy();
+    expect(row!.deliveredAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
   });
 
   it("updateEscalationStatus to acknowledged sets acknowledgedAt", () => {
@@ -165,7 +165,7 @@ describe("escalation-store", () => {
 
     const row = escalationStore.getEscalation("esc1");
     expect(row!.status).toBe("acknowledged");
-    expect(row!.acknowledgedAt).toBeTruthy();
+    expect(row!.acknowledgedAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
   });
 
   it("createEscalation defaults status to pending and urgency to normal", () => {

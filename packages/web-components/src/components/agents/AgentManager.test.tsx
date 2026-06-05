@@ -114,10 +114,10 @@ describe("AgentManager", () => {
         onNavigateBack={NOOP}
       />,
     );
-    expect(screen.getByTestId("agent-view")).toBeTruthy();
+    screen.getByTestId("agent-view");
     expect(screen.getByTestId("agent-name").textContent).toBe("Refactor Bot");
     expect(screen.getByTestId("agent-persona").textContent).toBe("Software Engineer");
-    expect(screen.getByTestId("agent-history")).toBeTruthy();
+    screen.getByTestId("agent-history");
   });
 
   it("falls back to the raw persona id when the persona is unknown", () => {
@@ -161,10 +161,10 @@ describe("AgentManager", () => {
         onNavigateBack={NOOP}
       />,
     );
-    expect(screen.getByTestId("agent-create-form")).toBeTruthy();
-    expect(screen.getByTestId("agent-name-input")).toBeTruthy();
-    expect(screen.getByTestId("agent-avatar-input")).toBeTruthy();
-    expect(screen.getByTestId("agent-persona-select")).toBeTruthy();
+    screen.getByTestId("agent-create-form");
+    screen.getByTestId("agent-name-input");
+    screen.getByTestId("agent-avatar-input");
+    screen.getByTestId("agent-persona-select");
     // Submit is disabled until the user types a name.
     const submit = screen.getByTestId("agent-submit") as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
@@ -206,9 +206,8 @@ describe("AgentManager", () => {
         onNavigateBack={NOOP}
       />,
     );
-    expect(screen.getByTestId("agent-not-found")).toBeTruthy();
-    // Back button is the only action.
-    expect(screen.getByTestId("agent-back")).toBeTruthy();
+    screen.getByTestId("agent-not-found");
+    screen.getByTestId("agent-back");
   });
 
   it("renders the loading placeholder while agents are still loading", () => {
@@ -224,7 +223,7 @@ describe("AgentManager", () => {
         onNavigateBack={NOOP}
       />,
     );
-    expect(screen.getByTestId("agent-loading")).toBeTruthy();
+    screen.getByTestId("agent-loading");
     // Neither not-found nor create form should be present.
     expect(screen.queryByTestId("agent-not-found")).toBeNull();
     expect(screen.queryByTestId("agent-create-form")).toBeNull();
@@ -319,7 +318,6 @@ describe("AgentManager", () => {
       />,
     );
     const select = screen.getByTestId("agent-environment-select") as HTMLSelectElement;
-    expect(select).toBeTruthy();
     expect(select.value).toBe("local"); // defaults to the first environment
     const optionLabels = Array.from(select.options).map((o) => o.textContent);
     expect(optionLabels).toEqual(["Local", "Sandbox"]);

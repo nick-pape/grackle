@@ -22,7 +22,7 @@ describe("createStream", () => {
 
     const res = await createStream(req);
 
-    expect(res.streamId).toBeTruthy();
+    expect(res.streamId).toEqual(expect.any(String));
     expect(res.fd).toBeGreaterThanOrEqual(3);
   });
 

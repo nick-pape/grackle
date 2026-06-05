@@ -293,7 +293,7 @@ describe("resolveServerConfig — network exposure gate (#1374)", () => {
     vi.stubEnv("GRACKLE_TLS_KEY", keyPath);
     const cfg = resolveServerConfig();
     expect(cfg.host).toBe("0.0.0.0");
-    expect(cfg.tls).toBeTruthy();
+    expect(cfg.tls).toEqual({ certPath, keyPath });
     expect(cfg.allowInsecure).toBe(false);
   });
 

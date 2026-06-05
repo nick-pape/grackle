@@ -163,8 +163,8 @@ describe("resolveMcpServers", () => {
 
     const result = resolveMcpServers({ spawnServer: { command: "b" } });
     expect(result.servers).toBeDefined();
-    expect(result.servers!.configServer).toBeDefined();
-    expect(result.servers!.spawnServer).toBeDefined();
+    expect(result.servers!.configServer).toEqual({ command: "a" });
+    expect(result.servers!.spawnServer).toEqual({ command: "b" });
   });
 
   it("returns undefined servers when no config and no brokerConfig", () => {

@@ -411,7 +411,7 @@ describe("MCP session cleanup on SSE disconnect", () => {
 
     // 1. Initialize a session
     const sessionId = await initialize(server!);
-    expect(sessionId).toBeTruthy();
+    expect(typeof sessionId).toBe("string");
 
     // 2. Verify session is alive
     const alive = await postToSession(server!, sessionId);
@@ -572,7 +572,7 @@ describe("scoped token workspaceId injection", () => {
     expect(capturedArgs).toHaveLength(1);
     // Handler must receive the caller-provided ID, not the token's "default-ws"
     expect(capturedArgs[0]!.workspaceId).toBe("target-ws");
-    expect(result).toBeTruthy();
+    expect(result).toEqual(expect.any(Object));
   });
 
   /**
@@ -1014,7 +1014,7 @@ describe("MCP Apps widget capture (#1238)", () => {
     expect(payload.html).toContain("Grackle");
     expect(payload.csp?.resourceDomains?.length).toBe(1);
     expect(payload.toolInput).toMatchObject({ message: "hi widget" });
-    expect(payload.toolResult).toBeTruthy();
+    expect(payload.toolResult).toEqual(expect.any(Object));
   });
 
   it("emits a dynamic widget event from a tool's _meta render descriptor (#1239)", async () => {

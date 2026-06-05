@@ -124,10 +124,10 @@ describe("StubRuntime", () => {
     expect(events[12].content).toBe("waiting_input");
 
     // Turn framing (AHP HR2): content shares its turn's id; the two turns differ.
-    expect(events[2].turnId).toBeTruthy();
+    expect(events[2].turnId).toEqual(expect.any(String));
     expect(events[3].turnId).toBe(events[2].turnId);
     expect(events[6].turnId).toBe(events[2].turnId);
-    expect(events[9].turnId).toBeTruthy();
+    expect(events[9].turnId).toEqual(expect.any(String));
     expect(events[9].turnId).not.toBe(events[2].turnId);
     expect(events[10].turnId).toBe(events[9].turnId);
 
