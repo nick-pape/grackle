@@ -154,6 +154,59 @@ export interface ListTasksOptions {
   status?: string;
 }
 
+/** Contract for task persistence. */
+export interface TaskStore {
+  insertTask(fields: InsertTaskFields): void;
+  createTask(
+    id: string,
+    workspaceId: string | undefined,
+    title: string,
+    description: string,
+    dependsOn: string[],
+    workspaceSlug: string,
+    parentTaskId?: string,
+    canDecompose?: boolean,
+    defaultPersonaId?: string,
+    tokenBudget?: number,
+    costBudgetMillicents?: number,
+    injectKnowledge?: boolean,
+    agentId?: string,
+    kind?: string,
+  ): void;
+  getTask(id: string): TaskRow | undefined;
+  listTasks(workspaceId?: string, options?: ListTasksOptions): TaskRow[];
+  updateTask(
+    id: string,
+    title: string,
+    description: string,
+    status: string,
+    dependsOn: string[],
+    defaultPersonaId?: string,
+  ): void;
+  updateTaskBudget(id: string, tokenBudget: number, costBudgetMillicents: number): void;
+  updateTaskInjectKnowledge(id: string, injectKnowledge: boolean): void;
+  setTaskWorkspace(id: string, workspaceId: string): void;
+  setWorkpad(id: string, workpad: string): void;
+  setTaskScheduleId(id: string, scheduleId: string): void;
+  setTaskDependsOn(id: string, dependsOn: string[]): void;
+  updateTaskStatus(id: string, status: TaskStatus): void;
+  markTaskComplete(id: string, status?: "complete" | "failed"): void;
+  deleteTask(id: string): number;
+  getUnblockedTasks(workspaceId?: string): TaskRow[];
+  checkAndUnblock(workspaceId?: string): TaskRow[];
+  areDependenciesMet(taskId: string): boolean;
+  detectDependencyCycle(taskId: string, proposedDependsOn: string[]): string[] | null;
+  buildChildIdsMap(rows: TaskRow[]): Map<string, string[]>;
+  getChildren(taskId: string): TaskRow[];
+  getDescendants(taskId: string): TaskRow[];
+  getAncestors(taskId: string): TaskRow[];
+  getChildStatusCounts(taskId: string): Record<string, number>;
+  reparentTask(taskId: string, newParentTaskId: string): void;
+  getOrphanedTasks(parentTaskId: string): TaskRow[];
+  getRootTaskForAgent(agentId: string): TaskRow | undefined;
+  getTasksForAgent(agentId: string): TaskRow[];
+}
+
 /** Escape LIKE special characters so they match literally. */
 function escapeLikePattern(value: string): string {
   return value.replace(/[%_\\]/g, (ch) => `\\${ch}`);
@@ -579,3 +632,34 @@ export function getRootTaskForAgent(agentId: string): TaskRow | undefined {
 export function getTasksForAgent(agentId: string): TaskRow[] {
   return db.select().from(tasks).where(eq(tasks.agentId, agentId)).all();
 }
+
+const _typeCheck: TaskStore = {
+  insertTask,
+  createTask,
+  getTask,
+  listTasks,
+  updateTask,
+  updateTaskBudget,
+  updateTaskInjectKnowledge,
+  setTaskWorkspace,
+  setWorkpad,
+  setTaskScheduleId,
+  setTaskDependsOn,
+  updateTaskStatus,
+  markTaskComplete,
+  deleteTask,
+  getUnblockedTasks,
+  checkAndUnblock,
+  areDependenciesMet,
+  detectDependencyCycle,
+  buildChildIdsMap,
+  getChildren,
+  getDescendants,
+  getAncestors,
+  getChildStatusCounts,
+  reparentTask,
+  getOrphanedTasks,
+  getRootTaskForAgent,
+  getTasksForAgent,
+};
+void _typeCheck;

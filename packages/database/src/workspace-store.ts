@@ -4,6 +4,38 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export type { WorkspaceRow };
 
+/** Contract for workspace persistence. */
+export interface WorkspaceStore {
+  createWorkspace(
+    id: string,
+    name: string,
+    description: string,
+    repoUrl: string,
+    useWorktrees?: boolean,
+    workingDirectory?: string,
+    defaultPersonaId?: string,
+    tokenBudget?: number,
+    costBudgetMillicents?: number,
+  ): void;
+  createWorkspaceAndLink(
+    id: string,
+    name: string,
+    description: string,
+    repoUrl: string,
+    useWorktrees?: boolean,
+    workingDirectory?: string,
+    defaultPersonaId?: string,
+    tokenBudget?: number,
+    costBudgetMillicents?: number,
+    environmentId?: string,
+  ): void;
+  getWorkspace(id: string): WorkspaceRow | undefined;
+  listWorkspaces(environmentId?: string): WorkspaceRow[];
+  countWorkspacesByEnvironment(environmentId: string): number;
+  archiveWorkspace(id: string): void;
+  updateWorkspace(id: string, fields: UpdateWorkspaceFields): WorkspaceRow | undefined;
+}
+
 /**
  * Insert a new workspace record without linking it to any environment.
  * @remarks Prefer {@link createWorkspaceAndLink} for production use — a workspace
@@ -175,3 +207,14 @@ export function updateWorkspace(
   db.update(workspaces).set(sets).where(eq(workspaces.id, id)).run();
   return getWorkspace(id);
 }
+
+const _typeCheck: WorkspaceStore = {
+  createWorkspace,
+  createWorkspaceAndLink,
+  getWorkspace,
+  listWorkspaces,
+  countWorkspacesByEnvironment,
+  archiveWorkspace,
+  updateWorkspace,
+};
+void _typeCheck;

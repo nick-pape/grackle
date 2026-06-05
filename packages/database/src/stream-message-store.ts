@@ -2,6 +2,12 @@ import { and, desc, eq, lt, type SQL } from "drizzle-orm";
 import db from "./db.js";
 import { streamMessages, type StreamMessageRow } from "./schema.js";
 
+/** Contract for stream message persistence. */
+export interface StreamMessageStore {
+  persistStreamMessage(message: StreamMessageRecord): void;
+  queryStreamMessages(query: StreamMessageQuery): StreamMessageRow[];
+}
+
 /**
  * A stream message to persist — the durable observation log for IPC stream rooms
  * (RFC #1264 Phase 2). Separate lifecycle from the in-memory delivery buffer.
@@ -84,3 +90,6 @@ export function queryStreamMessages(query: StreamMessageQuery): StreamMessageRow
     .limit(limit)
     .all();
 }
+
+const _typeCheck: StreamMessageStore = { persistStreamMessage, queryStreamMessages };
+void _typeCheck;

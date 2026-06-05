@@ -6,6 +6,66 @@ import type { SessionStatus, PipeMode, EndReason } from "@grackle-ai/common";
 
 export type { SessionRow };
 
+/** Contract for session persistence. */
+export interface SessionStore {
+  createSession(
+    id: string,
+    environmentId: string,
+    runtime: string,
+    prompt: string,
+    model: string,
+    logPath: string,
+    taskId?: string,
+    personaId?: string,
+    parentSessionId?: string,
+    pipeMode?: PipeMode,
+  ): void;
+  getSession(id: string): SessionRow | undefined;
+  listSessions(environmentId?: string, status?: string): SessionRow[];
+  listByEnv(environmentId: string): SessionRow[];
+  updateSession(
+    id: string,
+    status: SessionStatus,
+    runtimeSessionId?: string,
+    error?: string,
+    endReason?: EndReason,
+  ): void;
+  setSigtermSentAt(id: string): void;
+  clearSigtermSentAt(id: string): void;
+  updateSessionStatus(id: string, status: SessionStatus): void;
+  getActiveForEnv(environmentId: string): SessionRow | undefined;
+  getAllActiveForEnv(environmentId: string): SessionRow[];
+  incrementTurns(id: string): void;
+  updateSessionUsage(
+    id: string,
+    inputTokens: number,
+    outputTokens: number,
+    costMillicents: number,
+  ): void;
+  aggregateUsage(filter: { taskId?: string; taskIds?: string[]; environmentId?: string }): {
+    inputTokens: number;
+    outputTokens: number;
+    costMillicents: number;
+    sessionCount: number;
+  };
+  deleteByEnvironment(environmentId: string): void;
+  setSessionTask(id: string, taskId: string): void;
+  updateRuntimeSessionId(id: string, runtimeSessionId: string): void;
+  suspendSession(id: string): void;
+  getSuspendedForEnv(environmentId: string): SessionRow[];
+  reanimateSession(id: string): void;
+  listSessionsForTask(taskId: string): SessionRow[];
+  listSessionsByParent(parentSessionId: string): SessionRow[];
+  getLatestSessionForTask(taskId: string): SessionRow | undefined;
+  getLatestSessionsByTaskIds(taskIds: string[]): Map<string, SessionRow>;
+  getActiveSessionsForTask(taskId: string): SessionRow[];
+  listSessionsByTaskIds(taskIds: string[]): SessionRow[];
+  getChildSessions(parentSessionId: string): SessionRow[];
+  countActiveForEnvironment(environmentId: string): number;
+  listRunningSubagentChildren(): SessionRow[];
+  countActiveGlobal(): number;
+}
+
 /** Insert a new session record into the database. */
 export function createSession(
   id: string,
@@ -431,3 +491,36 @@ export function countActiveGlobal(): number {
     .get();
   return result?.count ?? 0;
 }
+
+const _typeCheck: SessionStore = {
+  createSession,
+  getSession,
+  listSessions,
+  listByEnv,
+  updateSession,
+  setSigtermSentAt,
+  clearSigtermSentAt,
+  updateSessionStatus,
+  getActiveForEnv,
+  getAllActiveForEnv,
+  incrementTurns,
+  updateSessionUsage,
+  aggregateUsage,
+  deleteByEnvironment,
+  setSessionTask,
+  updateRuntimeSessionId,
+  suspendSession,
+  getSuspendedForEnv,
+  reanimateSession,
+  listSessionsForTask,
+  listSessionsByParent,
+  getLatestSessionForTask,
+  getLatestSessionsByTaskIds,
+  getActiveSessionsForTask,
+  listSessionsByTaskIds,
+  getChildSessions,
+  countActiveForEnvironment,
+  listRunningSubagentChildren,
+  countActiveGlobal,
+};
+void _typeCheck;

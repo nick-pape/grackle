@@ -4,6 +4,26 @@ import { eq, asc, sql } from "drizzle-orm";
 
 export type { AgentRow };
 
+/** Contract for agent persistence. */
+export interface AgentStore {
+  createAgent(
+    id: string,
+    name: string,
+    avatar: string,
+    primaryPersonaId: string,
+    environmentId: string,
+  ): void;
+  getAgent(id: string): AgentRow | undefined;
+  getAgentByName(name: string): AgentRow | undefined;
+  listAgents(): AgentRow[];
+  updateAgent(
+    id: string,
+    fields: { name?: string; avatar?: string; primaryPersonaId?: string },
+  ): void;
+  deleteAgent(id: string): void;
+  getAgentsByEnvironment(environmentId: string): AgentRow[];
+}
+
 /**
  * Insert a new agent record.
  *
@@ -81,3 +101,14 @@ export function getAgentsByEnvironment(environmentId: string): AgentRow[] {
     .orderBy(asc(agents.name))
     .all();
 }
+
+const _typeCheck: AgentStore = {
+  createAgent,
+  getAgent,
+  getAgentByName,
+  listAgents,
+  updateAgent,
+  deleteAgent,
+  getAgentsByEnvironment,
+};
+void _typeCheck;

@@ -4,6 +4,24 @@ import { eq, desc, asc, and } from "drizzle-orm";
 
 export type { EscalationRow };
 
+/** Contract for escalation persistence. */
+export interface EscalationStore {
+  createEscalation(
+    id: string,
+    workspaceId: string,
+    taskId: string,
+    title: string,
+    message: string,
+    source: string,
+    urgency: string,
+    taskUrl: string,
+  ): void;
+  getEscalation(id: string): EscalationRow | undefined;
+  listEscalations(workspaceId?: string, status?: string, limit?: number): EscalationRow[];
+  listPendingEscalations(): EscalationRow[];
+  updateEscalationStatus(id: string, status: string): void;
+}
+
 /** Insert a new escalation record. Status defaults to "pending". */
 export function createEscalation(
   id: string,
@@ -117,3 +135,12 @@ export function updateEscalationStatus(id: string, status: string): void {
     .where(eq(escalations.id, id))
     .run();
 }
+
+const _typeCheck: EscalationStore = {
+  createEscalation,
+  getEscalation,
+  listEscalations,
+  listPendingEscalations,
+  updateEscalationStatus,
+};
+void _typeCheck;
