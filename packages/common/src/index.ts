@@ -12,9 +12,13 @@ export * from "./component-render-tool.js";
 export * from "./component-refs.js";
 export { RUNTIME_CATALOG } from "./runtime-catalog.js";
 export type {
+  AcpRuntimeFactory,
+  AcpRuntimeFactoryConfig,
   RuntimeCatalogEntry,
+  RuntimeFactoryDescriptor,
   RuntimeModelInfo,
   RuntimePackageManifest,
+  SdkRuntimeFactory,
 } from "./runtime-catalog.js";
 export { SequencedLog } from "./sequenced-log.js";
 export type { Sequenced, LogSink, SequencedLogOptions } from "./sequenced-log.js";

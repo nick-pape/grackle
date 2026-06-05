@@ -22,6 +22,19 @@ type AcknowledgeEscalationRequest = Message<"grackle.AcknowledgeEscalationReques
 const AcknowledgeEscalationRequestSchema: GenMessage<AcknowledgeEscalationRequest>;
 
 // @public
+export interface AcpRuntimeFactory {
+    config: AcpRuntimeFactoryConfig;
+    type: "acp";
+}
+
+// @public
+export interface AcpRuntimeFactoryConfig {
+    args: string[];
+    command: string;
+    isolateClaudeConfig?: boolean;
+}
+
+// @public
 export type AdapterType = "docker" | "local" | "codespace" | "ssh";
 
 // @public
@@ -2731,9 +2744,13 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>>;
 export interface RuntimeCatalogEntry {
     description: string;
     displayName: string;
+    factory?: RuntimeFactoryDescriptor;
     install?: RuntimePackageManifest;
     models: RuntimeModelInfo[];
 }
+
+// @public
+export type RuntimeFactoryDescriptor = SdkRuntimeFactory | AcpRuntimeFactory;
 
 // @public
 type RuntimeInfo = Message<"grackle.RuntimeInfo"> & {
@@ -2820,6 +2837,13 @@ export function scheduleRowToProto(row: ScheduleRowShape): Schedule;
 
 // @public
 const ScheduleSchema: GenMessage<Schedule>;
+
+// @public
+export interface SdkRuntimeFactory {
+    exportName: string;
+    package: string;
+    type: "sdk";
+}
 
 // @public
 type SearchComponentResult = Message<"grackle.SearchComponentResult"> & {
