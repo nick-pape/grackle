@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Add store interfaces, DatabaseStores type, and DI registry for dependency injection foundation",
+      "comment": "Extract RemoteTunnelAdapter base class from SSH/Codespace adapters, eliminating ~95% code duplication",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }

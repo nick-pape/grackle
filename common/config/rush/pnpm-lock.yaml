@@ -383,6 +383,9 @@ importers:
       '@rushstack/heft':
         specifier: 1.2.7
         version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
       '@vitest/coverage-v8':
         specifier: ^4.1.0
         version: 4.1.8(vitest@4.1.8)

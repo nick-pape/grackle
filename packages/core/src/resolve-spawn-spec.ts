@@ -23,6 +23,7 @@
  * @module
  */
 
+import { envOptionalString } from "@grackle-ai/common";
 import type { ToolConfigSpec, McpServerSpec } from "@grackle-ai/common";
 
 /**
@@ -322,6 +323,8 @@ export function spawnRequestToLayer(src: SpawnRequestSource): SpawnConfigLayer {
 export function hostDefaults(): SpawnConfigLayer {
   return {
     workingDirectory:
-      process.env.GRACKLE_WORKING_DIRECTORY || process.env.GRACKLE_WORKTREE_BASE || "/workspace",
+      envOptionalString("GRACKLE_WORKING_DIRECTORY") ??
+      envOptionalString("GRACKLE_WORKTREE_BASE") ??
+      "/workspace",
   };
 }

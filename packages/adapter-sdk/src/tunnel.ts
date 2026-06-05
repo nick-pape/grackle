@@ -143,3 +143,40 @@ export abstract class ProcessTunnel implements RemoteTunnel {
     return this.process?.exitCode === null;
   }
 }
+
+// ─── Reverse Tunnel ──────────────────────────────────────────
+
+/** Delay for reverse tunnels to settle before checking readiness. */
+export const REVERSE_TUNNEL_SETTLE_MS: number = 3_000;
+
+/**
+ * Base class for reverse tunnels that bind a remote port to a local port.
+ *
+ * Reverse tunnels bind on the remote side, so local port probing doesn't work.
+ * Readiness is determined by a fixed delay followed by an exit-code check.
+ * Subclasses override `spawnArgs()` for the specific transport (SSH, gh CLI).
+ */
+export abstract class ProcessReverseTunnel extends ProcessTunnel {
+  protected readonly remotePort: number;
+  protected readonly sleepFn: (ms: number) => Promise<void>;
+
+  public constructor(
+    localPort: number,
+    remotePort: number,
+    sleepFn: (ms: number) => Promise<void>,
+    processFactory?: TunnelProcessFactory,
+    portProbe?: TunnelPortProbe,
+  ) {
+    super(localPort, undefined, processFactory, portProbe);
+    this.remotePort = remotePort;
+    this.sleepFn = sleepFn;
+  }
+
+  /** Wait for the reverse tunnel to establish by sleeping, then check for early exit. */
+  protected async waitForReady(): Promise<void> {
+    await this.sleepFn(REVERSE_TUNNEL_SETTLE_MS);
+    if (this.process?.exitCode !== null) {
+      throw new Error(`Reverse tunnel exited immediately with code ${this.process?.exitCode}`);
+    }
+  }
+}
