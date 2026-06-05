@@ -1,5 +1,6 @@
 import { SESSION_STATUS } from "./types.js";
 import type { SessionStatus } from "./types.js";
+import { PreconditionError } from "./errors.js";
 
 /**
  * Legal session state transitions, encoding the documented lifecycle diagram.
@@ -43,12 +44,12 @@ export function isValidTransition(from: SessionStatus, to: SessionStatus): boole
 }
 
 /** Thrown when code attempts an illegal session state transition. */
-export class InvalidSessionTransitionError extends Error {
+export class InvalidSessionTransitionError extends PreconditionError {
   public readonly from: SessionStatus;
   public readonly to: SessionStatus;
 
   public constructor(from: SessionStatus, to: SessionStatus) {
-    super(`Invalid session state transition: ${from} → ${to}`);
+    super(`Invalid session state transition: ${from} → ${to}`, { from, to });
     this.name = "InvalidSessionTransitionError";
     this.from = from;
     this.to = to;

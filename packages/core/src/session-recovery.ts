@@ -1,5 +1,4 @@
-import { ConnectError, Code } from "@connectrpc/connect";
-import { SESSION_STATUS, END_REASON } from "@grackle-ai/common";
+import { SESSION_STATUS, END_REASON, PreconditionError } from "@grackle-ai/common";
 import { type PowerLineConnection } from "@grackle-ai/adapter-sdk";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 import { reanimateAgent } from "./reanimate-agent.js";
@@ -83,11 +82,7 @@ export async function recoverSuspendedSessions(
       // If the environment acquired an active session between our check and
       // reanimateAgent's check, this is a benign race — leave the session
       // SUSPENDED for future recovery instead of marking it permanently failed.
-      if (
-        err instanceof ConnectError &&
-        err.code === Code.FailedPrecondition &&
-        err.message.includes("already has active session")
-      ) {
+      if (err instanceof PreconditionError && err.message.includes("already has active session")) {
         logger.info(
           { sessionId: session.id, environmentId },
           "Recovery skipped — environment already has an active session",

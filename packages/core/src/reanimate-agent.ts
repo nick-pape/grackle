@@ -1,5 +1,11 @@
-import { ConnectError, Code } from "@connectrpc/connect";
-import { SESSION_STATUS, LOGS_DIR } from "@grackle-ai/common";
+import {
+  SESSION_STATUS,
+  LOGS_DIR,
+  GrackleError,
+  Code,
+  NotFoundError,
+  PreconditionError,
+} from "@grackle-ai/common";
 import { type ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
 import { join } from "node:path";
 import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
@@ -15,15 +21,15 @@ import { processEventStream } from "./event-processor.js";
  * Reanimate a terminal session: validate state, reset the DB record, and fire a
  * PowerLine resume stream. Returns the updated session as a domain model (status=running).
  *
- * Throws ConnectError on any validation failure:
- *   - NOT_FOUND if the session does not exist
- *   - FAILED_PRECONDITION if the session is still active, has no runtimeSessionId,
+ * Throws on any validation failure:
+ *   - NotFoundError if the session does not exist
+ *   - PreconditionError if the session is still active, has no runtimeSessionId,
  *     the environment already has an active session, or the environment is offline
  */
 export function reanimateAgent(sessionId: string): SessionModel {
   const session = sessionStore.getSession(sessionId);
   if (!session) {
-    throw new ConnectError(`Session not found: ${sessionId}`, Code.NotFound);
+    throw new NotFoundError(`Session not found: ${sessionId}`);
   }
 
   if (
@@ -31,25 +37,20 @@ export function reanimateAgent(sessionId: string): SessionModel {
     session.status === SESSION_STATUS.RUNNING ||
     session.status === SESSION_STATUS.PENDING
   ) {
-    throw new ConnectError(
+    throw new PreconditionError(
       `Session ${sessionId} is already active (status: ${session.status})`,
-      Code.FailedPrecondition,
     );
   }
 
   if (!session.runtimeSessionId) {
-    throw new ConnectError(
+    throw new PreconditionError(
       `Session ${sessionId} has no runtime session ID — cannot reanimate`,
-      Code.FailedPrecondition,
     );
   }
 
   const existingActive = sessionStore.getActiveForEnv(session.environmentId);
   if (existingActive) {
-    throw new ConnectError(
-      `Environment already has active session ${existingActive.id}`,
-      Code.FailedPrecondition,
-    );
+    throw new PreconditionError(`Environment already has active session ${existingActive.id}`);
   }
   // Note: the check above and reanimateSession() below are not wrapped in a DB
   // transaction, but Node.js's single-threaded event loop provides sufficient
@@ -59,10 +60,7 @@ export function reanimateAgent(sessionId: string): SessionModel {
 
   const conn = adapterManager.getConnection(session.environmentId);
   if (!conn) {
-    throw new ConnectError(
-      `Environment ${session.environmentId} not connected`,
-      Code.FailedPrecondition,
-    );
+    throw new PreconditionError(`Environment ${session.environmentId} not connected`);
   }
 
   const logPath = session.logPath || join(grackleHome, LOGS_DIR, session.id);
@@ -87,7 +85,7 @@ export function reanimateAgent(sessionId: string): SessionModel {
       runtime: session.runtime,
     });
   } catch (err) {
-    throw new ConnectError(`Failed to initiate resume stream: ${String(err)}`, Code.Internal);
+    throw new GrackleError(`Failed to initiate resume stream: ${String(err)}`, Code.Internal);
   }
 
   sessionStore.reanimateSession(session.id);

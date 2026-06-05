@@ -17,6 +17,7 @@ import {
   logger,
   exec,
   detectLanIp,
+  grackleErrorInterceptor,
   runWithTrace,
   isValidTraceId,
   wrapAsyncIterableWithTrace,
@@ -300,6 +301,8 @@ async function main(): Promise<void> {
   const grpcHandler = connectNodeAdapter({
     routes,
     interceptors: [
+      // Error interceptor: translates GrackleError → ConnectError at the boundary.
+      grackleErrorInterceptor,
       // Trace ID interceptor: extract or generate a trace ID for request correlation.
       // For streaming RPCs, wraps the response's message iterable so the generator
       // body runs within the trace context on each iteration step.

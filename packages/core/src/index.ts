@@ -14,6 +14,9 @@ export {
   toEscalationModel,
 } from "./domain/index.js";
 
+// ─── Error Interceptor ──────────────────────────────────────
+export { grackleErrorInterceptor } from "./grackle-error-interceptor.js";
+
 // ─── Service Collector ────────────────────────────────────────
 export { createServiceCollector } from "./service-collector.js";
 export type { ServiceCollector, HandlerGroup } from "./service-collector.js";

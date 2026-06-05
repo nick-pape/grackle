@@ -4,22 +4,21 @@
  * @module
  */
 
-import { ConnectError, Code } from "@connectrpc/connect";
+import { ValidationError } from "@grackle-ai/common";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 
 /** Valid pipe mode values for SpawnRequest and StartTaskRequest. */
 export const VALID_PIPE_MODES: ReadonlySet<string> = new Set(["", "sync", "async", "detach"]);
 
-/** Validate pipe mode and parentSessionId. Throws ConnectError on invalid input. */
+/** Validate pipe mode and parentSessionId. Throws ValidationError on invalid input. */
 export function validatePipeInputs(pipe: string, parentSessionId: string): void {
   if (pipe && !VALID_PIPE_MODES.has(pipe)) {
-    throw new ConnectError(
+    throw new ValidationError(
       `Invalid pipe mode: "${pipe}". Must be "sync", "async", "detach", or empty.`,
-      Code.InvalidArgument,
     );
   }
   if (pipe && pipe !== "detach" && !parentSessionId) {
-    throw new ConnectError(`Pipe mode "${pipe}" requires parent_session_id`, Code.InvalidArgument);
+    throw new ValidationError(`Pipe mode "${pipe}" requires parent_session_id`);
   }
 }
 
