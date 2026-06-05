@@ -387,6 +387,7 @@ async function main(): Promise<void> {
     bindHost,
     ...(secureContext ? { secureContext } : {}),
     connectRoutes: routes,
+    connectInterceptors: [grackleErrorInterceptor],
     handleWebhook: ingestChannelMessage,
     pluginNames: loaded.pluginNames,
     sandboxPort: config.sandboxPort,
