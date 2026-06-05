@@ -57,6 +57,10 @@ export { exec } from "./exec.js";
 // ─── Adapter Dependencies ───────────────────────────────────
 export type { ExecFunction, AdapterDependencies } from "./adapter-dependencies.js";
 
+// ─── Retry ─────────────────────────────────────────────────
+export type { RetryOptions } from "./retry.js";
+export { retryWithBackoff } from "./retry.js";
+
 // ─── Utilities ──────────────────────────────────────────────
 export {
   sleep,

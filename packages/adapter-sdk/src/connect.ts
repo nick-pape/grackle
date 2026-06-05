@@ -2,8 +2,8 @@ import { AhpClientSocket, InMemoryClientIdStore } from "@grackle-ai/ahp-transpor
 import { createConnection } from "node:net";
 import type { PowerLineConnection } from "./adapter.js";
 import { AhpHostTransport } from "./ahp-host-transport.js";
+import { retryWithBackoff } from "./retry.js";
 import { closeTunnel } from "./tunnel-registry.js";
-import { sleep } from "./utils.js";
 import type { AdapterLogger } from "./logger.js";
 import { defaultLogger } from "./logger.js";
 
@@ -96,56 +96,53 @@ export async function connectThroughTunnel(
 ): Promise<PowerLineConnection> {
   const baseUrl = `ws://127.0.0.1:${localPort}`;
 
-  let lastError: unknown;
-  for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
-    let attemptSocket: AhpClientSocket | undefined;
-    try {
-      const { transport, socket } = await createAhpHostTransport(
-        baseUrl,
-        powerlineToken,
-        environmentId,
-        logger,
-      );
-      attemptSocket = socket;
-      // Liveness probe via AHP `ping` to verify the wire is alive.
-      await socket.request("ping", { channel: "ahp-root://" });
-      return {
-        environmentId,
-        port: localPort,
-        transport,
-        ping: async () => {
-          await socket.request("ping", { channel: "ahp-root://" });
-        },
-        close: async () => {
-          await socket.close();
-        },
-      };
-    } catch (err) {
-      lastError = err;
-      // Close the per-attempt socket so we don't leak open WS connections
-      // across retries (e.g. when `createAhpHostTransport` succeeded but
-      // the subsequent `ping` rejected).
-      if (attemptSocket !== undefined) {
-        try {
-          await attemptSocket.close();
-        } catch (closeErr) {
-          logger.error({ environmentId, err: closeErr }, "Failed to close socket after attempt");
-        }
-      }
-      await sleep(CONNECT_RETRY_DELAY_MS);
-    }
-  }
-
-  // Clean up the tunnel so we don't leak background processes on connect failure
   try {
-    await closeTunnel(environmentId);
+    return await retryWithBackoff(
+      async () => {
+        const { transport, socket } = await createAhpHostTransport(
+          baseUrl,
+          powerlineToken,
+          environmentId,
+          logger,
+        );
+        try {
+          await socket.request("ping", { channel: "ahp-root://" });
+        } catch (err) {
+          await socket.close();
+          throw err;
+        }
+        return {
+          environmentId,
+          port: localPort,
+          transport,
+          ping: async () => {
+            await socket.request("ping", { channel: "ahp-root://" });
+          },
+          close: async () => {
+            await socket.close();
+          },
+        };
+      },
+      {
+        maxAttempts: CONNECT_MAX_RETRIES,
+        delayMs: CONNECT_RETRY_DELAY_MS,
+        onRetry: async (_attempt, err) => {
+          logger.debug({ environmentId, err }, "Connect attempt failed, retrying");
+        },
+      },
+    );
   } catch (err) {
-    logger.error({ environmentId, err }, "Failed to close tunnel after connect failure");
+    // Clean up the tunnel so we don't leak background processes on connect failure
+    try {
+      await closeTunnel(environmentId);
+    } catch (tunnelErr) {
+      logger.error(
+        { environmentId, err: tunnelErr },
+        "Failed to close tunnel after connect failure",
+      );
+    }
+    throw err;
   }
-
-  throw new Error(
-    `Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
-  );
 }
 
 // ─── Wait for Local Port ────────────────────────────────────
@@ -190,18 +187,20 @@ export async function waitForLocalPort(
   options?: WaitForLocalPortOptions,
 ): Promise<void> {
   const prober = options?.portProber ?? TCP_PORT_PROBER;
-  const sleepFn = options?.sleep ?? sleep;
 
-  for (let attempt = 0; attempt < TUNNEL_PORT_POLL_MAX_ATTEMPTS; attempt++) {
-    const reachable = await prober.probe(port, "127.0.0.1");
-
-    if (reachable) {
-      return;
-    }
-    await sleepFn(TUNNEL_PORT_POLL_DELAY_MS);
-  }
-
-  throw new Error(
-    `Local port ${port} did not become reachable after ${TUNNEL_PORT_POLL_MAX_ATTEMPTS} attempts`,
+  await retryWithBackoff(
+    async () => {
+      const reachable = await prober.probe(port, "127.0.0.1");
+      if (!reachable) {
+        throw new Error(
+          `Local port ${port} did not become reachable after ${TUNNEL_PORT_POLL_MAX_ATTEMPTS} attempts`,
+        );
+      }
+    },
+    {
+      maxAttempts: TUNNEL_PORT_POLL_MAX_ATTEMPTS,
+      delayMs: TUNNEL_PORT_POLL_DELAY_MS,
+      sleep: options?.sleep,
+    },
   );
 }

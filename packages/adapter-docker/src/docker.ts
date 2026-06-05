@@ -17,6 +17,7 @@ import {
   withFreePort,
   remoteStop,
   remoteDestroy,
+  retryWithBackoff,
   exec as defaultExec,
   sleep as defaultSleep,
   defaultLogger,
@@ -271,24 +272,34 @@ async function waitForContainerRunning(
   containerName: string,
   logger: AdapterLogger,
 ): Promise<void> {
-  for (let i = 0; i < CONTAINER_POLL_MAX_ATTEMPTS; i++) {
-    try {
-      const { stdout } = await execFn("docker", [
-        "inspect",
-        "-f",
-        "{{.State.Running}}",
-        containerName,
-      ]);
-      if (stdout === "true") {
-        return;
+  await retryWithBackoff(
+    async () => {
+      let running = false;
+      try {
+        const { stdout } = await execFn("docker", [
+          "inspect",
+          "-f",
+          "{{.State.Running}}",
+          containerName,
+        ]);
+        running = stdout === "true";
+      } catch {
+        // Container not inspectable yet — treat as not running
       }
-    } catch {
-      logger.debug({ containerName, attempt: i }, "Container not yet running");
-    }
-    await sleepFn(CONTAINER_POLL_DELAY_MS);
-  }
-  throw new Error(
-    `Container ${containerName} did not reach Running state after ${CONTAINER_POLL_MAX_ATTEMPTS} attempts`,
+      if (!running) {
+        throw new Error(
+          `Container ${containerName} did not reach Running state after ${CONTAINER_POLL_MAX_ATTEMPTS} attempts`,
+        );
+      }
+    },
+    {
+      maxAttempts: CONTAINER_POLL_MAX_ATTEMPTS,
+      delayMs: CONTAINER_POLL_DELAY_MS,
+      onRetry: (attempt) => {
+        logger.debug({ containerName, attempt }, "Container not yet running");
+      },
+      sleep: sleepFn,
+    },
   );
 }
 
@@ -771,17 +782,19 @@ export class DockerAdapter extends BaseAdapter {
     }
     // For attach-mode connectUrl is http:// from resolveAttachConnectivity;
     // createAhpHostTransport normalizes http(s) to ws(s).
-    let lastErr: unknown;
-    for (let attempt = 0; attempt < CONNECT_MAX_RETRIES; attempt++) {
-      let attemptSocket: { close(): Promise<void> } | undefined;
-      try {
+    return retryWithBackoff(
+      async () => {
         const { transport, socket } = await createAhpHostTransport(
           connectUrl,
           powerlineToken,
           environmentId,
         );
-        attemptSocket = socket;
-        await socket.request("ping", { channel: "ahp-root://" });
+        try {
+          await socket.request("ping", { channel: "ahp-root://" });
+        } catch (err) {
+          await socket.close();
+          throw err;
+        }
         return {
           environmentId,
           port,
@@ -793,27 +806,15 @@ export class DockerAdapter extends BaseAdapter {
             await socket.close();
           },
         };
-      } catch (err) {
-        lastErr = err;
-        // Close any socket opened by a failed attempt (e.g. `ping` rejected
-        // after `createAhpHostTransport` succeeded) so we don't leak open WS
-        // connections across the retry loop.
-        if (attemptSocket !== undefined) {
-          try {
-            await attemptSocket.close();
-          } catch (closeErr) {
-            this.logger.error(
-              { environmentId, err: closeErr },
-              "Failed to close socket after attempt",
-            );
-          }
-        }
-        await this.sleepFn(CONNECT_RETRY_DELAY_MS);
-      }
-    }
-
-    throw new Error(
-      `Could not reach PowerLine after ${CONNECT_MAX_RETRIES} attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`,
+      },
+      {
+        maxAttempts: CONNECT_MAX_RETRIES,
+        delayMs: CONNECT_RETRY_DELAY_MS,
+        onRetry: async (_attempt, err) => {
+          this.logger.debug({ environmentId, err }, "Connect attempt failed, retrying");
+        },
+        sleep: this.sleepFn,
+      },
     );
   }
 
