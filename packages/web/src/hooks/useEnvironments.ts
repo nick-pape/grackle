@@ -8,8 +8,8 @@
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { ConnectError } from "@connectrpc/connect";
 import { warnBadPayload } from "@grackle-ai/web-components";
+import { extractErrorMessage } from "./grackleError.js";
 import type {
   Environment,
   GrackleEvent,
@@ -24,11 +24,6 @@ import { useLoadingState } from "./useLoadingState.js";
 
 /** Delay in milliseconds before clearing a successful provision status. */
 const PROVISION_STATUS_CLEAR_DELAY_MS: number = 5_000;
-
-/** Extracts a user-facing message from a caught error. */
-function extractErrorMessage(err: unknown): string {
-  return err instanceof ConnectError ? err.message : "Operation failed";
-}
 
 export type { UseEnvironmentsResult } from "@grackle-ai/web-components";
 
@@ -153,7 +148,7 @@ export function useEnvironments(): UseEnvironmentsResult {
           githubAccountId: githubAccountId ?? "",
         });
       } catch (err) {
-        setOperationError(extractErrorMessage(err));
+        setOperationError(extractErrorMessage(err, "Operation failed"));
       }
     },
     [],
@@ -177,7 +172,7 @@ export function useEnvironments(): UseEnvironmentsResult {
           githubAccountId: fields.githubAccountId,
         });
       } catch (err) {
-        setOperationError(extractErrorMessage(err));
+        setOperationError(extractErrorMessage(err, "Operation failed"));
       }
     },
     [],
@@ -210,7 +205,7 @@ export function useEnvironments(): UseEnvironmentsResult {
           delete next[environmentId];
           return next;
         });
-        setOperationError(extractErrorMessage(err));
+        setOperationError(extractErrorMessage(err, "Operation failed"));
       }
     },
     [scheduleProvisionClear],
@@ -221,7 +216,7 @@ export function useEnvironments(): UseEnvironmentsResult {
     try {
       await grackleClient.stopEnvironment({ id: environmentId });
     } catch (err) {
-      setOperationError(extractErrorMessage(err));
+      setOperationError(extractErrorMessage(err, "Operation failed"));
     }
   }, []);
 
@@ -230,7 +225,7 @@ export function useEnvironments(): UseEnvironmentsResult {
     try {
       await grackleClient.removeEnvironment({ id: environmentId });
     } catch (err) {
-      setOperationError(extractErrorMessage(err));
+      setOperationError(extractErrorMessage(err, "Operation failed"));
     }
   }, []);
 
