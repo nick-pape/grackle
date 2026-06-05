@@ -3,7 +3,7 @@
  * each task spawn (AHP HR6), and that the deprecated proactive PushTokens path
  * is never used.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 
 // ── Mock heavy dependencies before importing modules under test ─────
 
@@ -11,8 +11,7 @@ vi.mock("@grackle-ai/database", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@grackle-ai/database")>();
   actual.openDatabase(":memory:");
   actual.initDatabase();
-  return {
-    ...actual,
+  const mockStores = {
     envRegistry: {
       listEnvironments: vi.fn(() => []),
       getEnvironment: vi.fn(() => ({ adapterType: "local" })),
@@ -79,6 +78,12 @@ vi.mock("@grackle-ai/database", async (importOriginal) => {
       })),
       setCredentialProviders: vi.fn(),
     },
+  };
+  // Wire mock stores into the real registry so cross-package getDatabaseStores() calls work
+  actual.setDatabaseStores(mockStores as unknown as Parameters<typeof actual.setDatabaseStores>[0]);
+  return {
+    ...actual,
+    ...mockStores,
   };
 });
 
@@ -239,6 +244,11 @@ function makeMockTask(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+afterAll(async () => {
+  const real = await vi.importActual<typeof import("@grackle-ai/database")>("@grackle-ai/database");
+  real.clearDatabaseStores();
+});
 
 describe("task-start token push", () => {
   beforeEach(() => {

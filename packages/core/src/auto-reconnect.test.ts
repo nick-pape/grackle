@@ -3,7 +3,7 @@
  * Covers: successful reconnect, backoff timing, max retries,
  * concurrent lock, clearReconnectState, session recovery trigger.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
 
 // ── Mock dependencies before importing ──────────────────────
 
@@ -49,9 +49,60 @@ vi.mock("./reanimate-agent.js", () => ({
 
 // ── Imports (after mocks) ───────────────────────────────────
 
-import { openDatabase, initDatabase, sqlite as _sqlite, envRegistry } from "@grackle-ai/database";
+import {
+  openDatabase,
+  initDatabase,
+  sqlite as _sqlite,
+  envRegistry,
+  sessionStore,
+  taskStore,
+  workspaceStore,
+  personaStore,
+  agentStore,
+  componentStore,
+  settingsStore,
+  tokenStore,
+  credentialProviders,
+  scheduleStore,
+  escalationStore,
+  workspaceEnvironmentLinkStore,
+  dispatchQueueStore,
+  pluginStore,
+  githubAccountStore,
+  channelGrantStore,
+  persistEvent,
+  queryDomainEvents,
+  persistStreamMessage,
+  queryStreamMessages,
+  persistSessionAction,
+  querySessionActions,
+  setDatabaseStores,
+  clearDatabaseStores,
+} from "@grackle-ai/database";
 openDatabase(":memory:");
 initDatabase();
+setDatabaseStores({
+  sessionStore,
+  taskStore,
+  envRegistry,
+  workspaceStore,
+  personaStore,
+  agentStore,
+  componentStore,
+  settingsStore,
+  tokenStore,
+  credentialProviders,
+  scheduleStore,
+  escalationStore,
+  workspaceEnvironmentLinkStore,
+  dispatchQueueStore,
+  pluginStore,
+  githubAccountStore,
+  channelGrantStore,
+  eventStore: { persistEvent, queryDomainEvents },
+  streamMessageStore: { persistStreamMessage, queryStreamMessages },
+  sessionActionStore: { persistSessionAction, querySessionActions },
+});
 const sqlite = _sqlite!;
 import * as adapterManager from "./adapter-manager.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
@@ -122,6 +173,10 @@ function makeAdapter(connectResult?: PowerLineConnection): EnvironmentAdapter {
 // ── Tests ───────────────────────────────────────────────────
 
 describe("auto-reconnect", () => {
+  afterAll(() => {
+    clearDatabaseStores();
+  });
+
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS environments");
     applySchema();

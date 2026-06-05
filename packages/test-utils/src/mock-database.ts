@@ -395,14 +395,7 @@ export function createDatabaseMock(): DatabaseMock {
   const streamMessageStoreMock = createStreamMessageStoreMock();
   const sessionActionStoreMock = createSessionActionStoreMock();
 
-  return {
-    db: {},
-    sqlite: undefined,
-    openDatabase: vi.fn(),
-    initDatabase: vi.fn(),
-    seedDatabase: vi.fn(),
-    schema: {},
-
+  const stores: MockedDatabaseStores = {
     sessionStore: createSessionStoreMock(),
     taskStore: createTaskStoreMock(),
     envRegistry: createEnvRegistryMock(),
@@ -423,6 +416,10 @@ export function createDatabaseMock(): DatabaseMock {
     eventStore: eventStoreMock,
     streamMessageStore: streamMessageStoreMock,
     sessionActionStore: sessionActionStoreMock,
+  };
+
+  return {
+    ...stores,
 
     // Direct barrel re-exports — same references as the namespace mocks above
     persistEvent: eventStoreMock.persistEvent,
@@ -439,8 +436,10 @@ export function createDatabaseMock(): DatabaseMock {
     parseCredentialProviderConfig: credentialProvidersMock.parseCredentialProviderConfig,
     isValidCredentialProviderConfig: credentialProvidersMock.isValidCredentialProviderConfig,
 
-    // Store registry — mirrors real semantics (throws until initialized)
-    ...createStoreRegistryMock(),
+    // Store registry — getDatabaseStores() returns the mock stores directly
+    setDatabaseStores: vi.fn(),
+    getDatabaseStores: vi.fn(() => stores),
+    clearDatabaseStores: vi.fn(),
 
     // Utilities
     grackleHome: "/tmp/test-grackle",

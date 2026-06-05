@@ -3,7 +3,16 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
-vi.mock("@grackle-ai/database", () => ({ persistStreamMessage: vi.fn() }));
+vi.mock("@grackle-ai/database", () => {
+  const persistStreamMessage = vi.fn();
+  const stores = {
+    streamMessageStore: { persistStreamMessage },
+  };
+  return {
+    persistStreamMessage,
+    getDatabaseStores: () => stores,
+  };
+});
 
 import { persistStreamMessage } from "@grackle-ai/database";
 import * as registry from "./stream-registry.js";

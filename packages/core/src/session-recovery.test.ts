@@ -3,7 +3,7 @@
  * Covers: drain + reanimate, empty drain, reanimate failure, concurrent lock,
  * and the "server died" scenario (RUNNING/IDLE sessions in DB).
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 
 // ── Mock dependencies before importing ──────────────────────
 
@@ -46,9 +46,60 @@ vi.mock("./reanimate-agent.js", () => ({
 
 // ── Imports (after mocks) ───────────────────────────────────
 
-import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore } from "@grackle-ai/database";
+import {
+  openDatabase,
+  initDatabase,
+  sqlite as _sqlite,
+  sessionStore,
+  taskStore,
+  envRegistry,
+  workspaceStore,
+  personaStore,
+  agentStore,
+  componentStore,
+  settingsStore,
+  tokenStore,
+  credentialProviders,
+  scheduleStore,
+  escalationStore,
+  workspaceEnvironmentLinkStore,
+  dispatchQueueStore,
+  pluginStore,
+  githubAccountStore,
+  channelGrantStore,
+  persistEvent,
+  queryDomainEvents,
+  persistStreamMessage,
+  queryStreamMessages,
+  persistSessionAction,
+  querySessionActions,
+  setDatabaseStores,
+  clearDatabaseStores,
+} from "@grackle-ai/database";
 openDatabase(":memory:");
 initDatabase();
+setDatabaseStores({
+  sessionStore,
+  taskStore,
+  envRegistry,
+  workspaceStore,
+  personaStore,
+  agentStore,
+  componentStore,
+  settingsStore,
+  tokenStore,
+  credentialProviders,
+  scheduleStore,
+  escalationStore,
+  workspaceEnvironmentLinkStore,
+  dispatchQueueStore,
+  pluginStore,
+  githubAccountStore,
+  channelGrantStore,
+  eventStore: { persistEvent, queryDomainEvents },
+  streamMessageStore: { persistStreamMessage, queryStreamMessages },
+  sessionActionStore: { persistSessionAction, querySessionActions },
+});
 const sqlite = _sqlite!;
 import * as logWriter from "./log-writer.js";
 import { reanimateAgent } from "./reanimate-agent.js";
@@ -170,6 +221,10 @@ function makeConnection(
 // ── Tests ───────────────────────────────────────────────────
 
 describe("session recovery", () => {
+  afterAll(() => {
+    clearDatabaseStores();
+  });
+
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS sessions");
     sqlite.exec("DROP TABLE IF EXISTS tasks");

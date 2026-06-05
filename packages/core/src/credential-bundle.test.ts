@@ -19,15 +19,21 @@ vi.mock("node:fs", () => ({
 }));
 
 const mockGetCredentialProviders = vi.fn();
-vi.mock("@grackle-ai/database", () => ({
-  credentialProviders: {
-    getCredentialProviders: (...args: unknown[]) => mockGetCredentialProviders(...args),
-  },
-  githubAccountStore: {
-    getDefaultGitHubAccount: vi.fn(() => undefined),
-    resolveStoredGitHubToken: vi.fn(() => undefined),
-  },
-}));
+vi.mock("@grackle-ai/database", () => {
+  const stores = {
+    credentialProviders: {
+      getCredentialProviders: (...args: unknown[]) => mockGetCredentialProviders(...args),
+    },
+    githubAccountStore: {
+      getDefaultGitHubAccount: vi.fn(() => undefined),
+      resolveStoredGitHubToken: vi.fn(() => undefined),
+    },
+  };
+  return {
+    ...stores,
+    getDatabaseStores: () => stores,
+  };
+});
 
 // Import AFTER mocks
 import {

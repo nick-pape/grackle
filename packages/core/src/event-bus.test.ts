@@ -1,13 +1,64 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 
 // ── Mock dependencies before importing ──────────────
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-import { openDatabase, initDatabase, sqlite as _sqlite } from "@grackle-ai/database";
+import {
+  openDatabase,
+  initDatabase,
+  sqlite as _sqlite,
+  sessionStore,
+  taskStore,
+  envRegistry,
+  workspaceStore,
+  personaStore,
+  agentStore,
+  componentStore,
+  settingsStore,
+  tokenStore,
+  credentialProviders,
+  scheduleStore,
+  escalationStore,
+  workspaceEnvironmentLinkStore,
+  dispatchQueueStore,
+  pluginStore,
+  githubAccountStore,
+  channelGrantStore,
+  persistEvent,
+  queryDomainEvents,
+  persistStreamMessage,
+  queryStreamMessages,
+  persistSessionAction,
+  querySessionActions,
+  setDatabaseStores,
+  clearDatabaseStores,
+} from "@grackle-ai/database";
 openDatabase(":memory:");
 initDatabase();
+setDatabaseStores({
+  sessionStore,
+  taskStore,
+  envRegistry,
+  workspaceStore,
+  personaStore,
+  agentStore,
+  componentStore,
+  settingsStore,
+  tokenStore,
+  credentialProviders,
+  scheduleStore,
+  escalationStore,
+  workspaceEnvironmentLinkStore,
+  dispatchQueueStore,
+  pluginStore,
+  githubAccountStore,
+  channelGrantStore,
+  eventStore: { persistEvent, queryDomainEvents },
+  streamMessageStore: { persistStreamMessage, queryStreamMessages },
+  sessionActionStore: { persistSessionAction, querySessionActions },
+});
 const sqlite = _sqlite!;
 import { emit, subscribe, _resetForTesting, type GrackleEvent } from "./event-bus.js";
 
@@ -27,6 +78,10 @@ function applySchema(): void {
 }
 
 describe("event-bus", () => {
+  afterAll(() => {
+    clearDatabaseStores();
+  });
+
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS domain_events");
     applySchema();
