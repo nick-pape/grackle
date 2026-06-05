@@ -1,8 +1,9 @@
 /**
  * Transport-agnostic error mapping.
  *
- * This is the only file in the web package that imports ConnectError/Code from
- * the transport layer. All other hooks and pages import from here instead.
+ * Production code in the web package must not import ConnectError/Code
+ * directly — use the helpers exported here instead. (Test files may still
+ * import ConnectError to construct mock errors.)
  *
  * @module
  */
@@ -43,7 +44,8 @@ function mapCode(code: number): GrackleErrorCode {
  * Map any caught error to a {@link GrackleError}.
  *
  * ConnectErrors are mapped to their UI-friendly code with the original message.
- * All other errors fall back to `"unknown"` with the provided fallback message.
+ * Plain Errors use their own message when no fallback is provided. Non-Error
+ * values fall back to `fallbackMessage` or a generic default.
  */
 export function mapError(err: unknown, fallbackMessage?: string): GrackleError {
   if (err instanceof ConnectError) {
@@ -61,8 +63,5 @@ export function mapError(err: unknown, fallbackMessage?: string): GrackleError {
  * message and don't branch on the error code.
  */
 export function extractErrorMessage(err: unknown, fallback: string): string {
-  if (err instanceof ConnectError) {
-    return err.message;
-  }
-  return fallback;
+  return mapError(err, fallback).message;
 }

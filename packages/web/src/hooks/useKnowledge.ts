@@ -52,9 +52,8 @@ function safeParseJson(json: string): Record<string, unknown> | undefined {
 /**
  * Classify a failed knowledge RPC into a {@link KnowledgeLoadError}.
  *
- * The backend returns `"unavailable"` when Neo4j is not running or unreachable;
- * that maps to the "knowledge server can't be reached" UX. Everything else is
- * a generic `"error"`.
+ * Transport-level "unavailable" errors (e.g. Neo4j unreachable) map to the
+ * "knowledge server can't be reached" UX. Everything else is a generic `"error"`.
  */
 function classifyLoadError(err: unknown): KnowledgeLoadError {
   return mapError(err).code === "unavailable" ? "unavailable" : "error";
