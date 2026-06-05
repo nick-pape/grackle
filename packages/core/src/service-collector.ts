@@ -19,7 +19,7 @@ export type HandlerGroup = Record<string, (...args: any[]) => any>;
  * function for `connectNodeAdapter`.
  */
 export interface ServiceCollector {
-  /** Add handler methods to a service. Multiple calls merge handlers (last-write-wins). */
+  /** Add handler methods to a service. Throws on method name collision. */
   addHandlers(service: DescService, handlers: HandlerGroup): void;
 
   /** Build the route registration function for `connectNodeAdapter({ routes })`. */
@@ -36,6 +36,13 @@ export function createServiceCollector(): ServiceCollector {
   return {
     addHandlers(service: DescService, handlers: HandlerGroup): void {
       const existing = registry.get(service) ?? {};
+      const collisions = Object.keys(handlers).filter((key) => Object.hasOwn(existing, key));
+      if (collisions.length > 0) {
+        throw new Error(
+          `Handler collision on service "${service.typeName}": ` +
+            `method(s) [${collisions.join(", ")}] already registered`,
+        );
+      }
       registry.set(service, { ...existing, ...handlers });
     },
 

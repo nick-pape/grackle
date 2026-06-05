@@ -7,6 +7,7 @@
  */
 
 import type { GracklePlugin } from "@grackle-ai/plugin-sdk";
+import { registerPlugin } from "@grackle-ai/plugin-sdk";
 import { grackle } from "@grackle-ai/common";
 import {
   createOrchestrationCollector,
@@ -29,6 +30,15 @@ import { taskStore } from "@grackle-ai/database";
  *
  * @returns A GracklePlugin ready to pass to `loadPlugins()`.
  */
+registerPlugin({
+  name: "orchestration",
+  description: "Task orchestration — tasks, personas, findings, escalations",
+  required: false,
+  defaultEnabled: true,
+  envOverride: { variable: "GRACKLE_SKIP_ORCHESTRATION", semantics: "skip" },
+  create: createOrchestrationPlugin,
+});
+
 export function createOrchestrationPlugin(): GracklePlugin {
   return {
     name: "orchestration",

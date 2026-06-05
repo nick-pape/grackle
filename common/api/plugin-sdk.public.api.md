@@ -14,6 +14,12 @@ interface Disposable_2 {
 export { Disposable_2 as Disposable }
 
 // @public
+export function getRegisteredPlugins(): ReadonlyArray<PluginRegistration>;
+
+// @public
+export function getRegistration(name: string): PluginRegistration | undefined;
+
+// @public
 export interface GrackleEvent {
     id: string;
     payload: Record<string, unknown>;
@@ -60,6 +66,22 @@ export interface PluginContext {
 }
 
 // @public
+export interface PluginEnvOverride {
+    semantics: "skip" | "enable";
+    variable: string;
+}
+
+// @public
+export interface PluginRegistration {
+    create: () => GracklePlugin;
+    defaultEnabled: boolean;
+    description: string;
+    envOverride?: PluginEnvOverride;
+    name: string;
+    required: boolean;
+}
+
+// @public
 export interface PluginToolDefinition {
     annotations?: Record<string, unknown>;
     description: string;
@@ -76,6 +98,12 @@ export interface ReconciliationPhase {
     execute: () => Promise<void>;
     name: string;
 }
+
+// @public
+export function registerPlugin(registration: PluginRegistration): void;
+
+// @public
+export function resolveEnabledPlugins(getPluginEnabled: (name: string) => boolean | undefined): GracklePlugin[];
 
 // @public
 export interface ServerConfig {

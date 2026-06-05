@@ -6,7 +6,7 @@
 
 import type { GracklePlugin } from '@grackle-ai/plugin-sdk';
 
-// @public
+// @public (undocumented)
 export function createOrchestrationPlugin(): GracklePlugin;
 
 // (No @packageDocumentation comment for this package)
