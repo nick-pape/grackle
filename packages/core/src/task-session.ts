@@ -19,6 +19,7 @@ import {
   grackleHome,
 } from "@grackle-ai/database";
 import { GrackleError } from "@grackle-ai/common";
+import { ConnectError } from "@connectrpc/connect";
 import * as adapterManager from "./adapter-manager.js";
 import * as tokenPush from "./token-push.js";
 import { v4 as uuid } from "uuid";
@@ -194,7 +195,13 @@ export async function startTaskSession(
       { taskId: freshTask.id, environmentId, runtime },
       "startTaskSession failed: pre-flight credential check",
     );
-    return err instanceof GrackleError ? err.message : (err as Error).message;
+    if (err instanceof GrackleError) {
+      return err.message;
+    }
+    if (err instanceof ConnectError) {
+      return err.rawMessage;
+    }
+    return (err as Error).message;
   }
 
   sessionStore.createSession(
