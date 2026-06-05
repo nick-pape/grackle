@@ -4,16 +4,19 @@
 
 ```ts
 
+import { computeNextRunAt } from '@grackle-ai/common';
 import type { GrackleEventType } from '@grackle-ai/core';
 import type { GracklePlugin } from '@grackle-ai/plugin-sdk';
+import { isIntervalExpression } from '@grackle-ai/common';
 import type { Logger } from 'pino';
+import { parseDuration } from '@grackle-ai/common';
 import type { ReconciliationPhase } from '@grackle-ai/plugin-sdk';
 import type { ScheduleRow } from '@grackle-ai/database';
 import type { SessionRow } from '@grackle-ai/database';
 import type { TaskModel } from '@grackle-ai/core';
+import { validateExpression } from '@grackle-ai/common';
 
-// @public
-export function computeNextRunAt(expr: string, lastRunAt?: string): string;
+export { computeNextRunAt }
 
 // @public
 export function createCronPhase(deps: CronPhaseDeps): ReconciliationPhase;
@@ -53,14 +56,11 @@ export interface CronPhaseDeps {
     }) => Promise<string | undefined>;
 }
 
-// @public
-export function isIntervalExpression(expr: string): boolean;
+export { isIntervalExpression }
 
-// @public
-export function parseDuration(expr: string): number;
+export { parseDuration }
 
-// @public
-export function validateExpression(expr: string): void;
+export { validateExpression }
 
 // (No @packageDocumentation comment for this package)
 
