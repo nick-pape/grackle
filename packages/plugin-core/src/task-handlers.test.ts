@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
 import type { ConnectRouter } from "@connectrpc/connect";
+import { setupTestDatabase } from "@grackle-ai/test-utils";
 
-// ── Mock @grackle-ai/database ────────────────────────────────────────
+// ── Mock dependencies ───────────────────────────────────────────
 
-vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("@grackle-ai/test-utils");
-  return createDatabaseMock();
-});
+// NOTE: @grackle-ai/database is NOT mocked -- real stores run against
+// an in-memory SQLite database initialized by setupTestDatabase().
 
 // ── Mock @grackle-ai/core ────────────────────────────────────────────
 
@@ -89,10 +88,18 @@ import {
   sessionStore,
   workspaceStore,
   workspaceEnvironmentLinkStore,
+  envRegistry,
 } from "@grackle-ai/database";
 // @grackle-ai/auth is intentionally NOT mocked here: revokeTask/isRevokedTask use
 // the real in-memory revocation set so we can assert lifecycle wiring (F12).
 import { isRevokedTask, clearRevocations } from "@grackle-ai/auth";
+
+// ── Test DB ───────────────────────────────────────────────────
+
+const testDb = setupTestDatabase();
+afterAll(() => testDb.cleanup());
+
+// ── Helpers ───────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getHandlers(): Record<string, (...args: any[]) => any> {
@@ -108,44 +115,29 @@ function getHandlers(): Record<string, (...args: any[]) => any> {
   return handlers;
 }
 
-function makeTaskRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: "task-1",
-    workspaceId: "ws-1",
-    title: "Test Task",
-    description: "",
-    status: "not_started",
-    branch: "",
-    dependsOn: "[]",
-    startedAt: null,
-    completedAt: null,
-    createdAt: "2026-01-01T00:00:00Z",
-    updatedAt: "2026-01-01T00:00:00Z",
-    sortOrder: 0,
-    parentTaskId: "",
-    depth: 0,
-    canDecompose: false,
-    defaultPersonaId: "",
-    workpad: "",
-    scheduleId: "",
-    ...overrides,
-  };
+function insertBaseEntities(): void {
+  envRegistry.addEnvironment("env-linked-1", "Linked Env", "local", "{}");
+  workspaceStore.createWorkspace("ws-1", "Test Workspace", "", "");
+  workspaceEnvironmentLinkStore.linkEnvironment("ws-1", "env-linked-1");
 }
 
-function makeWorkspaceRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    id: "ws-1",
-    name: "Test Workspace",
-    description: "",
-    repoUrl: "",
-    status: "active",
-    useWorktrees: true,
-    workingDirectory: "",
-    defaultPersonaId: "",
-    createdAt: "2026-01-01T00:00:00Z",
-    updatedAt: "2026-01-01T00:00:00Z",
-    ...overrides,
-  };
+function insertTask(
+  overrides: {
+    id?: string;
+    workspaceId?: string;
+    title?: string;
+    dependsOn?: string[];
+    parentTaskId?: string;
+    canDecompose?: boolean;
+  } = {},
+): void {
+  const id = overrides.id ?? "task-1";
+  const workspaceId = overrides.workspaceId ?? "ws-1";
+  const title = overrides.title ?? "Test Task";
+  const dependsOn = overrides.dependsOn ?? [];
+  const parentTaskId = overrides.parentTaskId ?? "";
+  const canDecompose = overrides.canDecompose ?? false;
+  taskStore.createTask(id, workspaceId, title, "", dependsOn, "ws-1", parentTaskId, canDecompose);
 }
 
 describe("startTask environment resolution", () => {
@@ -154,19 +146,15 @@ describe("startTask environment resolution", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    testDb.truncateAll();
+    insertBaseEntities();
+    insertTask();
     handlers = getHandlers();
-
-    vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow() as never);
-    vi.mocked(taskStore.areDependenciesMet).mockReturnValue(true);
-    vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([]);
-    vi.mocked(workspaceStore.getWorkspace).mockReturnValue(makeWorkspaceRow() as never);
-    vi.mocked(workspaceEnvironmentLinkStore.getLinkedEnvironmentIds).mockReturnValue([
-      "env-linked-1",
-    ]);
   });
 
   it("throws FailedPrecondition when workspace has no linked envs", async () => {
-    vi.mocked(workspaceEnvironmentLinkStore.getLinkedEnvironmentIds).mockReturnValue([]);
+    // Remove the link so workspace has no envs
+    workspaceEnvironmentLinkStore.unlinkEnvironment("ws-1", "env-linked-1");
 
     const err = (await handlers
       .startTask({
@@ -183,12 +171,12 @@ describe("startTask environment resolution", () => {
   });
 
   it("throws FailedPrecondition when task has no workspace and no env passed", async () => {
-    vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow({ workspaceId: null }) as never);
-    vi.mocked(workspaceEnvironmentLinkStore.getLinkedEnvironmentIds).mockReturnValue([]);
+    // Insert a task with no workspace
+    taskStore.createTask("task-no-ws", undefined, "No WS Task", "", [], "ws-1");
 
     const err = (await handlers
       .startTask({
-        taskId: "task-1",
+        taskId: "task-no-ws",
         personaId: "",
         environmentId: "",
         notes: "",
@@ -207,15 +195,18 @@ describe("scoped-token revocation on task lifecycle (GHSA-f9ff-5x35-7gfw F12)", 
   beforeEach(() => {
     vi.clearAllMocks();
     clearRevocations();
+    testDb.truncateAll();
+    insertBaseEntities();
+    insertTask();
     handlers = getHandlers();
-    vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow() as never);
-    vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([]);
-    vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([]);
-    vi.mocked(taskStore.checkAndUnblock).mockReturnValue([]);
+
+    // Spy on store methods needed for assertions
+    vi.spyOn(taskStore, "deleteTask");
+    vi.spyOn(taskStore, "checkAndUnblock");
   });
 
   // complete/stop are resumable, and resume reuses the original scoped token
-  // (powerline `runtime.resume` does not re-mint) — revoking here would 401 the
+  // (powerline `runtime.resume` does not re-mint) -- revoking here would 401 the
   // resumed agent. So only deleteTask (truly terminal) revokes.
   it("completeTask does NOT revoke the task's tokens (resumable)", async () => {
     await handlers.completeTask({ id: "task-1" });
@@ -228,8 +219,6 @@ describe("scoped-token revocation on task lifecycle (GHSA-f9ff-5x35-7gfw F12)", 
   });
 
   it("deleteTask revokes the task's tokens (terminal, never resumed)", async () => {
-    vi.mocked(taskStore.getChildren).mockReturnValue([]);
-    vi.mocked(taskStore.deleteTask).mockReturnValue(1 as never);
     expect(isRevokedTask("task-1")).toBe(false);
     await handlers.deleteTask({ id: "task-1" });
     expect(isRevokedTask("task-1")).toBe(true);
@@ -241,15 +230,17 @@ describe("dependency validation", () => {
   let handlers: Record<string, (...args: any[]) => any>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
+    testDb.truncateAll();
+    insertBaseEntities();
     handlers = getHandlers();
+
+    // Spy on store methods needed for assertions
+    vi.spyOn(taskStore, "updateTask");
   });
 
   describe("createTask", () => {
     it("rejects nonexistent dependency", async () => {
-      vi.mocked(workspaceStore.getWorkspace).mockReturnValue(makeWorkspaceRow() as never);
-      vi.mocked(taskStore.getTask).mockReturnValue(undefined as never);
-
       const err = (await handlers
         .createTask({
           workspaceId: "ws-1",
@@ -268,7 +259,7 @@ describe("dependency validation", () => {
 
   describe("updateTask", () => {
     it("rejects self-dependency", async () => {
-      vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow() as never);
+      insertTask();
 
       const err = (await handlers
         .updateTask({
@@ -287,12 +278,7 @@ describe("dependency validation", () => {
     });
 
     it("rejects nonexistent dependency", async () => {
-      vi.mocked(taskStore.getTask).mockImplementation((id: string) => {
-        if (id === "task-1") {
-          return makeTaskRow() as never;
-        }
-        return undefined as never;
-      });
+      insertTask();
 
       const err = (await handlers
         .updateTask({
@@ -311,8 +297,12 @@ describe("dependency validation", () => {
     });
 
     it("rejects circular dependency", async () => {
-      vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow() as never);
-      vi.mocked(taskStore.detectDependencyCycle).mockReturnValue(["task-2", "task-1"]);
+      insertTask();
+      // Insert a second task that depends on task-1
+      insertTask({ id: "task-2", dependsOn: ["task-1"] });
+
+      // Mock detectDependencyCycle to return a specific cycle path for assertion
+      vi.spyOn(taskStore, "detectDependencyCycle").mockReturnValue(["task-2", "task-1"]);
 
       const err = (await handlers
         .updateTask({
@@ -331,8 +321,8 @@ describe("dependency validation", () => {
     });
 
     it("allows valid dependency update", async () => {
-      vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow() as never);
-      vi.mocked(taskStore.detectDependencyCycle).mockReturnValue(null);
+      insertTask();
+      insertTask({ id: "task-2" });
 
       await handlers.updateTask({
         id: "task-1",
@@ -347,7 +337,8 @@ describe("dependency validation", () => {
     });
 
     it("skips validation when dependsOn is empty", async () => {
-      vi.mocked(taskStore.getTask).mockReturnValue(makeTaskRow() as never);
+      insertTask();
+      vi.spyOn(taskStore, "detectDependencyCycle");
 
       await handlers.updateTask({
         id: "task-1",

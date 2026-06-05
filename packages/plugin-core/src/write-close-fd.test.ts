@@ -2,44 +2,66 @@
  * Integration tests for writeToFd and closeFd with async delivery tracking.
  *
  * Uses the real stream-registry and pipe-delivery (not mocked), so the full chain fires:
- *   writeToFd → publish() → async listener → gRPC sendInput → deliveredTo tracking
- *   → awaitPendingDeliveries → delivery verification
+ *   writeToFd -> publish() -> async listener -> gRPC sendInput -> deliveredTo tracking
+ *   -> awaitPendingDeliveries -> delivery verification
  *
- * Only the database (sessionStore.getSession) and the adapter connection are stubbed.
+ * Only the adapter connection is stubbed. The database uses a real in-memory SQLite
+ * via setupTestDatabase(), and sessionStore.getSession returns real rows.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 import { streamRegistry, pipeDelivery, adapterManager } from "@grackle-ai/core";
-import { sessionStore } from "@grackle-ai/database";
+import { sessionStore, envRegistry } from "@grackle-ai/database";
 import { writeToFd, closeFd } from "./session-handlers.js";
+import { setupTestDatabase } from "@grackle-ai/test-utils";
 
-// Mock the database — only sessionStore.getSession is needed; everything else is unreachable
-// by writeToFd/closeFd and can stay as vi.fn() stubs.
-vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("@grackle-ai/test-utils");
-  return createDatabaseMock();
-});
+// NOTE: @grackle-ai/database is NOT mocked -- real stores run against
+// an in-memory SQLite database initialized by setupTestDatabase().
 
-/** Minimal session shape used by the pipe-delivery async listener. */
-const makeSession = (id: string, environmentId = "test-env") => ({
-  id,
-  environmentId,
-  parentSessionId: "",
-  pipeMode: "",
-  status: "running",
-  logPath: null,
-  error: null,
-});
+// ── Test DB ───────────────────────────────────────────────────
 
-describe("writeToFd + closeFd — async delivery integration", () => {
+const testDb = setupTestDatabase();
+afterAll(() => testDb.cleanup());
+
+// ── Helpers ───────────────────────────────────────────────────
+
+function insertBaseEntities(): void {
+  envRegistry.addEnvironment("test-env", "Test Env", "local", "{}");
+}
+
+/** Insert a session into the real database. */
+function insertSession(
+  id: string,
+  environmentId: string = "test-env",
+  parentSessionId: string = "",
+  pipeMode: string = "",
+): void {
+  sessionStore.createSession(
+    id,
+    environmentId,
+    "stub",
+    "",
+    "claude",
+    "/tmp/log",
+    "",
+    "",
+    parentSessionId,
+    pipeMode as never,
+  );
+  sessionStore.updateSession(id, "running" as never);
+}
+
+describe("writeToFd + closeFd -- async delivery integration", () => {
   let mockSendInput: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     streamRegistry._resetForTesting();
     pipeDelivery._resetForTesting();
     vi.clearAllMocks();
+    testDb.truncateAll();
+    insertBaseEntities();
 
     mockSendInput = vi.fn().mockResolvedValue(undefined);
 
@@ -49,10 +71,9 @@ describe("writeToFd + closeFd — async delivery integration", () => {
       transport: { dispatchInput: mockSendInput },
     } as unknown as ReturnType<typeof adapterManager.getConnection>);
 
-    // Make sessionStore.getSession return a valid session so the listener doesn't throw.
-    vi.mocked(sessionStore.getSession).mockImplementation(
-      (id: string) => makeSession(id) as unknown as ReturnType<typeof sessionStore.getSession>,
-    );
+    // Insert real sessions so getSession returns valid data
+    insertSession("child");
+    insertSession("parent");
   });
 
   /**
@@ -111,6 +132,11 @@ describe("writeToFd + closeFd — async delivery integration", () => {
     });
 
     it("throws when one of two async readers has no listener (partial delivery)", async () => {
+      // Insert additional sessions for multi-reader test
+      insertSession("reader-a");
+      insertSession("reader-b");
+      insertSession("writer");
+
       // Two readers: "reader-a" has a listener (sendInput resolves),
       // "reader-b" has no listener (message stays undelivered).
       const stream = streamRegistry.createStream("pipe:multi");
@@ -138,7 +164,10 @@ describe("writeToFd + closeFd — async delivery integration", () => {
     });
 
     it("returns Empty when there are no async subscribers (sync-only stream)", async () => {
-      // Only a sync reader — no async delivery to verify, writeToFd should succeed.
+      insertSession("reader");
+      insertSession("writer");
+
+      // Only a sync reader -- no async delivery to verify, writeToFd should succeed.
       const stream = streamRegistry.createStream("pipe:sync-only");
       streamRegistry.subscribe(stream.id, "reader", "rw", "sync", true);
       const writerSub = streamRegistry.subscribe(stream.id, "writer", "w", "detach", false);
@@ -162,7 +191,7 @@ describe("writeToFd + closeFd — async delivery integration", () => {
     it("succeeds when all messages have been delivered", async () => {
       const { parentFd, childFd } = setupPipeStream();
 
-      // Child writes; sendInput for parent resolves → message delivered to parent
+      // Child writes; sendInput for parent resolves -> message delivered to parent
       await writeToFd(
         create(grackle.WriteToFdRequestSchema, {
           sessionId: "child",
@@ -171,7 +200,7 @@ describe("writeToFd + closeFd — async delivery integration", () => {
         }),
       );
 
-      // Parent can now close its fd — hasUndeliveredMessages should be false
+      // Parent can now close its fd -- hasUndeliveredMessages should be false
       const result = await closeFd(
         create(grackle.CloseFdRequestSchema, {
           sessionId: "parent",
@@ -186,11 +215,11 @@ describe("writeToFd + closeFd — async delivery integration", () => {
       const { parentFd } = setupPipeStream();
       mockSendInput.mockRejectedValue(new Error("gRPC failure"));
 
-      // Publish directly — sendInput rejects → parent sub stays undelivered
+      // Publish directly -- sendInput rejects -> parent sub stays undelivered
       const stream = streamRegistry.getStreamByName("pipe:child")!;
       const msg = streamRegistry.publish(stream.id, "child", "message that won't arrive");
 
-      // Wait for all pending delivery Promises to settle (deterministic — no setTimeout).
+      // Wait for all pending delivery Promises to settle (deterministic -- no setTimeout).
       // awaitPendingDeliveries uses Promise.all on the same deliveryPromise array, so it
       // returns once the sendInput rejection has propagated through the .then(ok, fail)
       // handler and deliveredTo has been left unpopulated.

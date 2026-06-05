@@ -4,14 +4,13 @@
  * Verifies that when `force=true`, active sessions are killed, the adapter is
  * disconnected, and reconnectOrProvision receives the force flag.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { setupTestDatabase } from "@grackle-ai/test-utils";
 
 // ── Mock heavy dependencies before importing the module ──────────
 
-vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("@grackle-ai/test-utils");
-  return createDatabaseMock();
-});
+// NOTE: @grackle-ai/database is NOT mocked -- real stores run against
+// an in-memory SQLite database initialized by setupTestDatabase().
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -104,7 +103,7 @@ vi.mock("./utils/format-gh-error.js", () => ({
   formatGhError: vi.fn((e: unknown) => String(e)),
 }));
 
-// Import AFTER mocks — use the mocked versions
+// Import AFTER mocks -- use the mocked versions
 import { registerGrackleRoutes } from "./grpc-service.js";
 import { envRegistry, sessionStore, taskStore } from "@grackle-ai/database";
 import {
@@ -116,27 +115,24 @@ import {
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import type { ConnectRouter } from "@connectrpc/connect";
 
-/** Fake environment row. */
-const FAKE_ENV = {
-  id: "test-env",
-  displayName: "Test Env",
-  adapterType: "local",
-  adapterConfig: "{}",
-  bootstrapped: true,
-  status: "connected",
-  lastSeen: "",
-  envInfo: "",
-  createdAt: "2025-01-01",
-  powerlineToken: "tok-123",
-};
+// ── Test DB ───────────────────────────────────────────────────
 
-/** Fake active session row. */
-const FAKE_SESSION = {
-  id: "session-1",
-  environmentId: "test-env",
-  status: "running",
-  taskId: "task-1",
-};
+const testDb = setupTestDatabase();
+afterAll(() => testDb.cleanup());
+
+// ── Helpers ───────────────────────────────────────────────────
+
+function insertBaseEntities(): void {
+  envRegistry.addEnvironment("test-env", "Test Env", "local", "{}");
+  envRegistry.markBootstrapped("test-env");
+  envRegistry.updateEnvironmentStatus("test-env", "connected");
+}
+
+function insertActiveSession(): void {
+  taskStore.createTask("task-1", undefined, "Task 1", "", [], "ws-1");
+  sessionStore.createSession("session-1", "test-env", "stub", "", "claude", "/tmp/log", "task-1");
+  sessionStore.updateSession("session-1", "running" as never);
+}
 
 /** Extract the service handlers from registerGrackleRoutes. */
 function getHandlers(): Record<string, (...args: unknown[]) => unknown> {
@@ -164,13 +160,20 @@ describe("gRPC provisionEnvironment with force", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    testDb.truncateAll();
+    insertBaseEntities();
     handlers = getHandlers();
+
+    // Spy on store methods for assertion tracking
+    vi.spyOn(sessionStore, "updateSession");
+    vi.spyOn(sessionStore, "getActiveForEnv");
   });
 
   it("kills active session when force=true", async () => {
-    vi.mocked(envRegistry.getEnvironment).mockReturnValue(FAKE_ENV);
-    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(FAKE_SESSION as never);
-    vi.mocked(taskStore.getTask).mockReturnValue({ id: "task-1", workspaceId: "ws-1" } as never);
+    insertActiveSession();
+    // Clear the spy from insertActiveSession's updateSession call
+    vi.mocked(sessionStore.updateSession).mockClear();
+
     const fakeAdapter = {
       connect: vi.fn().mockResolvedValue({ client: {} }),
       disconnect: vi.fn().mockResolvedValue(undefined),
@@ -199,8 +202,7 @@ describe("gRPC provisionEnvironment with force", () => {
   });
 
   it("disconnects adapter and removes connection when force=true", async () => {
-    vi.mocked(envRegistry.getEnvironment).mockReturnValue(FAKE_ENV);
-    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
+    // No active session -- just test disconnect path
     const fakeAdapter = {
       connect: vi.fn().mockResolvedValue({ client: {} }),
       disconnect: vi.fn().mockResolvedValue(undefined),
@@ -217,8 +219,7 @@ describe("gRPC provisionEnvironment with force", () => {
   });
 
   it("passes force flag to reconnectOrProvision", async () => {
-    vi.mocked(envRegistry.getEnvironment).mockReturnValue(FAKE_ENV);
-    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
+    // No active session
     const fakeAdapter = {
       connect: vi.fn().mockResolvedValue({ client: {} }),
       disconnect: vi.fn().mockResolvedValue(undefined),
@@ -234,14 +235,13 @@ describe("gRPC provisionEnvironment with force", () => {
       "test-env",
       expect.anything(),
       expect.anything(),
-      "tok-123",
+      expect.any(String),
       true,
       true,
     );
   });
 
   it("does not kill sessions or disconnect when force=false", async () => {
-    vi.mocked(envRegistry.getEnvironment).mockReturnValue(FAKE_ENV);
     const fakeAdapter = {
       connect: vi.fn().mockResolvedValue({ client: {} }),
       disconnect: vi.fn(),
@@ -259,8 +259,7 @@ describe("gRPC provisionEnvironment with force", () => {
   });
 
   it("handles adapter disconnect failure gracefully", async () => {
-    vi.mocked(envRegistry.getEnvironment).mockReturnValue(FAKE_ENV);
-    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
+    // No active session
     const fakeAdapter = {
       connect: vi.fn().mockResolvedValue({ client: {} }),
       disconnect: vi.fn().mockRejectedValue(new Error("disconnect failed")),
@@ -279,8 +278,7 @@ describe("gRPC provisionEnvironment with force", () => {
   });
 
   it("skips session kill when no active session exists", async () => {
-    vi.mocked(envRegistry.getEnvironment).mockReturnValue(FAKE_ENV);
-    vi.mocked(sessionStore.getActiveForEnv).mockReturnValue(undefined);
+    // No session inserted
     const fakeAdapter = {
       connect: vi.fn().mockResolvedValue({ client: {} }),
       disconnect: vi.fn().mockResolvedValue(undefined),

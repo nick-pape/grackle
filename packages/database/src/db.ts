@@ -635,6 +635,21 @@ export function openDatabase(dbPath?: string): void {
 }
 
 /**
+ * Close the database connection and reset the module-level singleton.
+ * Allows re-initialization via {@link openDatabase} with a fresh instance.
+ * Intended for test teardown — production code should not call this.
+ */
+export function closeDatabase(): void {
+  stopWalCheckpointTimer();
+  if (sqlite) {
+    sqlite.close();
+  }
+  sqlite = undefined;
+  resolvedDbPath = undefined;
+  db = undefined!;
+}
+
+/**
  * Initialize all database tables and run any pending migrations.
  * Call once at startup after {@link openDatabase}, or pass an in-memory
  * SQLite instance for testing.

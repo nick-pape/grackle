@@ -3,8 +3,9 @@
  * Covers both hard kill (SIGKILL) and graceful kill (SIGTERM) paths,
  * including the bug fix for forwarding kills to PowerLine.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
+import { setupTestDatabase } from "@grackle-ai/test-utils";
 
 // ── Mock heavy dependencies before importing the module ──────────
 
@@ -12,10 +13,8 @@ const { mockSendInputToSession } = vi.hoisted(() => ({
   mockSendInputToSession: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("@grackle-ai/test-utils");
-  return createDatabaseMock();
-});
+// NOTE: @grackle-ai/database is NOT mocked -- real stores run against
+// an in-memory SQLite database initialized by setupTestDatabase().
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -109,7 +108,7 @@ vi.mock("./utils/slugify.js", () => ({
 // ── Import AFTER mocks ──────────────────────────────────────────
 
 import { registerGrackleRoutes } from "./grpc-service.js";
-import { sessionStore } from "@grackle-ai/database";
+import { sessionStore, envRegistry } from "@grackle-ai/database";
 import {
   adapterManager,
   streamRegistry,
@@ -118,6 +117,11 @@ import {
 } from "@grackle-ai/core";
 const lifecycle = { cleanupLifecycleStream, ensureLifecycleStream };
 import type { ConnectRouter } from "@connectrpc/connect";
+
+// ── Test DB ───────────────────────────────────────────────────
+
+const testDb = setupTestDatabase();
+afterAll(() => testDb.cleanup());
 
 /**
  * Extract the service handlers from registerGrackleRoutes by
@@ -136,30 +140,14 @@ function getHandlers(): Record<string, (...args: unknown[]) => unknown> {
 
 // ── Helpers ────────────────────────────────────────────────
 
-const ACTIVE_SESSION = {
-  id: "sess-1",
-  environmentId: "env-1",
-  status: "idle",
-  runtime: "stub",
-  runtimeSessionId: "rt-1",
-  prompt: "",
-  model: "claude",
-  logPath: "/tmp/log",
-  turns: 0,
-  startedAt: new Date().toISOString(),
-  suspendedAt: null,
-  endedAt: null,
-  endReason: null,
-  error: null,
-  taskId: "",
-  personaId: "",
-  parentSessionId: "",
-  pipeMode: "",
-  inputTokens: 0,
-  outputTokens: 0,
-  costMillicents: 0,
-  sigtermSentAt: null,
-};
+function insertBaseEntities(): void {
+  envRegistry.addEnvironment("env-1", "Test Env", "local", "{}");
+}
+
+function insertActiveSession(): void {
+  sessionStore.createSession("sess-1", "env-1", "stub", "", "claude", "/tmp/log", "", "", "", "");
+  sessionStore.updateSession("sess-1", "idle" as never, "rt-1");
+}
 
 function makeMockConnection(killMock = vi.fn().mockResolvedValue(undefined)) {
   return {
@@ -180,12 +168,21 @@ describe("gRPC killAgent", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    testDb.truncateAll();
+    insertBaseEntities();
+    insertActiveSession();
     handlers = getHandlers();
+
+    // Spy on store methods for assertion tracking.
+    // These are set up after data insertion so the initial updateSession call
+    // from insertActiveSession is not captured. Clear any residual spy state.
+    vi.spyOn(sessionStore, "updateSession").mockClear();
+    vi.spyOn(sessionStore, "setSigtermSentAt").mockClear();
+    vi.spyOn(sessionStore, "clearSigtermSentAt").mockClear();
   });
 
   it("throws NOT_FOUND when session does not exist", async () => {
-    vi.mocked(sessionStore.getSession).mockReturnValue(undefined);
-
+    // Use a non-existent session ID -- real getSession returns undefined
     const err = await handlers
       .killAgent({ id: "nonexistent", graceful: false })
       .catch((e: unknown) => e);
@@ -196,8 +193,6 @@ describe("gRPC killAgent", () => {
 
   describe("graceful=false (hard kill / SIGKILL)", () => {
     it("sets status to stopped with endReason=killed", async () => {
-      vi.mocked(sessionStore.getSession).mockReturnValue(ACTIVE_SESSION);
-
       await handlers.killAgent({ id: "sess-1", graceful: false });
 
       expect(sessionStore.updateSession).toHaveBeenCalledWith(
@@ -210,7 +205,6 @@ describe("gRPC killAgent", () => {
     });
 
     it("forwards kill to PowerLine via adapter connection", async () => {
-      vi.mocked(sessionStore.getSession).mockReturnValue(ACTIVE_SESSION);
       const mockKill = vi.fn().mockResolvedValue({});
       const mockConn = makeMockConnection(mockKill);
       vi.mocked(adapterManager.getConnection).mockReturnValue(
@@ -224,8 +218,6 @@ describe("gRPC killAgent", () => {
     });
 
     it("cleans up lifecycle streams and subscriptions", async () => {
-      vi.mocked(sessionStore.getSession).mockReturnValue(ACTIVE_SESSION);
-
       await handlers.killAgent({ id: "sess-1", graceful: false });
 
       expect(lifecycle.cleanupLifecycleStream).toHaveBeenCalledWith("sess-1");
@@ -235,7 +227,6 @@ describe("gRPC killAgent", () => {
 
   describe("graceful=true (SIGTERM)", () => {
     it("delivers [SIGTERM] message via sendInputToSession", async () => {
-      vi.mocked(sessionStore.getSession).mockReturnValue(ACTIVE_SESSION);
       mockSendInputToSession.mockResolvedValue(true);
 
       await handlers.killAgent({ id: "sess-1", graceful: true });
@@ -249,7 +240,6 @@ describe("gRPC killAgent", () => {
     });
 
     it("records sigtermSentAt in the database", async () => {
-      vi.mocked(sessionStore.getSession).mockReturnValue(ACTIVE_SESSION);
       mockSendInputToSession.mockResolvedValue(true);
 
       await handlers.killAgent({ id: "sess-1", graceful: true });
@@ -258,7 +248,6 @@ describe("gRPC killAgent", () => {
     });
 
     it("does NOT set session status to stopped", async () => {
-      vi.mocked(sessionStore.getSession).mockReturnValue(ACTIVE_SESSION);
       mockSendInputToSession.mockResolvedValue(true);
 
       await handlers.killAgent({ id: "sess-1", graceful: true });
@@ -267,7 +256,6 @@ describe("gRPC killAgent", () => {
     });
 
     it("does NOT cleanup lifecycle streams", async () => {
-      vi.mocked(sessionStore.getSession).mockReturnValue(ACTIVE_SESSION);
       mockSendInputToSession.mockResolvedValue(true);
 
       await handlers.killAgent({ id: "sess-1", graceful: true });
@@ -276,7 +264,6 @@ describe("gRPC killAgent", () => {
     });
 
     it("falls back to hard kill if signal delivery fails", async () => {
-      vi.mocked(sessionStore.getSession).mockReturnValue(ACTIVE_SESSION);
       mockSendInputToSession.mockResolvedValue(false);
 
       await handlers.killAgent({ id: "sess-1", graceful: true });
