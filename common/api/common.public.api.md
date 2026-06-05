@@ -433,6 +433,9 @@ export function componentRenderToolName(name: string): string | undefined;
 const ComponentSchema: GenMessage<Component>;
 
 // @public
+export function computeNextRunAt(expr: string, lastRunAt?: string): string;
+
+// @public
 export type CopyButtonBuiltinProps = z.infer<typeof copyButtonPropsSchema>;
 
 // @public
@@ -2031,6 +2034,9 @@ export class InvalidSessionTransitionError extends Error {
 }
 
 // @public
+export function isIntervalExpression(expr: string): boolean;
+
+// @public
 export function isValidTransition(from: SessionStatus, to: SessionStatus): boolean;
 
 // @public
@@ -2398,6 +2404,9 @@ const PairingCodeResponseSchema: GenMessage<PairingCodeResponse>;
 
 // @public
 export function parseDelegationArgs(tool: string, args: unknown): DelegationInfo;
+
+// @public
+export function parseDuration(expr: string): number;
 
 // @public
 export interface PendingToolCall {
@@ -3731,6 +3740,9 @@ type UsageStats = Message<"grackle.UsageStats"> & {
 
 // @public
 const UsageStatsSchema: GenMessage<UsageStats>;
+
+// @public
+export function validateExpression(expr: string): void;
 
 // @public
 type VersionStatus = Message<"grackle.VersionStatus"> & {

@@ -10,6 +10,12 @@ export * from "./builtin-component-schemas.js";
 export * from "./builtin-components.js";
 export * from "./component-render-tool.js";
 export * from "./component-refs.js";
+export {
+  validateExpression,
+  computeNextRunAt,
+  parseDuration,
+  isIntervalExpression,
+} from "./schedule-expression.js";
 export { RUNTIME_CATALOG } from "./runtime-catalog.js";
 export type {
   RuntimeCatalogEntry,
