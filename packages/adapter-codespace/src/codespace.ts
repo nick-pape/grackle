@@ -1,38 +1,18 @@
-import type {
-  BaseEnvironmentConfig,
-  PowerLineConnection,
-  ProvisionEvent,
-  AdapterDependencies,
-  ExecFunction,
-} from "@grackle-ai/adapter-sdk";
+import type { RemoteTunnelConfig, RemoteTunnelMeta, ExecFunction } from "@grackle-ai/adapter-sdk";
 import { FatalAdapterError } from "@grackle-ai/adapter-sdk";
-import { DEFAULT_POWERLINE_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import {
-  BaseAdapter,
+  RemoteTunnelAdapter,
   type RemoteExecutor,
   type TunnelProcessFactory,
   type TunnelPortProbe,
   ProcessTunnel,
-  bootstrapPowerLine,
-  connectThroughTunnel,
-  registerTunnel,
-  getTunnel,
-  closeTunnel,
-  withFreePort,
-  remoteStop,
-  remoteDestroy,
-  remoteHealthCheck,
-  startRemotePowerLine,
-  exec as defaultExec,
-  sleep as defaultSleep,
-  SSH_CONNECTIVITY_TIMEOUT_MS,
+  ProcessReverseTunnel,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
+  SSH_CONNECTIVITY_TIMEOUT_MS,
 } from "@grackle-ai/adapter-sdk";
+import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 
 const REMOTE_COPY_TIMEOUT_MS: number = 120_000;
-
-/** Delay for reverse tunnels to wait for SSH to establish. */
-const REVERSE_TUNNEL_SETTLE_MS: number = 3_000;
 
 /**
  * Thrown when the codespace no longer exists on GitHub.
@@ -53,13 +33,9 @@ const CODESPACE_NOT_FOUND_PATTERNS: RegExp =
 // ─── Config ─────────────────────────────────────────────────
 
 /** GitHub Codespaces-specific environment configuration. */
-export interface CodespaceEnvironmentConfig extends BaseEnvironmentConfig {
+export interface CodespaceEnvironmentConfig extends RemoteTunnelConfig {
   /** The codespace name from `gh codespace list` (required). */
   codespaceName: string;
-  /** Override the local tunnel port (otherwise a free port is chosen). */
-  localPort?: number;
-  /** Additional environment variables forwarded to the remote PowerLine. */
-  env?: Record<string, string>;
   /**
    * ID of the GitHub account to use for `gh` CLI operations on this environment.
    * When set, the account's token is injected as `GH_TOKEN` into all `gh` calls.
@@ -172,10 +148,8 @@ class CodespaceTunnel extends ProcessTunnel {
  * Reverse SSH tunnel: binds a port inside the codespace that tunnels back to a local port.
  * Used so agents (running in the codespace) can reach the Grackle MCP server (on the host).
  */
-class CodespaceReverseTunnel extends ProcessTunnel {
+class CodespaceReverseTunnel extends ProcessReverseTunnel {
   private readonly codespaceName: string;
-  private readonly remotePort: number;
-  private readonly sleepFn: (ms: number) => Promise<void>;
 
   public constructor(
     localPort: number,
@@ -186,10 +160,8 @@ class CodespaceReverseTunnel extends ProcessTunnel {
     portProbe?: TunnelPortProbe,
     ghToken?: string,
   ) {
-    super(localPort, undefined, processFactory, portProbe);
-    this.remotePort = remotePort;
+    super(localPort, remotePort, sleepFn, processFactory, portProbe);
     this.codespaceName = codespaceName;
-    this.sleepFn = sleepFn;
     if (ghToken) {
       this.spawnEnv = { GH_TOKEN: ghToken };
     }
@@ -209,70 +181,61 @@ class CodespaceReverseTunnel extends ProcessTunnel {
     ];
     return { command: "gh", args };
   }
-
-  /**
-   * Reverse tunnels bind on the remote side, not locally.
-   * We can't probe the remote port, so wait a fixed delay for SSH to establish.
-   */
-  protected async waitForReady(): Promise<void> {
-    await this.sleepFn(REVERSE_TUNNEL_SETTLE_MS);
-    if (this.process?.exitCode !== null) {
-      throw new Error(`Reverse tunnel exited immediately with code ${this.process?.exitCode}`);
-    }
-  }
 }
 
 // ─── Adapter ────────────────────────────────────────────────
 
 /** Environment adapter that provisions and manages GitHub Codespaces running the PowerLine. */
-export class CodespaceAdapter extends BaseAdapter {
+export class CodespaceAdapter extends RemoteTunnelAdapter<CodespaceEnvironmentConfig> {
   public type: string = "codespace";
-  private readonly execFn: ExecFunction;
-  private readonly sleepFn: (ms: number) => Promise<void>;
-  private readonly isGitHubProviderEnabled: () => boolean;
-  private readonly resolveGitHubToken: (accountId?: string) => string | undefined;
 
-  public constructor(deps: AdapterDependencies = {}) {
-    super();
-    this.execFn = deps.exec ?? defaultExec;
-    this.sleepFn = deps.sleep ?? defaultSleep;
-    this.isGitHubProviderEnabled = deps.isGitHubProviderEnabled ?? (() => false);
-    this.resolveGitHubToken = deps.resolveGitHubToken ?? (() => undefined);
-  }
-
-  /** Provision the codespace: verify connectivity, bootstrap PowerLine, open port-forward. */
-  protected async *doProvision(
-    environmentId: string,
-    config: Record<string, unknown>,
-    powerlineToken: string,
-  ): AsyncGenerator<ProvisionEvent> {
+  /** Validate and parse the raw config into typed Codespace configuration. */
+  protected resolveConfig(config: Record<string, unknown>): {
+    config: CodespaceEnvironmentConfig;
+    meta: RemoteTunnelMeta;
+  } {
     const cfg = config as unknown as CodespaceEnvironmentConfig;
     if (!cfg.codespaceName) {
       throw new Error("Codespace adapter requires a 'codespaceName' in the configuration");
     }
+    return { config: cfg, meta: { displayTarget: `codespace ${cfg.codespaceName}` } };
+  }
 
+  /** Create a Codespace executor with optional GitHub token injection. */
+  protected createExecutor(cfg: CodespaceEnvironmentConfig): RemoteExecutor {
     const ghToken = this.resolveGitHubToken(cfg.githubAccountId || undefined);
-    const executor = new CodespaceExecutor(cfg.codespaceName, this.execFn, ghToken);
+    return new CodespaceExecutor(cfg.codespaceName, this.execFn, ghToken);
+  }
 
-    // Test codespace connectivity
-    yield {
-      stage: "connecting",
-      message: `Connecting to codespace ${cfg.codespaceName}...`,
-      progress: 0.05,
-    };
-    try {
-      await executor.exec("echo ok", { timeout: SSH_CONNECTIVITY_TIMEOUT_MS });
-    } catch (err) {
-      if (err instanceof FatalAdapterError) {
-        throw err;
-      }
-      throw new Error(
-        `Cannot reach codespace '${cfg.codespaceName}' via gh CLI: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
+  /** Create a port-forward tunnel via `gh codespace ports forward`. */
+  protected createForwardTunnel(localPort: number, cfg: CodespaceEnvironmentConfig): ProcessTunnel {
+    const ghToken = this.resolveGitHubToken(cfg.githubAccountId || undefined);
+    return new CodespaceTunnel(localPort, cfg.codespaceName, undefined, undefined, ghToken);
+  }
 
-    // Detect the repo working directory (codespaces clone to /workspaces/<name>)
-    let workingDirectory: string | undefined;
+  /** Create a reverse SSH tunnel via `gh codespace ssh -- -R`. */
+  protected createReverseTunnel(
+    localPort: number,
+    remotePort: number,
+    cfg: CodespaceEnvironmentConfig,
+  ): ProcessTunnel {
+    const ghToken = this.resolveGitHubToken(cfg.githubAccountId || undefined);
+    return new CodespaceReverseTunnel(
+      localPort,
+      remotePort,
+      cfg.codespaceName,
+      this.sleepFn,
+      undefined,
+      undefined,
+      ghToken,
+    );
+  }
+
+  /** Detect the repo working directory (codespaces clone to /workspaces/<name>). */
+  protected async preBootstrap(
+    executor: RemoteExecutor,
+    _config: CodespaceEnvironmentConfig,
+  ): Promise<{ workingDirectory?: string }> {
     try {
       const workspaceDir = (
         await executor.exec("ls -d /workspaces/*/ 2>/dev/null | head -1", {
@@ -282,190 +245,18 @@ export class CodespaceAdapter extends BaseAdapter {
         .trim()
         .replace(/\/$/, "");
       if (workspaceDir) {
-        workingDirectory = workspaceDir;
+        return { workingDirectory: workspaceDir };
       }
     } catch {
       // Non-fatal — fall back to PowerLine directory
     }
-
-    // Bootstrap PowerLine on the codespace
-    yield* bootstrapPowerLine(executor, powerlineToken, {
-      extraEnv: cfg.env,
-      workingDirectory,
-      isGitHubProviderEnabled: this.isGitHubProviderEnabled,
-      defaultRuntime: (config.defaultRuntime as string) || undefined,
-    });
-
-    // Open port-forward tunnel (retry on port conflict, #1486)
-    const openTunnel = async (port: number): Promise<{ port: number; tunnel: CodespaceTunnel }> => {
-      const t = new CodespaceTunnel(port, cfg.codespaceName, undefined, undefined, ghToken);
-      await t.open();
-      return { port, tunnel: t };
-    };
-
-    const { port: localPort, tunnel } = cfg.localPort
-      ? await openTunnel(cfg.localPort)
-      : await withFreePort(openTunnel);
-
-    yield {
-      stage: "tunneling",
-      message: `Forwarding local port ${localPort} to codespace...`,
-      progress: 0.8,
-    };
-
-    // Open reverse tunnel (codespace → host MCP server) for agent tool calls.
-    // Wrap in try/catch so the forward tunnel is cleaned up if the reverse fails.
-    try {
-      const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-      const reverseTunnel = new CodespaceReverseTunnel(
-        mcpPort,
-        mcpPort,
-        cfg.codespaceName,
-        this.sleepFn,
-        undefined,
-        undefined,
-        ghToken,
-      );
-      await reverseTunnel.open();
-
-      registerTunnel(environmentId, { tunnel, reverseTunnel });
-    } catch (err) {
-      await tunnel.close();
-      throw err;
-    }
-
-    yield {
-      stage: "connecting",
-      message: `Tunnel open, connecting on port ${localPort}...`,
-      progress: 0.9,
-    };
+    return {};
   }
 
-  /**
-   * Attempt fast reconnect: probe PowerLine, restart if needed, re-open tunnel.
-   */
-  public async *reconnect(
-    environmentId: string,
-    config: Record<string, unknown>,
-    powerlineToken: string,
-  ): AsyncGenerator<ProvisionEvent> {
-    yield* this.withProvisionLock(
-      environmentId,
-      this.doReconnect(environmentId, config, powerlineToken),
-    );
-  }
-
-  private async *doReconnect(
-    environmentId: string,
-    config: Record<string, unknown>,
-    powerlineToken: string,
-  ): AsyncGenerator<ProvisionEvent> {
-    const cfg = config as unknown as CodespaceEnvironmentConfig;
-    if (!cfg.codespaceName) {
-      throw new Error("Codespace adapter requires a 'codespaceName' in the configuration");
-    }
-
-    const ghToken = this.resolveGitHubToken(cfg.githubAccountId || undefined);
-    const executor = new CodespaceExecutor(cfg.codespaceName, this.execFn, ghToken);
-
-    // 1. Close any stale tunnel
-    yield { stage: "reconnecting", message: "Closing stale tunnel...", progress: 0.1 };
-    await closeTunnel(environmentId);
-
-    // 2. Probe + conditional restart in a single SSH call.
-    yield {
-      stage: "reconnecting",
-      message: `Checking PowerLine on ${cfg.codespaceName}...`,
-      progress: 0.3,
-    };
-    const { alreadyRunning } = await startRemotePowerLine(executor, powerlineToken, {
-      extraEnv: cfg.env,
-      autoDetectWorkspace: true,
-      probeFirst: true,
-    });
-    if (!alreadyRunning) {
-      yield { stage: "reconnecting", message: "PowerLine restarted", progress: 0.5 };
-    }
-
-    // 3. Open new port-forward tunnel + reverse tunnel for MCP (retry on port conflict, #1486)
-    const openTunnel = async (port: number): Promise<{ port: number; tunnel: CodespaceTunnel }> => {
-      const t = new CodespaceTunnel(port, cfg.codespaceName, undefined, undefined, ghToken);
-      await t.open();
-      return { port, tunnel: t };
-    };
-
-    const { port: localPort, tunnel } = cfg.localPort
-      ? await openTunnel(cfg.localPort)
-      : await withFreePort(openTunnel);
-
-    yield {
-      stage: "reconnecting",
-      message: `Forwarding local port ${localPort} to codespace...`,
-      progress: 0.7,
-    };
-
-    try {
-      const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-      const reverseTunnel = new CodespaceReverseTunnel(
-        mcpPort,
-        mcpPort,
-        cfg.codespaceName,
-        this.sleepFn,
-        undefined,
-        undefined,
-        ghToken,
-      );
-      await reverseTunnel.open();
-
-      registerTunnel(environmentId, { tunnel, reverseTunnel });
-    } catch (err) {
-      await tunnel.close();
-      throw err;
-    }
-
-    yield { stage: "reconnecting", message: "Reconnected to codespace", progress: 0.9 };
-  }
-
-  /** Connect to the PowerLine through the port-forward tunnel. */
-  protected async doConnect(
-    environmentId: string,
-    _config: Record<string, unknown>,
-    powerlineToken: string,
-  ): Promise<PowerLineConnection> {
-    const state = getTunnel(environmentId);
-    if (!state) {
-      throw new Error(`No tunnel registered for environment ${environmentId}`);
-    }
-    return connectThroughTunnel(environmentId, state.tunnel.localPort, powerlineToken);
-  }
-
-  /** Close the port-forward tunnel without stopping the remote PowerLine. */
-  protected async doDisconnect(environmentId: string): Promise<void> {
-    await closeTunnel(environmentId);
-  }
-
-  /** Stop the remote PowerLine process and close the tunnel. */
-  protected async doStop(environmentId: string, config: Record<string, unknown>): Promise<void> {
-    const cfg = config as unknown as CodespaceEnvironmentConfig;
-    const ghToken = this.resolveGitHubToken(cfg.githubAccountId || undefined);
-    await remoteStop(environmentId, new CodespaceExecutor(cfg.codespaceName, this.execFn, ghToken));
-  }
-
-  /**
-   * Stop the remote PowerLine and remove artifacts from the codespace.
-   * This does NOT delete the codespace itself.
-   */
-  protected async doDestroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
-    const cfg = config as unknown as CodespaceEnvironmentConfig;
-    const ghToken = this.resolveGitHubToken(cfg.githubAccountId || undefined);
-    await remoteDestroy(
-      environmentId,
-      new CodespaceExecutor(cfg.codespaceName, this.execFn, ghToken),
-    );
-  }
-
-  /** Check that the tunnel is alive and the PowerLine responds to a ping. */
-  public async healthCheck(connection: PowerLineConnection): Promise<boolean> {
-    return remoteHealthCheck(connection);
+  /** On reconnect, auto-detect the workspace directory. */
+  protected reconnectBootstrapOptions(
+    _config: CodespaceEnvironmentConfig,
+  ): Record<string, unknown> {
+    return { autoDetectWorkspace: true };
   }
 }

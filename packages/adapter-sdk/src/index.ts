@@ -18,12 +18,16 @@ export { reconnectOrProvision } from "./adapter.js";
 export type { AdapterLifecycleState } from "./base-adapter.js";
 export { BaseAdapter } from "./base-adapter.js";
 
+// ─── Remote Tunnel Adapter ─────────────────────────────────
+export type { RemoteTunnelConfig, RemoteTunnelMeta } from "./remote-tunnel-adapter.js";
+export { RemoteTunnelAdapter } from "./remote-tunnel-adapter.js";
+
 // ─── Remote Executor ────────────────────────────────────────
 export type { RemoteExecutor } from "./remote-executor.js";
 
 // ─── Tunnels ────────────────────────────────────────────────
 export type { RemoteTunnel, TunnelProcessFactory, TunnelPortProbe } from "./tunnel.js";
-export { ProcessTunnel } from "./tunnel.js";
+export { ProcessTunnel, ProcessReverseTunnel, REVERSE_TUNNEL_SETTLE_MS } from "./tunnel.js";
 export type { TunnelState } from "./tunnel-registry.js";
 export { registerTunnel, getTunnel, closeTunnel, closeAllTunnels } from "./tunnel-registry.js";
 
