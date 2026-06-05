@@ -38,6 +38,7 @@
     "@bufbuild/protobuf": "^2.5.0",
     "@connectrpc/connect": "^2.0.0",
     "@grackle-ai/ahp": "workspace:*",
+    "cron-parser": "^4.9.0",
     "fuse.js": "^7.0.0",
     "zod": "^4.3.0"
   },

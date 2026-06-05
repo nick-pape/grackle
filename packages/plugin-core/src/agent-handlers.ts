@@ -22,8 +22,7 @@ import {
 import { v4 as uuid } from "uuid";
 import { slugify } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
-import { validateExpression, computeNextRunAt } from "@grackle-ai/plugin-scheduling";
-import { scheduleRowToProto } from "@grackle-ai/common";
+import { scheduleRowToProto, validateExpression, computeNextRunAt } from "@grackle-ai/common";
 import { agentRowToProto } from "./grpc-proto-converters.js";
 import { killSessionAndCleanup } from "./grpc-shared.js";
 

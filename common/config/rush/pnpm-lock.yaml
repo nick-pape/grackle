@@ -358,6 +358,9 @@ importers:
       '@grackle-ai/ahp':
         specifier: workspace:*
         version: link:../ahp
+      cron-parser:
+        specifier: ^4.9.0
+        version: 4.9.0
       fuse.js:
         specifier: ^7.0.0
         version: 7.1.0
@@ -680,9 +683,6 @@ importers:
       '@grackle-ai/knowledge':
         specifier: workspace:*
         version: link:../knowledge
-      '@grackle-ai/plugin-scheduling':
-        specifier: workspace:*
-        version: link:../plugin-scheduling
       '@grackle-ai/plugin-sdk':
         specifier: workspace:*
         version: link:../plugin-sdk
