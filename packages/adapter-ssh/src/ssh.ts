@@ -1,42 +1,21 @@
-import type {
-  BaseEnvironmentConfig,
-  PowerLineConnection,
-  ProvisionEvent,
-  AdapterDependencies,
-  ExecFunction,
-} from "@grackle-ai/adapter-sdk";
-import { DEFAULT_POWERLINE_PORT, DEFAULT_MCP_PORT } from "@grackle-ai/common";
+import type { RemoteTunnelConfig, RemoteTunnelMeta, ExecFunction } from "@grackle-ai/adapter-sdk";
+import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
 import {
-  BaseAdapter,
+  RemoteTunnelAdapter,
   type RemoteExecutor,
   type TunnelProcessFactory,
   type TunnelPortProbe,
   ProcessTunnel,
-  bootstrapPowerLine,
-  connectThroughTunnel,
-  registerTunnel,
-  getTunnel,
-  closeTunnel,
-  withFreePort,
-  remoteStop,
-  remoteDestroy,
-  remoteHealthCheck,
-  startRemotePowerLine,
-  exec as defaultExec,
-  sleep as defaultSleep,
-  SSH_CONNECTIVITY_TIMEOUT_MS,
+  ProcessReverseTunnel,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
 } from "@grackle-ai/adapter-sdk";
 
 const REMOTE_COPY_TIMEOUT_MS: number = 120_000;
 
-/** Delay for reverse tunnels to wait for SSH to establish. */
-const REVERSE_TUNNEL_SETTLE_MS: number = 3_000;
-
 // ─── Config ─────────────────────────────────────────────────
 
 /** SSH-specific environment configuration. */
-export interface SshEnvironmentConfig extends BaseEnvironmentConfig {
+export interface SshEnvironmentConfig extends RemoteTunnelConfig {
   /** Remote hostname or IP address (required). */
   host: string;
   /** SSH username (defaults to the current OS user). */
@@ -47,10 +26,6 @@ export interface SshEnvironmentConfig extends BaseEnvironmentConfig {
   identityFile?: string;
   /** Extra SSH options passed as `-o Key=Value`. */
   sshOptions?: Record<string, string>;
-  /** Override the local tunnel port (otherwise a free port is chosen). */
-  localPort?: number;
-  /** Additional environment variables forwarded to the remote PowerLine. */
-  env?: Record<string, string>;
 }
 
 // ─── SSH Helpers ────────────────────────────────────────────
@@ -148,10 +123,8 @@ class SshTunnel extends ProcessTunnel {
  * Reverse SSH tunnel: binds a port on the remote host that tunnels back to a local port.
  * Used so agents (running on the remote host) can reach the Grackle MCP server (on the host).
  */
-class SshReverseTunnel extends ProcessTunnel {
+class SshReverseTunnel extends ProcessReverseTunnel {
   private readonly cfg: SshEnvironmentConfig;
-  private readonly remotePort: number;
-  private readonly sleepFn: (ms: number) => Promise<void>;
 
   public constructor(
     localPort: number,
@@ -161,10 +134,8 @@ class SshReverseTunnel extends ProcessTunnel {
     processFactory?: TunnelProcessFactory,
     portProbe?: TunnelPortProbe,
   ) {
-    super(localPort, undefined, processFactory, portProbe);
+    super(localPort, remotePort, sleepFn, processFactory, portProbe);
     this.cfg = cfg;
-    this.remotePort = remotePort;
-    this.sleepFn = sleepFn;
   }
 
   /** Return the ssh command with -R for reverse port forwarding. */
@@ -185,215 +156,42 @@ class SshReverseTunnel extends ProcessTunnel {
     ];
     return { command: "ssh", args };
   }
-
-  /**
-   * Reverse tunnels bind on the remote side, not locally.
-   * We can't probe the remote port, so wait a fixed delay for SSH to establish.
-   */
-  protected async waitForReady(): Promise<void> {
-    await this.sleepFn(REVERSE_TUNNEL_SETTLE_MS);
-    if (this.process?.exitCode !== null) {
-      throw new Error(`Reverse tunnel exited immediately with code ${this.process?.exitCode}`);
-    }
-  }
 }
 
 // ─── Adapter ────────────────────────────────────────────────
 
 /** Environment adapter that provisions and manages remote environments via SSH. */
-export class SshAdapter extends BaseAdapter {
+export class SshAdapter extends RemoteTunnelAdapter<SshEnvironmentConfig> {
   public type: string = "ssh";
-  private readonly execFn: ExecFunction;
-  private readonly sleepFn: (ms: number) => Promise<void>;
-  private readonly isGitHubProviderEnabled: () => boolean;
 
-  public constructor(deps: AdapterDependencies = {}) {
-    super();
-    this.execFn = deps.exec ?? defaultExec;
-    this.sleepFn = deps.sleep ?? defaultSleep;
-    this.isGitHubProviderEnabled = deps.isGitHubProviderEnabled ?? (() => false);
-  }
-
-  /** Provision the remote host: test connectivity, bootstrap PowerLine, open tunnel. */
-  protected async *doProvision(
-    environmentId: string,
-    config: Record<string, unknown>,
-    powerlineToken: string,
-  ): AsyncGenerator<ProvisionEvent> {
+  /** Validate and parse the raw config into typed SSH configuration. */
+  protected resolveConfig(config: Record<string, unknown>): {
+    config: SshEnvironmentConfig;
+    meta: RemoteTunnelMeta;
+  } {
     const cfg = config as unknown as SshEnvironmentConfig;
     if (!cfg.host) {
       throw new Error("SSH adapter requires a 'host' in the configuration");
     }
-
-    const executor = new SshExecutor(cfg, this.execFn);
-
-    // Test SSH connectivity
-    yield {
-      stage: "connecting",
-      message: `Testing SSH connectivity to ${cfg.host}...`,
-      progress: 0.05,
-    };
-    try {
-      await executor.exec("echo ok", { timeout: SSH_CONNECTIVITY_TIMEOUT_MS });
-    } catch (err) {
-      throw new Error(
-        `Cannot reach ${cfg.host} via SSH: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-
-    // Bootstrap PowerLine on the remote host
-    yield* bootstrapPowerLine(executor, powerlineToken, {
-      extraEnv: cfg.env,
-      isGitHubProviderEnabled: this.isGitHubProviderEnabled,
-      defaultRuntime: (config.defaultRuntime as string) || undefined,
-    });
-
-    // Open SSH tunnel (retry with a fresh port on TOCTOU conflict, #1486)
-    const openTunnel = async (port: number): Promise<{ port: number; tunnel: SshTunnel }> => {
-      const t = new SshTunnel(port, cfg);
-      await t.open();
-      return { port, tunnel: t };
-    };
-
-    const { port: localPort, tunnel } = cfg.localPort
-      ? await openTunnel(cfg.localPort)
-      : await withFreePort(openTunnel);
-
-    yield {
-      stage: "tunneling",
-      message: `Opening SSH tunnel on local port ${localPort}...`,
-      progress: 0.8,
-    };
-
-    // Open reverse tunnel (remote → host MCP server) for agent tool calls.
-    // Wrap in try/catch so the forward tunnel is cleaned up if the reverse fails.
-    try {
-      const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-      const reverseTunnel = new SshReverseTunnel(mcpPort, mcpPort, cfg, this.sleepFn);
-      await reverseTunnel.open();
-
-      registerTunnel(environmentId, { tunnel, reverseTunnel });
-    } catch (err) {
-      await tunnel.close();
-      throw err;
-    }
-
-    yield {
-      stage: "connecting",
-      message: `Tunnel open, connecting on port ${localPort}...`,
-      progress: 0.9,
-    };
+    return { config: cfg, meta: { displayTarget: cfg.host } };
   }
 
-  /**
-   * Attempt fast reconnect: probe PowerLine, restart if needed, re-open tunnel.
-   *
-   * Any failure (SSH unreachable, PowerLine won't start, tunnel error) throws
-   * and falls through to the caller, which should trigger a full provision.
-   *
-   * Minimizes SSH round trips — probe and conditional restart run in a single
-   * SSH call via `startRemotePowerLine({ probeFirst: true })`.
-   */
-  public async *reconnect(
-    environmentId: string,
-    config: Record<string, unknown>,
-    powerlineToken: string,
-  ): AsyncGenerator<ProvisionEvent> {
-    yield* this.withProvisionLock(
-      environmentId,
-      this.doReconnect(environmentId, config, powerlineToken),
-    );
+  /** Create an SSH executor for remote command execution. */
+  protected createExecutor(cfg: SshEnvironmentConfig): RemoteExecutor {
+    return new SshExecutor(cfg, this.execFn);
   }
 
-  private async *doReconnect(
-    environmentId: string,
-    config: Record<string, unknown>,
-    powerlineToken: string,
-  ): AsyncGenerator<ProvisionEvent> {
-    const cfg = config as unknown as SshEnvironmentConfig;
-    if (!cfg.host) {
-      throw new Error("SSH adapter requires a 'host' in the configuration");
-    }
-
-    const executor = new SshExecutor(cfg, this.execFn);
-
-    // 1. Close any stale tunnel
-    yield { stage: "reconnecting", message: "Closing stale tunnel...", progress: 0.1 };
-    await closeTunnel(environmentId);
-
-    // 2. Probe + conditional restart in a single SSH call.
-    yield { stage: "reconnecting", message: `Checking PowerLine on ${cfg.host}...`, progress: 0.3 };
-    const { alreadyRunning } = await startRemotePowerLine(executor, powerlineToken, {
-      extraEnv: cfg.env,
-      probeFirst: true,
-    });
-    if (!alreadyRunning) {
-      yield { stage: "reconnecting", message: "PowerLine restarted", progress: 0.5 };
-    }
-
-    // 3. Open new SSH tunnel + reverse tunnel for MCP (retry on port conflict, #1486)
-    const openTunnel = async (port: number): Promise<{ port: number; tunnel: SshTunnel }> => {
-      const t = new SshTunnel(port, cfg);
-      await t.open();
-      return { port, tunnel: t };
-    };
-
-    const { port: localPort, tunnel } = cfg.localPort
-      ? await openTunnel(cfg.localPort)
-      : await withFreePort(openTunnel);
-
-    yield {
-      stage: "reconnecting",
-      message: `Opening SSH tunnel on local port ${localPort}...`,
-      progress: 0.7,
-    };
-
-    try {
-      const mcpPort = parseInt(process.env.GRACKLE_MCP_PORT || String(DEFAULT_MCP_PORT), 10);
-      const reverseTunnel = new SshReverseTunnel(mcpPort, mcpPort, cfg, this.sleepFn);
-      await reverseTunnel.open();
-
-      registerTunnel(environmentId, { tunnel, reverseTunnel });
-    } catch (err) {
-      await tunnel.close();
-      throw err;
-    }
-
-    yield { stage: "reconnecting", message: "Reconnected via SSH", progress: 0.9 };
+  /** Create an SSH forward tunnel (local port → remote PowerLine). */
+  protected createForwardTunnel(localPort: number, cfg: SshEnvironmentConfig): ProcessTunnel {
+    return new SshTunnel(localPort, cfg);
   }
 
-  /** Connect to the PowerLine through the SSH tunnel. */
-  protected async doConnect(
-    environmentId: string,
-    _config: Record<string, unknown>,
-    powerlineToken: string,
-  ): Promise<PowerLineConnection> {
-    const state = getTunnel(environmentId);
-    if (!state) {
-      throw new Error(`No tunnel registered for environment ${environmentId}`);
-    }
-    return connectThroughTunnel(environmentId, state.tunnel.localPort, powerlineToken);
-  }
-
-  /** Close the SSH tunnel without stopping the remote PowerLine. */
-  protected async doDisconnect(environmentId: string): Promise<void> {
-    await closeTunnel(environmentId);
-  }
-
-  /** Stop the remote PowerLine process and close the tunnel. */
-  protected async doStop(environmentId: string, config: Record<string, unknown>): Promise<void> {
-    const cfg = config as unknown as SshEnvironmentConfig;
-    await remoteStop(environmentId, new SshExecutor(cfg, this.execFn));
-  }
-
-  /** Stop the remote PowerLine, remove artifacts, and close the tunnel. */
-  protected async doDestroy(environmentId: string, config: Record<string, unknown>): Promise<void> {
-    const cfg = config as unknown as SshEnvironmentConfig;
-    await remoteDestroy(environmentId, new SshExecutor(cfg, this.execFn));
-  }
-
-  /** Check that the tunnel is alive and the PowerLine responds to a ping. */
-  public async healthCheck(connection: PowerLineConnection): Promise<boolean> {
-    return remoteHealthCheck(connection);
+  /** Create an SSH reverse tunnel (remote → local MCP). */
+  protected createReverseTunnel(
+    localPort: number,
+    remotePort: number,
+    cfg: SshEnvironmentConfig,
+  ): ProcessTunnel {
+    return new SshReverseTunnel(localPort, remotePort, cfg, this.sleepFn);
   }
 }

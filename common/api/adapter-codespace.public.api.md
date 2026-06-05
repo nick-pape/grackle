@@ -4,33 +4,35 @@
 
 ```ts
 
-import type { AdapterDependencies } from '@grackle-ai/adapter-sdk';
-import { BaseAdapter } from '@grackle-ai/adapter-sdk';
-import type { BaseEnvironmentConfig } from '@grackle-ai/adapter-sdk';
 import { FatalAdapterError } from '@grackle-ai/adapter-sdk';
-import type { PowerLineConnection } from '@grackle-ai/adapter-sdk';
-import type { ProvisionEvent } from '@grackle-ai/adapter-sdk';
+import { ProcessTunnel } from '@grackle-ai/adapter-sdk';
+import { RemoteExecutor } from '@grackle-ai/adapter-sdk';
+import { RemoteTunnelAdapter } from '@grackle-ai/adapter-sdk';
+import type { RemoteTunnelConfig } from '@grackle-ai/adapter-sdk';
+import type { RemoteTunnelMeta } from '@grackle-ai/adapter-sdk';
+import type { StartRemotePowerLineOptions } from '@grackle-ai/adapter-sdk';
 
 // @public
-export class CodespaceAdapter extends BaseAdapter {
-    constructor(deps?: AdapterDependencies);
-    protected doConnect(environmentId: string, _config: Record<string, unknown>, powerlineToken: string): Promise<PowerLineConnection>;
-    protected doDestroy(environmentId: string, config: Record<string, unknown>): Promise<void>;
-    protected doDisconnect(environmentId: string): Promise<void>;
-    protected doProvision(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
-    protected doStop(environmentId: string, config: Record<string, unknown>): Promise<void>;
-    healthCheck(connection: PowerLineConnection): Promise<boolean>;
-    reconnect(environmentId: string, config: Record<string, unknown>, powerlineToken: string): AsyncGenerator<ProvisionEvent>;
+export class CodespaceAdapter extends RemoteTunnelAdapter<CodespaceEnvironmentConfig> {
+    protected createExecutor(cfg: CodespaceEnvironmentConfig): RemoteExecutor;
+    protected createForwardTunnel(localPort: number, cfg: CodespaceEnvironmentConfig): ProcessTunnel;
+    protected createReverseTunnel(localPort: number, remotePort: number, cfg: CodespaceEnvironmentConfig): ProcessTunnel;
+    protected preBootstrap(executor: RemoteExecutor, _config: CodespaceEnvironmentConfig): Promise<{
+        workingDirectory?: string;
+    }>;
+    protected reconnectBootstrapOptions(_config: CodespaceEnvironmentConfig): Partial<StartRemotePowerLineOptions>;
+    protected resolveConfig(config: Record<string, unknown>): {
+        config: CodespaceEnvironmentConfig;
+        meta: RemoteTunnelMeta;
+    };
     // (undocumented)
     type: string;
 }
 
 // @public
-export interface CodespaceEnvironmentConfig extends BaseEnvironmentConfig {
+export interface CodespaceEnvironmentConfig extends RemoteTunnelConfig {
     codespaceName: string;
-    env?: Record<string, string>;
     githubAccountId?: string;
-    localPort?: number;
 }
 
 // @public
