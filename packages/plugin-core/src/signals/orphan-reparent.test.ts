@@ -421,6 +421,8 @@ describe("createOrphanReparentSubscriber", () => {
         subscriptions: new Map(),
       } as never);
 
+      vi.spyOn(taskStore, "reparentTask");
+
       fireEvent({
         type: "task.completed",
         payload: { taskId: "pipe-only-parent", workspaceId: "ws-1" },
@@ -436,7 +438,7 @@ describe("createOrphanReparentSubscriber", () => {
         true,
       );
       expect(streamRegistry.unsubscribe).toHaveBeenCalledWith("sub-only");
-      expect(taskStore.reparentTask).toBeUndefined; // not spied, not called
+      expect(taskStore.reparentTask).not.toHaveBeenCalled();
     });
 
     it("skips non-pipe subscriptions (lifecycle streams)", async () => {

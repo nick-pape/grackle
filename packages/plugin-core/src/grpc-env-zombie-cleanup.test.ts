@@ -100,7 +100,7 @@ function insertBaseEntities(): void {
 }
 
 function insertActiveSession(id: string, taskId: string): void {
-  taskStore.createTask(taskId, "ws-1", `Task ${taskId}`, "", [], "ws-1");
+  taskStore.createTask(taskId, undefined, `Task ${taskId}`, "", [], "");
   sessionStore.createSession(id, "test-env", "stub", "", "claude", "/tmp/log", taskId);
   sessionStore.updateSession(id, "running" as never);
 }

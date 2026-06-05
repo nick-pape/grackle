@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Add closeDatabase() for test teardown; migrate 9 handler tests from mock-database to real in-memory SQLite",
+      "comment": "Add closeDatabase() export for test teardown; add setupTestDatabase() to @grackle-ai/test-utils; migrate 9 handler tests from mock-database to real in-memory SQLite",
       "type": "patch",
       "packageName": "@grackle-ai/cli"
     }
