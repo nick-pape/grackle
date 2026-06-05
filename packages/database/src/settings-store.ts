@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 
 /** Contract for key-value settings persistence. */
 export interface SettingsStore {
+  readonly WRITABLE_SETTING_KEYS: ReadonlySet<string>;
   isAllowedSettingKey(key: string): boolean;
   getSetting(key: string): string | undefined;
   setSetting(key: string, value: string): void;
@@ -41,5 +42,10 @@ export function setSetting(key: string, value: string): void {
     .run();
 }
 
-const _typeCheck: SettingsStore = { isAllowedSettingKey, getSetting, setSetting };
+const _typeCheck: SettingsStore = {
+  WRITABLE_SETTING_KEYS,
+  isAllowedSettingKey,
+  getSetting,
+  setSetting,
+};
 void _typeCheck;

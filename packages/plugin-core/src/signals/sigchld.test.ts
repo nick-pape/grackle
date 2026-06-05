@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 // ── Mock dependencies ────────────────────────────────────────
 
 vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("../test-utils/mock-database.js");
+  const { createDatabaseMock } = await import("@grackle-ai/test-utils");
   return createDatabaseMock();
 });
 

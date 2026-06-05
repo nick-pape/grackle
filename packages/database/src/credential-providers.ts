@@ -14,6 +14,9 @@ import * as schema from "./schema.js";
 
 /** Contract for credential provider configuration persistence. */
 export interface CredentialProviderStore {
+  readonly VALID_PROVIDERS: readonly string[];
+  readonly VALID_CLAUDE_VALUES: ReadonlySet<string>;
+  readonly VALID_TOGGLE_VALUES: ReadonlySet<string>;
   parseCredentialProviderConfig(rawJson: string): CredentialProviderConfig;
   getCredentialProviders(database?: DatabaseInstance): CredentialProviderConfig;
   isValidCredentialProviderConfig(value: unknown): value is CredentialProviderConfig;
@@ -140,6 +143,9 @@ export function setCredentialProviders(
 }
 
 const _typeCheck: CredentialProviderStore = {
+  VALID_PROVIDERS,
+  VALID_CLAUDE_VALUES,
+  VALID_TOGGLE_VALUES,
   parseCredentialProviderConfig,
   getCredentialProviders,
   isValidCredentialProviderConfig,

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
 
 vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("./test-utils/mock-database.js");
+  const { createDatabaseMock } = await import("@grackle-ai/test-utils");
   // Define LastEnvironmentError within the factory so both the handler (which imports
   // from the mocked module) and the test use the exact same class reference, making
   // `instanceof` checks reliable without depending on importActual resolving the dist/.

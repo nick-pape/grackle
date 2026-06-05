@@ -1,0 +1,23 @@
+{
+  "name": "@grackle-ai/test-utils",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Shared test utilities for Grackle packages",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "heft build --clean",
+    "_phase:build": "heft build --clean"
+  },
+  "dependencies": {
+    "@grackle-ai/database": "workspace:*",
+    "vitest": "^4.1.0"
+  },
+  "devDependencies": {
+    "@grackle-ai/heft-rig": "workspace:*",
+    "@rushstack/heft": "1.2.7",
+    "@types/node": "^22.0.0",
+    "typescript": "~5.7.0"
+  }
+}
