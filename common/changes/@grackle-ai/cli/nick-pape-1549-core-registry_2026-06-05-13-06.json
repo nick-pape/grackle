@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Migrate packages/core from direct store imports to getDatabaseStores() registry",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
