@@ -32,8 +32,6 @@ vi.mock("@grackle-ai/auth", () => ({
   stopOAuthCleanup: vi.fn(),
 }));
 
-vi.mock("@grackle-ai/adapter-sdk", () => ({}));
-
 import { createShutdown, type ShutdownContext } from "./shutdown.js";
 import { logger } from "@grackle-ai/core";
 import { stopWalCheckpointTimer } from "@grackle-ai/database";
