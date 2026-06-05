@@ -24,17 +24,20 @@ export function validatePipeInputs(pipe: string, parentSessionId: string): void 
 
 /**
  * Map a bind host to a dialable URL host. Wildcard addresses become loopback,
- * unless GRACKLE_DOCKER_HOST is set (DooD mode) — in that case, use that value
+ * unless `dockerHost` is provided (DooD mode) — in that case, use that value
  * so sibling containers can reach the server by container name.
+ *
+ * Falls back to `GRACKLE_DOCKER_HOST` env var when `dockerHost` is not
+ * explicitly passed (backward compat during config migration).
  */
-export function toDialableHost(bindHost: string): string {
+export function toDialableHost(bindHost: string, dockerHost?: string): string {
   if (bindHost === "0.0.0.0" || bindHost === "::") {
-    const dockerHost = process.env.GRACKLE_DOCKER_HOST;
-    if (dockerHost) {
-      if (dockerHost.startsWith("[") && dockerHost.endsWith("]")) {
-        return dockerHost;
+    const resolved = dockerHost ?? process.env.GRACKLE_DOCKER_HOST;
+    if (resolved) {
+      if (resolved.startsWith("[") && resolved.endsWith("]")) {
+        return resolved;
       }
-      return dockerHost.includes(":") ? `[${dockerHost}]` : dockerHost;
+      return resolved.includes(":") ? `[${resolved}]` : resolved;
     }
     return bindHost === "::" ? "[::1]" : "127.0.0.1";
   }

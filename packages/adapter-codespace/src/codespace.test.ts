@@ -10,46 +10,50 @@ interface MockTunnelInstance {
   close: ReturnType<typeof vi.fn>;
 }
 
-const mocks = vi.hoisted(() => ({
-  closeTunnel: vi.fn().mockResolvedValue(undefined),
-  registerTunnel: vi.fn(),
-  findFreePort: vi.fn().mockResolvedValue(9999),
-  withFreePort: vi.fn(),
-  startRemotePowerLine: vi.fn().mockResolvedValue({ alreadyRunning: true }),
-  bootstrapPowerLine: vi.fn(),
-  tunnelInstances: [] as MockTunnelInstance[],
-  tunnelOpenCallCount: 0,
-  tunnelOpenFailOnCall: -1,
-}));
+const mocks: {
+  tunnelInstances: MockTunnelInstance[];
+  tunnelOpenCallCount: number;
+  tunnelOpenFailOnCall: number;
+  MockTunnelClass: new (localPort: number) => unknown;
+} = vi.hoisted(() => {
+  // Use a single object so the class closures and the test both mutate the same reference.
+  const m: {
+    tunnelInstances: MockTunnelInstance[];
+    tunnelOpenCallCount: number;
+    tunnelOpenFailOnCall: number;
+    MockTunnelClass: new (localPort: number) => unknown;
+  } = {
+    tunnelInstances: [],
+    tunnelOpenCallCount: 0,
+    tunnelOpenFailOnCall: -1,
+    MockTunnelClass: undefined!,
+  };
+
+  m.MockTunnelClass = class {
+    public localPort: number;
+    public close = vi.fn();
+    public open = vi.fn().mockImplementation(async () => {
+      m.tunnelOpenCallCount++;
+      if (m.tunnelOpenCallCount === m.tunnelOpenFailOnCall) {
+        throw new Error("tunnel open failed");
+      }
+    });
+    public isAlive = vi.fn().mockReturnValue(true);
+    public constructor(localPort: number) {
+      this.localPort = localPort;
+      m.tunnelInstances.push(this as unknown as MockTunnelInstance);
+    }
+  };
+
+  return m;
+});
 
 vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
   const original = await importOriginal<typeof import("@grackle-ai/adapter-sdk")>();
   return {
     ...original,
-    closeTunnel: mocks.closeTunnel,
-    registerTunnel: mocks.registerTunnel,
-    findFreePort: mocks.findFreePort,
-    withFreePort: mocks.withFreePort,
-    startRemotePowerLine: mocks.startRemotePowerLine,
-    bootstrapPowerLine: async function* () {
-      yield { stage: "bootstrapping", message: "mock", progress: 0.5 };
-    },
-    // Stub ProcessTunnel so CodespaceTunnel doesn't spawn real processes (tested in tunnel.test.ts)
-    ProcessTunnel: class {
-      public localPort: number;
-      public close = vi.fn();
-      public open = vi.fn().mockImplementation(async () => {
-        mocks.tunnelOpenCallCount++;
-        if (mocks.tunnelOpenCallCount === mocks.tunnelOpenFailOnCall) {
-          throw new Error("tunnel open failed");
-        }
-      });
-      public isAlive = vi.fn().mockReturnValue(true);
-      public constructor(localPort: number) {
-        this.localPort = localPort;
-        mocks.tunnelInstances.push(this as unknown as MockTunnelInstance);
-      }
-    },
+    ProcessTunnel: mocks.MockTunnelClass,
+    ProcessReverseTunnel: mocks.MockTunnelClass,
   };
 });
 
@@ -69,10 +73,48 @@ async function collectEvents(gen: AsyncGenerator<ProvisionEvent>): Promise<Provi
   return events;
 }
 
+/** Set up standard spies on the adapter's SDK wrapper methods. */
+function setupAdapterSpies(adapter: CodespaceAdapter): {
+  runBootstrap: ReturnType<typeof vi.fn>;
+  runStartPowerLine: ReturnType<typeof vi.fn>;
+  openWithFreePort: ReturnType<typeof vi.fn>;
+  closeTunnelForEnvironment: ReturnType<typeof vi.fn>;
+  registerTunnelForEnvironment: ReturnType<typeof vi.fn>;
+} {
+  const obj = adapter as unknown as Record<string, unknown>;
+  const runBootstrap = vi
+    .spyOn(obj, "runBootstrap")
+    .mockImplementation(async function* (): AsyncGenerator<ProvisionEvent> {
+      yield { stage: "bootstrapping", message: "mock", progress: 0.5 };
+    });
+  const runStartPowerLine = vi
+    .spyOn(obj, "runStartPowerLine")
+    .mockResolvedValue({ alreadyRunning: true });
+  const openWithFreePort = vi
+    .spyOn(obj, "openWithFreePort")
+    .mockImplementation(async (action: (port: number) => Promise<unknown>) => action(9999));
+  const closeTunnelForEnvironment = vi
+    .spyOn(obj, "closeTunnelForEnvironment")
+    .mockResolvedValue(undefined);
+  const registerTunnelForEnvironment = vi
+    .spyOn(obj, "registerTunnelForEnvironment")
+    .mockImplementation(() => {});
+  return {
+    runBootstrap: runBootstrap as unknown as ReturnType<typeof vi.fn>,
+    runStartPowerLine: runStartPowerLine as unknown as ReturnType<typeof vi.fn>,
+    openWithFreePort: openWithFreePort as unknown as ReturnType<typeof vi.fn>,
+    closeTunnelForEnvironment: closeTunnelForEnvironment as unknown as ReturnType<typeof vi.fn>,
+    registerTunnelForEnvironment: registerTunnelForEnvironment as unknown as ReturnType<
+      typeof vi.fn
+    >,
+  };
+}
+
 // ── Tests ───────────────────────────────────────────────────
 
 describe("CodespaceAdapter.reconnect()", () => {
   let adapter: CodespaceAdapter;
+  let spies: ReturnType<typeof setupAdapterSpies>;
   const config = { codespaceName: "test-cs" };
   const token = "test-token";
   const envId = "env-1";
@@ -82,14 +124,11 @@ describe("CodespaceAdapter.reconnect()", () => {
     mocks.tunnelInstances.length = 0;
     mocks.tunnelOpenCallCount = 0;
     mocks.tunnelOpenFailOnCall = -1;
-    mocks.startRemotePowerLine.mockResolvedValue({ alreadyRunning: true });
-    mocks.withFreePort.mockImplementation(async (action: (port: number) => Promise<unknown>) =>
-      action(9999),
-    );
     adapter = new CodespaceAdapter({
       exec: mockExec,
       sleep: mockSleep,
     });
+    spies = setupAdapterSpies(adapter);
   });
 
   it("yields reconnecting progress events on happy path", async () => {
@@ -99,18 +138,18 @@ describe("CodespaceAdapter.reconnect()", () => {
 
     expect(events.length).toBeGreaterThanOrEqual(3);
     expect(events.every((e) => e.stage === "reconnecting")).toBe(true);
-    expect(events[events.length - 1].message).toContain("Reconnected");
+    expect(events[events.length - 1]!.message).toContain("Reconnected");
   });
 
-  it("closes stale tunnel, calls startRemotePowerLine with probeFirst, and opens new tunnel", async () => {
+  it("closes stale tunnel, calls startRemotePowerLine with probeFirst and autoDetectWorkspace, and opens new tunnel", async () => {
     await collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token));
 
-    expect(mocks.closeTunnel).toHaveBeenCalledWith(envId);
-    expect(mocks.startRemotePowerLine).toHaveBeenCalledOnce();
-    // Verify probeFirst and autoDetectWorkspace options
-    const options = mocks.startRemotePowerLine.mock.calls[0][2];
+    expect(spies.closeTunnelForEnvironment).toHaveBeenCalledWith(envId);
+    expect(spies.runStartPowerLine).toHaveBeenCalledOnce();
+    // Verify probeFirst and autoDetectWorkspace options (Codespace-specific)
+    const options = spies.runStartPowerLine.mock.calls[0]![2];
     expect(options).toMatchObject({ probeFirst: true, autoDetectWorkspace: true });
-    expect(mocks.registerTunnel).toHaveBeenCalledWith(
+    expect(spies.registerTunnelForEnvironment).toHaveBeenCalledWith(
       envId,
       expect.objectContaining({
         tunnel: expect.objectContaining({ localPort: 9999 }),
@@ -119,18 +158,18 @@ describe("CodespaceAdapter.reconnect()", () => {
   });
 
   it("yields 'restarted' event when PowerLine was not already running", async () => {
-    mocks.startRemotePowerLine.mockResolvedValueOnce({ alreadyRunning: false });
+    spies.runStartPowerLine.mockResolvedValueOnce({ alreadyRunning: false });
 
     const events = await collectEvents(
       adapter.reconnect!(envId, config as Record<string, unknown>, token),
     );
 
     expect(events.some((e) => e.message.includes("restarted"))).toBe(true);
-    expect(events[events.length - 1].message).toContain("Reconnected");
+    expect(events[events.length - 1]!.message).toContain("Reconnected");
   });
 
   it("does not yield 'restarted' event when PowerLine was already running", async () => {
-    mocks.startRemotePowerLine.mockResolvedValueOnce({ alreadyRunning: true });
+    spies.runStartPowerLine.mockResolvedValueOnce({ alreadyRunning: true });
 
     const events = await collectEvents(
       adapter.reconnect!(envId, config as Record<string, unknown>, token),
@@ -140,7 +179,7 @@ describe("CodespaceAdapter.reconnect()", () => {
   });
 
   it("propagates error when startRemotePowerLine fails", async () => {
-    mocks.startRemotePowerLine.mockRejectedValueOnce(
+    spies.runStartPowerLine.mockRejectedValueOnce(
       new Error("PowerLine process died immediately after starting"),
     );
 
@@ -150,7 +189,7 @@ describe("CodespaceAdapter.reconnect()", () => {
   });
 
   it("propagates error when SSH is unreachable", async () => {
-    mocks.startRemotePowerLine.mockRejectedValueOnce(new Error("ssh connection refused"));
+    spies.runStartPowerLine.mockRejectedValueOnce(new Error("ssh connection refused"));
 
     await expect(
       collectEvents(adapter.reconnect!(envId, config as Record<string, unknown>, token)),
@@ -172,13 +211,13 @@ describe("CodespaceAdapter.reconnect()", () => {
 
     expect(mocks.tunnelInstances).toHaveLength(2);
     expect(mocks.tunnelInstances[0]!.close).toHaveBeenCalledOnce();
-    expect(mocks.registerTunnel).not.toHaveBeenCalled();
+    expect(spies.registerTunnelForEnvironment).not.toHaveBeenCalled();
   });
 });
 
 // ── CodespaceNotFoundError detection ────────────────────────
-// These tests go through provision() because that calls executor.exec() directly
-// (startRemotePowerLine is mocked in reconnect() tests above, bypassing the executor).
+// These tests go through provision() with the connectivity test exec mock only.
+// The runBootstrap spy prevents real I/O after the connectivity test.
 
 describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()", () => {
   let adapter: CodespaceAdapter;
@@ -188,10 +227,12 @@ describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()"
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.withFreePort.mockImplementation(async (action: (port: number) => Promise<unknown>) =>
-      action(9999),
-    );
+    mocks.tunnelInstances.length = 0;
+    mocks.tunnelOpenCallCount = 0;
+    mocks.tunnelOpenFailOnCall = -1;
     adapter = new CodespaceAdapter({ exec: mockExec, sleep: mockSleep });
+    // Set up spies so provision doesn't try real bootstrap/tunnel work after the connectivity test
+    setupAdapterSpies(adapter);
   });
 
   it("throws CodespaceNotFoundError (FatalAdapterError) when gh stderr contains 'Not Found'", async () => {
@@ -250,8 +291,6 @@ describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()"
   });
 
   it("throws CodespaceNotFoundError for real gh HTTP 404 response (getting full codespace details)", async () => {
-    // This is the actual error gh codespace ssh emits when the codespace doesn't exist:
-    // "getting full codespace details: HTTP 404: Not Found"
     const ghErr = Object.assign(new Error("Command failed: gh codespace ssh"), {
       stderr:
         "getting full codespace details: HTTP 404: Not Found (https://api.github.com/user/codespaces/fake-cs)",
@@ -285,6 +324,7 @@ describe("CodespaceAdapter — CodespaceNotFoundError detection via provision()"
 
 describe("CodespaceAdapter.provision() — tunnel cleanup", () => {
   let adapter: CodespaceAdapter;
+  let spies: ReturnType<typeof setupAdapterSpies>;
   const config = { codespaceName: "test-cs" };
   const token = "test-token";
   const envId = "env-1";
@@ -294,10 +334,8 @@ describe("CodespaceAdapter.provision() — tunnel cleanup", () => {
     mocks.tunnelInstances.length = 0;
     mocks.tunnelOpenCallCount = 0;
     mocks.tunnelOpenFailOnCall = -1;
-    mocks.withFreePort.mockImplementation(async (action: (port: number) => Promise<unknown>) =>
-      action(9999),
-    );
     adapter = new CodespaceAdapter({ exec: mockExec, sleep: mockSleep });
+    spies = setupAdapterSpies(adapter);
   });
 
   it("closes forward tunnel when reverse tunnel open() fails", async () => {
@@ -309,6 +347,6 @@ describe("CodespaceAdapter.provision() — tunnel cleanup", () => {
 
     expect(mocks.tunnelInstances).toHaveLength(2);
     expect(mocks.tunnelInstances[0]!.close).toHaveBeenCalledOnce();
-    expect(mocks.registerTunnel).not.toHaveBeenCalled();
+    expect(spies.registerTunnelForEnvironment).not.toHaveBeenCalled();
   });
 });
