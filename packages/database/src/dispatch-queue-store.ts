@@ -13,6 +13,15 @@ import { eq, asc } from "drizzle-orm";
 
 export type { DispatchQueueRow };
 
+/** Contract for dispatch queue persistence. */
+export interface DispatchQueueStore {
+  enqueue(entry: EnqueueEntry): void;
+  dequeue(taskId: string): void;
+  getByTaskId(taskId: string): DispatchQueueRow | undefined;
+  listPending(): DispatchQueueRow[];
+  listPendingForEnvironment(environmentId: string): DispatchQueueRow[];
+}
+
 /** Fields accepted when enqueuing a dispatch request. */
 export interface EnqueueEntry {
   /** Unique ID for this queue entry. */
@@ -79,3 +88,12 @@ export function listPendingForEnvironment(environmentId: string): DispatchQueueR
     .orderBy(asc(dispatchQueue.enqueuedAt), asc(dispatchQueue.id))
     .all();
 }
+
+const _typeCheck: DispatchQueueStore = {
+  enqueue,
+  dequeue,
+  getByTaskId,
+  listPending,
+  listPendingForEnvironment,
+};
+void _typeCheck;

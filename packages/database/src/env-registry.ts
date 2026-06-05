@@ -8,6 +8,27 @@ const POWERLINE_TOKEN_BYTE_LENGTH: number = 32;
 
 export type { EnvironmentRow };
 
+/** Contract for environment registry persistence. */
+export interface EnvironmentRegistry {
+  listEnvironments(): EnvironmentRow[];
+  getEnvironment(id: string): EnvironmentRow | undefined;
+  addEnvironment(
+    id: string,
+    displayName: string,
+    adapterType: string,
+    adapterConfig: string,
+    githubAccountId?: string,
+  ): void;
+  removeEnvironment(id: string): void;
+  updateEnvironmentStatus(id: string, status: EnvironmentStatus): void;
+  markBootstrapped(id: string): void;
+  setEnvInfo(id: string, info: string): void;
+  updateAdapterConfig(id: string, config: string): void;
+  updateEnvironment(id: string, fields: UpdateEnvironmentFields): void;
+  updateDefaultRuntime(id: string, runtime: string): void;
+  resetAllStatuses(): void;
+}
+
 /** Return all registered environments. */
 export function listEnvironments(): EnvironmentRow[] {
   return db.select().from(environments).all();
@@ -103,3 +124,18 @@ export function updateDefaultRuntime(id: string, runtime: string): void {
 export function resetAllStatuses(): void {
   db.update(environments).set({ status: "disconnected" }).run();
 }
+
+const _typeCheck: EnvironmentRegistry = {
+  listEnvironments,
+  getEnvironment,
+  addEnvironment,
+  removeEnvironment,
+  updateEnvironmentStatus,
+  markBootstrapped,
+  setEnvInfo,
+  updateAdapterConfig,
+  updateEnvironment,
+  updateDefaultRuntime,
+  resetAllStatuses,
+};
+void _typeCheck;

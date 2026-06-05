@@ -4,6 +4,21 @@ import { eq, desc } from "drizzle-orm";
 
 export type { ChannelGrantRow };
 
+/** Contract for channel grant persistence. */
+export interface ChannelGrantStore {
+  createGrant(
+    id: string,
+    channelUri: string,
+    verbs: string,
+    label: string,
+    expiresAt: string | null,
+  ): void;
+  getGrant(id: string): ChannelGrantRow | undefined;
+  listGrants(): ChannelGrantRow[];
+  revokeGrant(id: string): void;
+  deleteGrant(id: string): void;
+}
+
 /**
  * Persist a new channel grant.
  *
@@ -42,3 +57,12 @@ export function revokeGrant(id: string): void {
 export function deleteGrant(id: string): void {
   db.delete(channelGrants).where(eq(channelGrants.id, id)).run();
 }
+
+const _typeCheck: ChannelGrantStore = {
+  createGrant,
+  getGrant,
+  listGrants,
+  revokeGrant,
+  deleteGrant,
+};
+void _typeCheck;

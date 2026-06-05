@@ -2,6 +2,12 @@ import { and, asc, eq, gt, type SQL } from "drizzle-orm";
 import db from "./db.js";
 import { sessionActions, type SessionActionRow } from "./schema.js";
 
+/** Contract for session action persistence. */
+export interface SessionActionStore {
+  persistSessionAction(action: SessionActionRecord): void;
+  querySessionActions(query: SessionActionQuery): SessionActionRow[];
+}
+
 /**
  * A session action (one agent-conversation event) to persist — the durable,
  * server-sequenced session log (RFC #1264 / AHP HR1a #1276). This is the
@@ -99,3 +105,6 @@ export function querySessionActions(query: SessionActionQuery): SessionActionRow
     .limit(limit)
     .all();
 }
+
+const _typeCheck: SessionActionStore = { persistSessionAction, querySessionActions };
+void _typeCheck;

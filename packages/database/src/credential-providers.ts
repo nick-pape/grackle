@@ -12,6 +12,14 @@ import * as schema from "./schema.js";
 
 // ─── Types ─────────────────────────────────────────────────
 
+/** Contract for credential provider configuration persistence. */
+export interface CredentialProviderStore {
+  parseCredentialProviderConfig(rawJson: string): CredentialProviderConfig;
+  getCredentialProviders(database?: DatabaseInstance): CredentialProviderConfig;
+  isValidCredentialProviderConfig(value: unknown): value is CredentialProviderConfig;
+  setCredentialProviders(config: CredentialProviderConfig, database?: DatabaseInstance): void;
+}
+
 /** Configuration for which credential providers are enabled. */
 export interface CredentialProviderConfig {
   claude: "off" | "subscription" | "api_key";
@@ -130,3 +138,11 @@ export function setCredentialProviders(
     })
     .run();
 }
+
+const _typeCheck: CredentialProviderStore = {
+  parseCredentialProviderConfig,
+  getCredentialProviders,
+  isValidCredentialProviderConfig,
+  setCredentialProviders,
+};
+void _typeCheck;

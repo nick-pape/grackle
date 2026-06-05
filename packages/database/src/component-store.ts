@@ -4,6 +4,17 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export type { ComponentRow };
 
+/** Contract for component registry persistence. */
+export interface ComponentStore {
+  registerComponent(fields: RegisterComponentFields): void;
+  updateComponent(id: string, fields: UpdateComponentFields): boolean;
+  getComponent(id: string): ComponentRow | undefined;
+  findComponentByName(workspaceId: string, name: string): ComponentRow | undefined;
+  listComponents(workspaceId: string): ComponentRow[];
+  deleteComponent(id: string): boolean;
+  setPromoted(id: string, promoted: boolean): boolean;
+}
+
 /**
  * Maximum stored component body length (characters). Agent-authored bodies are
  * persisted verbatim; this guards the registry against unbounded DB growth and
@@ -128,3 +139,14 @@ export function setPromoted(id: string, promoted: boolean): boolean {
   const result = db.update(components).set({ promoted }).where(eq(components.id, id)).run();
   return result.changes > 0;
 }
+
+const _typeCheck: ComponentStore = {
+  registerComponent,
+  updateComponent,
+  getComponent,
+  findComponentByName,
+  listComponents,
+  deleteComponent,
+  setPromoted,
+};
+void _typeCheck;

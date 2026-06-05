@@ -9,6 +9,20 @@ import { encrypt, decrypt } from "./crypto.js";
 import { create } from "@bufbuild/protobuf";
 import { powerline } from "@grackle-ai/common";
 
+/** Contract for encrypted token persistence. */
+export interface TokenStore {
+  setToken(entry: TokenConfig): void;
+  deleteToken(name: string): void;
+  listTokens(): Array<{
+    name: string;
+    type: string;
+    envVar?: string;
+    filePath?: string;
+    expiresAt?: string;
+  }>;
+  getBundle(): powerline.TokenBundle;
+}
+
 /** Shape of a token's stored configuration. */
 export interface TokenConfig {
   name: string;
@@ -76,3 +90,6 @@ export function getBundle(): powerline.TokenBundle {
 
   return create(powerline.TokenBundleSchema, { tokens: items });
 }
+
+const _typeCheck: TokenStore = { setToken, deleteToken, listTokens, getBundle };
+void _typeCheck;

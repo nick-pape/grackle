@@ -2,6 +2,20 @@ import db from "./db.js";
 import { workspaceEnvironmentLinks } from "./schema.js";
 import { eq, and, inArray, sql, asc } from "drizzle-orm";
 
+/** Contract for workspace-environment link persistence. */
+export interface WorkspaceEnvironmentLinkStore {
+  linkEnvironment(workspaceId: string, environmentId: string): void;
+  unlinkEnvironment(workspaceId: string, environmentId: string): void;
+  unlinkEnvironmentIfNotLast(workspaceId: string, environmentId: string): void;
+  getLinkedEnvironmentIds(workspaceId: string): string[];
+  getWorkspaceIdsLinkedToEnvironment(environmentId: string): string[];
+  getLinkedEnvironmentIdsByWorkspaces(workspaceIds: string[]): Map<string, string[]>;
+  isLinked(workspaceId: string, environmentId: string): boolean;
+  countLinksForEnvironment(environmentId: string): number;
+  deleteLinksForEnvironment(environmentId: string): void;
+  deleteLinksForWorkspace(workspaceId: string): void;
+}
+
 /** Create a link between a workspace and an environment. Throws on duplicate. */
 export function linkEnvironment(workspaceId: string, environmentId: string): void {
   db.insert(workspaceEnvironmentLinks).values({ workspaceId, environmentId }).run();
@@ -134,3 +148,17 @@ export function deleteLinksForWorkspace(workspaceId: string): void {
     .where(eq(workspaceEnvironmentLinks.workspaceId, workspaceId))
     .run();
 }
+
+const _typeCheck: WorkspaceEnvironmentLinkStore = {
+  linkEnvironment,
+  unlinkEnvironment,
+  unlinkEnvironmentIfNotLast,
+  getLinkedEnvironmentIds,
+  getWorkspaceIdsLinkedToEnvironment,
+  getLinkedEnvironmentIdsByWorkspaces,
+  isLinked,
+  countLinksForEnvironment,
+  deleteLinksForEnvironment,
+  deleteLinksForWorkspace,
+};
+void _typeCheck;
