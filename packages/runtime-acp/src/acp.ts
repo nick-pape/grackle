@@ -23,6 +23,7 @@ import {
   getRuntimeBinDirectory,
   getRuntimeConfigDirectory,
 } from "@grackle-ai/runtime-sdk";
+import { serverTimestamp } from "@grackle-ai/common";
 
 // ─── Configuration ──────────────────────────────────────────
 
@@ -123,7 +124,7 @@ function getAcpSdk(runtimeName: string): Promise<AcpSdkModule> {
  * Only actionable update types are mapped; intermediate progress is skipped.
  */
 export function mapSessionUpdate(update: Record<string, unknown>): AgentEvent[] {
-  const ts = new Date().toISOString();
+  const ts = serverTimestamp();
   const raw = update;
   const updateType = update.sessionUpdate as string;
 
@@ -380,7 +381,7 @@ class AcpSession extends BaseAgentSession {
   // ─── BaseAgentSession hooks ──────────────────────────────
 
   protected async setupSdk(): Promise<void> {
-    const ts: () => string = () => new Date().toISOString();
+    const ts: () => string = () => serverTimestamp();
     const sdk = await getAcpSdk(this.config.name);
 
     // Resolve working directory

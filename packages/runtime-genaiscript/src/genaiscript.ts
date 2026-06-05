@@ -14,7 +14,7 @@ import type {
   ResumeOptions,
 } from "@grackle-ai/runtime-sdk";
 import { logger, ensureRuntimeInstalled } from "@grackle-ai/runtime-sdk";
-import { SESSION_STATUS, assertTransition } from "@grackle-ai/common";
+import { SESSION_STATUS, assertTransition, serverTimestamp } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 
 /** Shape of the JSON result from genaiscript's res.json output. */
@@ -102,7 +102,7 @@ class GenAIScriptSession implements AgentSession {
   }
 
   public async *stream(): AsyncIterable<AgentEvent> {
-    const ts: () => string = () => new Date().toISOString();
+    const ts: () => string = () => serverTimestamp();
     this.transitionTo(SESSION_STATUS.RUNNING);
 
     if (!this.scriptContent) {

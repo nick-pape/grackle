@@ -6,7 +6,7 @@ import {
   ensureRuntimeInstalled,
   importFromRuntime,
 } from "@grackle-ai/runtime-sdk";
-import { SESSION_STATUS } from "@grackle-ai/common";
+import { SESSION_STATUS, serverTimestamp } from "@grackle-ai/common";
 
 // ─── Environment variable names ────────────────────────────
 // All configuration is driven by environment variables so the
@@ -111,7 +111,7 @@ class CodexSession extends BaseAgentSession {
   // ─── BaseAgentSession hooks ──────────────────────────────
 
   protected async setupSdk(): Promise<void> {
-    const ts: () => string = () => new Date().toISOString();
+    const ts: () => string = () => serverTimestamp();
     const { Codex } = await getCodexSdk();
 
     // ── Resolve working directory ──
@@ -212,7 +212,7 @@ class CodexSession extends BaseAgentSession {
 
     this.emit({
       type: "system",
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
       content: `Codex thread started (model: ${this.model || "default"})`,
       diagnostic: true,
     });
@@ -246,7 +246,7 @@ class CodexSession extends BaseAgentSession {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async consumeStream(streamResult: any): Promise<number> {
-    const ts: () => string = () => new Date().toISOString();
+    const ts: () => string = () => serverTimestamp();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     this.activeStream = streamResult;
     let messageCount = 0;

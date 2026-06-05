@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { grackle } from "@grackle-ai/common";
+import { grackle, serverTimestamp } from "@grackle-ai/common";
 import type { GrackleClients, ToolDefinition, ToolResult } from "../tool-registry.js";
 import type { AuthContext } from "@grackle-ai/auth";
 import { jsonResult } from "../result-helpers.js";
@@ -166,7 +166,7 @@ export const componentTools: ToolDefinition[] = [
     async handler(args: Record<string, unknown>) {
       const message: string =
         typeof args.message === "string" ? args.message : "Hello from Grackle";
-      return jsonResult({ message, renderedAt: new Date().toISOString() });
+      return jsonResult({ message, renderedAt: serverTimestamp() });
     },
   },
   {

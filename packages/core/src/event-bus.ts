@@ -1,5 +1,5 @@
 import { ulid } from "ulid";
-import { SequencedLog, type LogSink } from "@grackle-ai/common";
+import { SequencedLog, type LogSink, serverTimestamp } from "@grackle-ai/common";
 import { persistEvent } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 
@@ -144,7 +144,7 @@ const domainEventLog: SequencedLog<DomainEventBody> = new SequencedLog<DomainEve
  * @returns The created GrackleEvent.
  */
 export function emit(type: GrackleEventType, payload: Record<string, unknown>): GrackleEvent {
-  const timestamp: string = new Date().toISOString();
+  const timestamp: string = serverTimestamp();
 
   // Persist synchronously via the sequenced log (SQLite is fast in WAL mode).
   // The log assigns the monotonic ULID sequence key, which becomes the event id.

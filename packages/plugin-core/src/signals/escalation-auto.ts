@@ -7,7 +7,7 @@
  * to explicitly call `escalate_to_human`.
  */
 
-import { SESSION_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
+import { SESSION_STATUS, ROOT_TASK_ID, serverTimestamp } from "@grackle-ai/common";
 import type { GrackleEvent } from "@grackle-ai/core";
 import { taskStore, sessionStore, escalationStore } from "@grackle-ai/database";
 import { readLastTextEntry } from "@grackle-ai/core";
@@ -140,7 +140,7 @@ async function handleTaskUpdated(delivered: Map<string, number>, taskId: string)
     source: "auto",
     urgency: "normal",
     status: "pending",
-    createdAt: new Date().toISOString(),
+    createdAt: serverTimestamp(),
     deliveredAt: undefined,
     acknowledgedAt: undefined,
     taskUrl,

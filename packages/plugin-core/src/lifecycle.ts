@@ -13,7 +13,13 @@
  */
 
 import { create } from "@bufbuild/protobuf";
-import { grackle, SESSION_STATUS, TERMINAL_SESSION_STATUSES, END_REASON } from "@grackle-ai/common";
+import {
+  grackle,
+  SESSION_STATUS,
+  TERMINAL_SESSION_STATUSES,
+  END_REASON,
+  serverTimestamp,
+} from "@grackle-ai/common";
 import type { SessionStatus, EndReason } from "@grackle-ai/common";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 import {
@@ -100,7 +106,7 @@ export function createLifecycleSubscriber(ctx: PluginContext): Disposable {
       create(grackle.SessionEventSchema, {
         sessionId,
         type: grackle.EventType.STATUS,
-        timestamp: new Date().toISOString(),
+        timestamp: serverTimestamp(),
         content: reason,
         raw: "",
       }),

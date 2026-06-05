@@ -1,3 +1,4 @@
+export * from "./clock.js";
 export * from "./errors.js";
 export * as grackle from "./grackle-barrel.js";
 export * as powerline from "./gen/grackle/powerline/powerline_pb.js";

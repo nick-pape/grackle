@@ -10,6 +10,7 @@
 import db from "./db.js";
 import { dispatchQueue, type DispatchQueueRow } from "./schema.js";
 import { eq, asc } from "drizzle-orm";
+import { serverTimestamp } from "@grackle-ai/common";
 
 export type { DispatchQueueRow };
 
@@ -54,7 +55,7 @@ export function enqueue(entry: EnqueueEntry): void {
       notes: entry.notes ?? "",
       pipe: entry.pipe ?? "",
       parentSessionId: entry.parentSessionId ?? "",
-      enqueuedAt: new Date().toISOString(),
+      enqueuedAt: serverTimestamp(),
     })
     .onConflictDoNothing()
     .run();

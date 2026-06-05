@@ -1,6 +1,7 @@
 import db from "./db.js";
 import { escalations, type EscalationRow } from "./schema.js";
 import { eq, desc, asc, and } from "drizzle-orm";
+import { serverTimestamp } from "@grackle-ai/common";
 
 export type { EscalationRow };
 
@@ -121,7 +122,7 @@ export function listPendingEscalations(): EscalationRow[] {
  * (deliveredAt for "delivered", acknowledgedAt for "acknowledged").
  */
 export function updateEscalationStatus(id: string, status: string): void {
-  const now = new Date().toISOString();
+  const now = serverTimestamp();
   const updates: Record<string, unknown> = { status };
 
   if (status === "delivered") {

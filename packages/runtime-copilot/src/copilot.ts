@@ -6,6 +6,7 @@ import {
   ensureRuntimeInstalled,
   importFromRuntime,
 } from "@grackle-ai/runtime-sdk";
+import { serverTimestamp } from "@grackle-ai/common";
 
 // ─── Environment variable names ────────────────────────────
 // All configuration is driven by environment variables so the
@@ -157,7 +158,7 @@ export class CopilotSession extends BaseAgentSession {
   // ─── BaseAgentSession hooks ──────────────────────────────
 
   protected async setupSdk(): Promise<void> {
-    const ts = (): string => new Date().toISOString();
+    const ts = (): string => serverTimestamp();
     const copilotSdk = await getCopilotSdk();
 
     // ── Resolve working directory ──

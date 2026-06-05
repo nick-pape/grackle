@@ -17,6 +17,7 @@ import { logger } from "./logger.js";
 import { isReservedStreamName, LIFECYCLE_PREFIX } from "./stream-names.js";
 import { emitStreamMessage } from "./stream-message-bus.js";
 import { emit, type GrackleEventType } from "./event-bus.js";
+import { serverTimestamp } from "@grackle-ai/common";
 
 /**
  * Monotonic ULID generator for transcript sequence keys. Unlike plain `ulid()`,
@@ -455,7 +456,7 @@ export function publish(streamId: string, senderId: string, content: string): St
     id: uuid(),
     senderId,
     content,
-    timestamp: new Date().toISOString(),
+    timestamp: serverTimestamp(),
     deliveredTo: new Set(),
   };
 

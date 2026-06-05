@@ -1,5 +1,5 @@
 import type { AgentSession, AgentEvent, CreateSessionOptions } from "./runtime.js";
-import { SESSION_STATUS, assertTransition } from "@grackle-ai/common";
+import { SESSION_STATUS, assertTransition, serverTimestamp } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import { AsyncQueue } from "./async-queue.js";
 import { resolveWorkingDirectory, resolveMcpServers } from "./runtime-utils.js";
@@ -86,7 +86,7 @@ export abstract class BaseAgentSession implements AgentSession {
   protected async setupForResume(): Promise<void> {
     this.emit({
       type: "system",
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
       content: `Session resumed (id: ${this.resumeSessionId})`,
       diagnostic: true,
     });
@@ -161,7 +161,7 @@ export abstract class BaseAgentSession implements AgentSession {
     }
     this.emit({
       type: "usage",
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
       content: JSON.stringify({
         input_tokens: inputTokens,
         output_tokens: outputTokens,
@@ -180,7 +180,7 @@ export abstract class BaseAgentSession implements AgentSession {
     if (wasEmpty && id) {
       this.emit({
         type: "runtime_session_id",
-        timestamp: new Date().toISOString(),
+        timestamp: serverTimestamp(),
         content: id,
       });
     }
@@ -229,7 +229,7 @@ export abstract class BaseAgentSession implements AgentSession {
     this.currentTurnId = randomUUID();
     this.emit({
       type: "turn_started",
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
       content: userMessage,
       turnId: this.currentTurnId,
     });
@@ -242,7 +242,7 @@ export abstract class BaseAgentSession implements AgentSession {
     }
     this.emit({
       type: "turn_complete",
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
       content: "",
       turnId: this.currentTurnId,
     });
@@ -252,7 +252,7 @@ export abstract class BaseAgentSession implements AgentSession {
   // ─── Shared lifecycle implementation ──────────────────────
 
   public async *stream(): AsyncIterable<AgentEvent> {
-    const ts: () => string = () => new Date().toISOString();
+    const ts: () => string = () => serverTimestamp();
 
     this.transitionTo(SESSION_STATUS.RUNNING);
 
@@ -282,7 +282,7 @@ export abstract class BaseAgentSession implements AgentSession {
 
   /** Core session logic: setup SDK, handle resume or initial query, transition to waiting_input. */
   private async runSession(): Promise<void> {
-    const ts: () => string = () => new Date().toISOString();
+    const ts: () => string = () => serverTimestamp();
 
     try {
       await this.setupSdk();
@@ -346,7 +346,7 @@ export abstract class BaseAgentSession implements AgentSession {
    * lifecycle — closes it when the loop exits.
    */
   private async processInputLoop(): Promise<void> {
-    const ts: () => string = () => new Date().toISOString();
+    const ts: () => string = () => serverTimestamp();
     for await (const text of this.inputQueue) {
       if (this.killed) {
         break;
@@ -383,7 +383,7 @@ export abstract class BaseAgentSession implements AgentSession {
   /** Fire-and-forget launch of the input processing loop. */
   private startInputLoop(): void {
     this.processInputLoop().catch((err) => {
-      const ts = new Date().toISOString();
+      const ts = serverTimestamp();
       logger.error({ err }, `Input loop crashed in ${this.runtimeDisplayName} session`);
       this.transitionTo(SESSION_STATUS.STOPPED);
       // A failed turn never completes — drop the turn id so terminal events are
@@ -408,7 +408,7 @@ export abstract class BaseAgentSession implements AgentSession {
     // Emit a final status event BEFORE closing the queue so the server receives it.
     this.emit({
       type: "status",
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
       content: reason,
     });
     // releaseResources() and eventQueue.close() are also called by processInputLoop()

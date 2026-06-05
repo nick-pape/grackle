@@ -11,6 +11,7 @@ import { getSession } from "./client.js";
 import { logger } from "./logger.js";
 import { NODE_LABEL } from "./constants.js";
 import { EDGE_TYPE, type EdgeType, type KnowledgeEdge } from "./types.js";
+import { serverTimestamp } from "./clock.js";
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -85,7 +86,7 @@ export async function createEdge(
 ): Promise<KnowledgeEdge> {
   assertValidEdgeType(type);
 
-  const createdAt = new Date().toISOString();
+  const createdAt = serverTimestamp();
   const metadataStr: string | null = metadata !== undefined ? JSON.stringify(metadata) : null;
 
   const session = getSession();
@@ -198,7 +199,7 @@ export async function upsertEdge(
 ): Promise<KnowledgeEdge> {
   assertValidEdgeType(type);
 
-  const createdAt = new Date().toISOString();
+  const createdAt = serverTimestamp();
   const metadataStr: string | null = metadata !== undefined ? JSON.stringify(metadata) : null;
 
   const session = getSession();

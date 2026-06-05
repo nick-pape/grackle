@@ -21,6 +21,7 @@ import {
   type KnowledgeEdge,
   type EdgeType,
 } from "./types.js";
+import { serverTimestamp } from "./clock.js";
 
 // ---------------------------------------------------------------------------
 // Input types
@@ -229,7 +230,7 @@ export function recordToEdge(raw: Record<string, unknown>): KnowledgeEdge {
  */
 export async function createReferenceNode(input: CreateReferenceNodeInput): Promise<string> {
   const id = randomUUID();
-  const now = new Date().toISOString();
+  const now = serverTimestamp();
   const props = {
     id,
     kind: NODE_KIND.REFERENCE,
@@ -265,7 +266,7 @@ export async function createReferenceNode(input: CreateReferenceNodeInput): Prom
  */
 export async function createNativeNode(input: CreateNativeNodeInput): Promise<string> {
   const id = randomUUID();
-  const now = new Date().toISOString();
+  const now = serverTimestamp();
   const props = {
     id,
     kind: NODE_KIND.NATIVE,
@@ -368,7 +369,7 @@ export async function updateNode(
 
   const patchedUpdates = {
     ...mutableUpdates,
-    updatedAt: new Date().toISOString(),
+    updatedAt: serverTimestamp(),
   };
 
   const session = getSession();
@@ -437,7 +438,7 @@ const UPSERT_REFERENCE_NODE_CYPHER: string = `
  * @returns The (stable) node ID.
  */
 export async function upsertReferenceNode(input: UpsertReferenceNodeInput): Promise<string> {
-  const now = new Date().toISOString();
+  const now = serverTimestamp();
   const mutable: Record<string, unknown> = {
     label: input.label,
     workspaceId: input.workspaceId,

@@ -1,3 +1,4 @@
+import { serverTimestamp } from "@grackle-ai/common";
 import type { AgentEventType } from "@grackle-ai/common";
 import type { AgentEvent } from "@grackle-ai/runtime-sdk";
 
@@ -200,7 +201,7 @@ export function buildEventFromEmitStep(
   step: EmitStep,
   lastToolUseId: string | undefined,
 ): [AgentEvent, string | undefined] {
-  const timestamp = new Date().toISOString();
+  const timestamp = serverTimestamp();
   let content = step.content ?? "";
   let raw = step.raw;
   let newToolUseId: string | undefined;
