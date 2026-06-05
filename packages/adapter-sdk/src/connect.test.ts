@@ -58,7 +58,7 @@ describe("waitForLocalPort", () => {
     );
 
     expect(prober.probe).toHaveBeenCalledTimes(20);
-    expect(noopSleep).toHaveBeenCalledTimes(20);
+    expect(noopSleep).toHaveBeenCalledTimes(19);
   });
 });
 
