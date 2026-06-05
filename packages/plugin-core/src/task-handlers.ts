@@ -10,19 +10,22 @@ import {
   fuzzySearch,
   type FuzzyKey,
 } from "@grackle-ai/common";
-import {
-  sessionStore,
-  taskStore,
-  workspaceStore,
-  slugify,
-  safeParseJsonArray,
-} from "@grackle-ai/database";
+import type { WorkspaceRow } from "@grackle-ai/database";
+import { sessionStore, taskStore, slugify, safeParseJsonArray } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { emit } from "@grackle-ai/core";
 import { processorRegistry } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { computeTaskStatus } from "@grackle-ai/core";
 import { taskRowToProto } from "./grpc-proto-converters.js";
+import {
+  requireField,
+  requireNonNegativeBudget,
+  requireSession,
+  requireTask,
+  requireTrimmed,
+  requireWorkspace,
+} from "./require-helpers.js";
 
 /** Weighted fields for fuzzy task search: title is twice as important as description. */
 const TASK_SEARCH_KEYS: FuzzyKey[] = [
@@ -64,11 +67,7 @@ export async function listTasks(req: grackle.ListTasksRequest): Promise<grackle.
 export async function searchTasks(
   req: grackle.SearchTasksRequest,
 ): Promise<grackle.SearchTasksResponse> {
-  const query = req.query.trim();
-  if (!query) {
-    throw new ConnectError("query is required", Code.InvalidArgument);
-  }
-
+  const query = requireTrimmed(req.query, "query");
   const limit = req.limit > 0 ? req.limit : DEFAULT_SEARCH_LIMIT;
 
   // Fetch rows filtered by workspace/status at the DB level; fuzzy match happens in-memory
@@ -106,24 +105,16 @@ export async function searchTasks(
 
 /** Create a new task. */
 export async function createTask(req: grackle.CreateTaskRequest): Promise<grackle.Task> {
-  if (!req.title) {
-    throw new ConnectError("title is required", Code.InvalidArgument);
-  }
+  requireField(req.title, "title");
   const workspaceId = req.workspaceId || undefined;
-  let workspace: ReturnType<typeof workspaceStore.getWorkspace>;
+  let workspace: WorkspaceRow | undefined;
   if (workspaceId) {
-    workspace = workspaceStore.getWorkspace(workspaceId);
-    if (!workspace) {
-      throw new ConnectError(`Workspace not found: ${workspaceId}`, Code.NotFound);
-    }
+    workspace = requireWorkspace(workspaceId);
   }
 
   // Validate parent task if specified
   if (req.parentTaskId) {
-    const parent = taskStore.getTask(req.parentTaskId);
-    if (!parent) {
-      throw new ConnectError(`Parent task not found: ${req.parentTaskId}`, Code.NotFound);
-    }
+    const parent = requireTask(req.parentTaskId);
     if (!parent.canDecompose) {
       throw new ConnectError(
         `Parent task "${parent.title}" (${req.parentTaskId}) does not have decomposition rights`,
@@ -138,14 +129,10 @@ export async function createTask(req: grackle.CreateTaskRequest): Promise<grackl
     }
   }
 
-  if ((req.tokenBudget ?? 0) < 0 || (req.costBudgetMillicents ?? 0) < 0) {
-    throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
-  }
+  requireNonNegativeBudget(req.tokenBudget, req.costBudgetMillicents);
 
   for (const depId of req.dependsOn) {
-    if (!taskStore.getTask(depId)) {
-      throw new ConnectError(`Dependency task not found: ${depId}`, Code.NotFound);
-    }
+    requireTask(depId);
   }
 
   const id = uuid().slice(0, 8);
@@ -174,10 +161,7 @@ export async function createTask(req: grackle.CreateTaskRequest): Promise<grackl
 
 /** Get a task by ID with computed status. */
 export async function getTask(req: grackle.TaskId): Promise<grackle.Task> {
-  const row = taskStore.getTask(req.id);
-  if (!row) {
-    throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
-  }
+  const row = requireTask(req.id);
   const taskSessions = sessionStore.listSessionsForTask(req.id);
   const { status, latestSessionId } = computeTaskStatus(row.status, taskSessions);
   return taskRowToProto(row, undefined, status, latestSessionId);
@@ -185,10 +169,7 @@ export async function getTask(req: grackle.TaskId): Promise<grackle.Task> {
 
 /** Update task fields or late-bind a session to a task. */
 export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackle.Task> {
-  const existing = taskStore.getTask(req.id);
-  if (!existing) {
-    throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
-  }
+  const existing = requireTask(req.id);
 
   let reqStatus = existing.status;
   if (req.status !== grackle.TaskStatus.UNSPECIFIED) {
@@ -207,9 +188,7 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
       throw new ConnectError(`Task ${req.id} cannot depend on itself`, Code.InvalidArgument);
     }
     for (const depId of req.dependsOn) {
-      if (!taskStore.getTask(depId)) {
-        throw new ConnectError(`Dependency task not found: ${depId}`, Code.NotFound);
-      }
+      requireTask(depId);
     }
     const cycle = taskStore.detectDependencyCycle(req.id, [...req.dependsOn]);
     if (cycle) {
@@ -251,10 +230,7 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
 
   // Late-bind: associate an existing session with this task
   if (req.sessionId !== "") {
-    const session = sessionStore.getSession(req.sessionId);
-    if (!session) {
-      throw new ConnectError(`Session not found: ${req.sessionId}`, Code.NotFound);
-    }
+    const session = requireSession(req.sessionId);
     if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
       throw new ConnectError(
         `Cannot bind terminal session ${req.sessionId} (status: ${session.status})`,

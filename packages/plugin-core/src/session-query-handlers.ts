@@ -19,6 +19,7 @@ import {
   deliverPendingEscalations,
 } from "@grackle-ai/core";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
+import { requireField, requireSession } from "./require-helpers.js";
 
 /** List sessions with optional filters. */
 export async function listSessions(req: grackle.SessionFilter): Promise<grackle.SessionList> {
@@ -30,19 +31,13 @@ export async function listSessions(req: grackle.SessionFilter): Promise<grackle.
 
 /** Get a session by ID. */
 export async function getSession(req: grackle.SessionId): Promise<grackle.Session> {
-  const row = sessionStore.getSession(req.id);
-  if (!row) {
-    throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
-  }
+  const row = requireSession(req.id);
   return sessionRowToProto(row);
 }
 
 /** Get all events recorded for a session. */
 export async function getSessionEvents(req: grackle.SessionId): Promise<grackle.SessionEventList> {
-  const session = sessionStore.getSession(req.id);
-  if (!session) {
-    throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
-  }
+  const session = requireSession(req.id);
   if (!session.logPath) {
     return create(grackle.SessionEventListSchema, {
       sessionId: req.id,
@@ -70,9 +65,7 @@ export async function getSessionEvents(req: grackle.SessionId): Promise<grackle.
 
 /** Get all sessions for a task. */
 export async function getTaskSessions(req: grackle.TaskId): Promise<grackle.SessionList> {
-  if (!req.id) {
-    throw new ConnectError("task id is required", Code.InvalidArgument);
-  }
+  requireField(req.id, "task id");
   const rows = sessionStore.listSessionsForTask(req.id);
   return create(grackle.SessionListSchema, {
     sessions: rows.map(sessionRowToProto),

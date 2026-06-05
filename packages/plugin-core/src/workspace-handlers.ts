@@ -1,16 +1,17 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import {
-  workspaceStore,
-  envRegistry,
-  workspaceEnvironmentLinkStore,
-  slugify,
-} from "@grackle-ai/database";
+import { workspaceStore, workspaceEnvironmentLinkStore, slugify } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { emit } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { workspaceRowToProto } from "./grpc-proto-converters.js";
+import {
+  requireEnvironment,
+  requireField,
+  requireNonNegativeBudget,
+  requireWorkspace,
+} from "./require-helpers.js";
 
 /** List all workspaces, optionally filtered by environment. */
 export async function listWorkspaces(
@@ -30,24 +31,14 @@ export async function listWorkspaces(
 export async function createWorkspace(
   req: grackle.CreateWorkspaceRequest,
 ): Promise<grackle.Workspace> {
-  if (!req.name) {
-    throw new ConnectError("name is required", Code.InvalidArgument);
-  }
-  if (!req.environmentId) {
-    throw new ConnectError("environment_id is required", Code.InvalidArgument);
-  }
-  const env = envRegistry.getEnvironment(req.environmentId);
-  if (!env) {
-    throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
-  }
+  requireField(req.name, "name");
+  requireEnvironment(req.environmentId);
   let id = slugify(req.name) || uuid().slice(0, 8);
   // If slug already exists (e.g. archived workspace), append a short suffix
   if (workspaceStore.getWorkspace(id)) {
     id = `${id}-${uuid().slice(0, 4)}`;
   }
-  if ((req.tokenBudget ?? 0) < 0 || (req.costBudgetMillicents ?? 0) < 0) {
-    throw new ConnectError("Budget values must be >= 0", Code.InvalidArgument);
-  }
+  requireNonNegativeBudget(req.tokenBudget, req.costBudgetMillicents);
   // useWorktrees defaults to true when not specified
   const useWorktrees = req.useWorktrees ?? true;
   // Create the workspace and its initial environment link in a single transaction
@@ -72,10 +63,7 @@ export async function createWorkspace(
 
 /** Get a workspace by ID. */
 export async function getWorkspace(req: grackle.WorkspaceId): Promise<grackle.Workspace> {
-  const row = workspaceStore.getWorkspace(req.id);
-  if (!row) {
-    throw new ConnectError(`Workspace not found: ${req.id}`, Code.NotFound);
-  }
+  const row = requireWorkspace(req.id);
   return workspaceRowToProto(row);
 }
 
@@ -91,10 +79,7 @@ export async function archiveWorkspace(req: grackle.WorkspaceId): Promise<grackl
 export async function updateWorkspace(
   req: grackle.UpdateWorkspaceRequest,
 ): Promise<grackle.Workspace> {
-  const existing = workspaceStore.getWorkspace(req.id);
-  if (!existing) {
-    throw new ConnectError(`Workspace not found: ${req.id}`, Code.NotFound);
-  }
+  const existing = requireWorkspace(req.id);
   if (req.name?.trim() === "") {
     throw new ConnectError("Workspace name cannot be empty", Code.InvalidArgument);
   }
@@ -128,14 +113,8 @@ export async function updateWorkspace(
 export async function linkEnvironment(
   req: grackle.LinkEnvironmentRequest,
 ): Promise<grackle.Workspace> {
-  const workspace = workspaceStore.getWorkspace(req.workspaceId);
-  if (!workspace) {
-    throw new ConnectError(`Workspace not found: ${req.workspaceId}`, Code.NotFound);
-  }
-  const env = envRegistry.getEnvironment(req.environmentId);
-  if (!env) {
-    throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
-  }
+  const workspace = requireWorkspace(req.workspaceId);
+  requireEnvironment(req.environmentId);
   if (workspaceEnvironmentLinkStore.isLinked(req.workspaceId, req.environmentId)) {
     throw new ConnectError(
       `Environment ${req.environmentId} is already linked to workspace ${req.workspaceId}`,
@@ -169,10 +148,7 @@ export async function linkEnvironment(
 export async function unlinkEnvironment(
   req: grackle.UnlinkEnvironmentRequest,
 ): Promise<grackle.Workspace> {
-  const workspace = workspaceStore.getWorkspace(req.workspaceId);
-  if (!workspace) {
-    throw new ConnectError(`Workspace not found: ${req.workspaceId}`, Code.NotFound);
-  }
+  const workspace = requireWorkspace(req.workspaceId);
   if (!workspaceEnvironmentLinkStore.isLinked(req.workspaceId, req.environmentId)) {
     throw new ConnectError(
       `Environment ${req.environmentId} is not linked to workspace ${req.workspaceId}`,

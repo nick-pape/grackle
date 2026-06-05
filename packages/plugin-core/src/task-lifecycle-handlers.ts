@@ -25,16 +25,14 @@ import { revokeTask } from "@grackle-ai/auth";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 import { taskRowToProto, sessionRowToProto } from "./grpc-proto-converters.js";
+import { requireTask } from "./require-helpers.js";
 
 /** Mark a task as complete and clean up active sessions. */
 export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
   if (req.id === ROOT_TASK_ID) {
     throw new ConnectError("Cannot complete the system task", Code.PermissionDenied);
   }
-  const task = taskStore.getTask(req.id);
-  if (!task) {
-    throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
-  }
+  const task = requireTask(req.id);
 
   taskStore.markTaskComplete(task.id, TASK_STATUS.COMPLETE);
 
@@ -89,10 +87,7 @@ export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
 
 /** Set the workpad JSON for a task. */
 export async function setWorkpad(req: grackle.SetWorkpadRequest): Promise<grackle.Task> {
-  const task = taskStore.getTask(req.taskId);
-  if (!task) {
-    throw new ConnectError(`Task not found: ${req.taskId}`, Code.NotFound);
-  }
+  const task = requireTask(req.taskId);
   // Validate workpad is a valid JSON object
   try {
     const parsed: unknown = JSON.parse(req.workpad);
@@ -122,10 +117,7 @@ export async function setWorkpad(req: grackle.SetWorkpadRequest): Promise<grackl
 
 /** Resume the latest session for a task. */
 export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> {
-  const task = taskStore.getTask(req.id);
-  if (!task) {
-    throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
-  }
+  const task = requireTask(req.id);
 
   const latestSession = sessionStore.getLatestSessionForTask(req.id);
   if (!latestSession) {
@@ -192,10 +184,7 @@ export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> 
 
 /** Stop a task by terminating all its active sessions. */
 export async function stopTask(req: grackle.TaskId): Promise<grackle.Task> {
-  const task = taskStore.getTask(req.id);
-  if (!task) {
-    throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
-  }
+  const task = requireTask(req.id);
 
   // Terminate all active sessions for this task using the fd-closure pattern
   const activeSessions = sessionStore.getActiveSessionsForTask(req.id);
@@ -249,10 +238,7 @@ export async function deleteTask(req: grackle.TaskId): Promise<grackle.Empty> {
   if (req.id === ROOT_TASK_ID) {
     throw new ConnectError("Cannot delete the system task", Code.PermissionDenied);
   }
-  const task = taskStore.getTask(req.id);
-  if (!task) {
-    throw new ConnectError(`Task not found: ${req.id}`, Code.NotFound);
-  }
+  const task = requireTask(req.id);
   const children = taskStore.getChildren(req.id);
   if (children.length > 0) {
     throw new ConnectError(

@@ -108,7 +108,7 @@ describe("gRPC addEnvironment handlers", () => {
 
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
-    expect(err.message).toContain("displayName and adapterType required");
+    expect(err.message).toContain("displayName is required");
   });
 
   it("addEnvironment returns error when adapterType is missing", async () => {
@@ -118,7 +118,7 @@ describe("gRPC addEnvironment handlers", () => {
 
     expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
-    expect(err.message).toContain("displayName and adapterType required");
+    expect(err.message).toContain("adapterType is required");
   });
 
   it("addEnvironment accepts pre-serialized adapterConfig string without double-encoding", async () => {

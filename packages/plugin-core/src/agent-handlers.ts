@@ -12,19 +12,19 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import {
-  agentStore,
-  envRegistry,
-  scheduleStore,
-  sessionStore,
-  taskStore,
-} from "@grackle-ai/database";
+import { agentStore, scheduleStore, sessionStore, taskStore } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { slugify } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
 import { scheduleRowToProto, validateExpression, computeNextRunAt } from "@grackle-ai/common";
 import { agentRowToProto } from "./grpc-proto-converters.js";
 import { killSessionAndCleanup } from "./grpc-shared.js";
+import {
+  requireAgent,
+  requireEnvironment,
+  requireNonEmpty,
+  requireTrimmed,
+} from "./require-helpers.js";
 
 /**
  * Resolve the heartbeat schedule for an agent (#1438). Returns undefined when
@@ -48,24 +48,13 @@ export async function listAgents(): Promise<grackle.AgentList> {
 
 /** Create a new agent. */
 export async function createAgent(req: grackle.CreateAgentRequest): Promise<grackle.Agent> {
-  const name = req.name.trim();
-  if (!name) {
-    throw new ConnectError("Agent name is required", Code.InvalidArgument);
-  }
+  const name = requireTrimmed(req.name, "Agent name");
   if (agentStore.getAgentByName(name)) {
     throw new ConnectError(`Agent with name "${name}" already exists`, Code.AlreadyExists);
   }
 
-  // The Agent's home environment is required (#1418): an Agent without an
-  // environment can't be the principal for autonomous work since the runtime
-  // needs a place to live. Validation: non-empty + environment exists.
-  const environmentId = req.environmentId.trim();
-  if (!environmentId) {
-    throw new ConnectError("Agent environment_id is required", Code.InvalidArgument);
-  }
-  if (!envRegistry.getEnvironment(environmentId)) {
-    throw new ConnectError(`Environment not found: ${environmentId}`, Code.NotFound);
-  }
+  const environmentId = requireTrimmed(req.environmentId, "environment_id");
+  requireEnvironment(environmentId);
 
   // Enforce a unique ID derived from the name (mirrors persona handling).
   let id = slugify(name) || uuid().slice(0, 8);
@@ -86,19 +75,13 @@ export async function createAgent(req: grackle.CreateAgentRequest): Promise<grac
 
 /** Get an agent by ID. Populates the derived `heartbeat` field when set (#1438). */
 export async function getAgent(req: grackle.AgentId): Promise<grackle.Agent> {
-  const row = agentStore.getAgent(req.id);
-  if (!row) {
-    throw new ConnectError(`Agent not found: ${req.id}`, Code.NotFound);
-  }
+  const row = requireAgent(req.id);
   return agentRowToProto(row, getHeartbeatForAgent(req.id));
 }
 
 /** Update an existing agent. Optional fields left unset preserve the stored value. */
 export async function updateAgent(req: grackle.UpdateAgentRequest): Promise<grackle.Agent> {
-  const existing = agentStore.getAgent(req.id);
-  if (!existing) {
-    throw new ConnectError(`Agent not found: ${req.id}`, Code.NotFound);
-  }
+  const existing = requireAgent(req.id);
 
   if (req.name === undefined && req.avatar === undefined && req.primaryPersonaId === undefined) {
     throw new ConnectError("No updatable fields provided", Code.InvalidArgument);
@@ -109,10 +92,7 @@ export async function updateAgent(req: grackle.UpdateAgentRequest): Promise<grac
   // allows empty strings, which would persist an invalid record).
   let trimmedName: string | undefined;
   if (req.name !== undefined) {
-    trimmedName = req.name.trim();
-    if (!trimmedName) {
-      throw new ConnectError("Agent name cannot be empty", Code.InvalidArgument);
-    }
+    trimmedName = requireNonEmpty(req.name, "Agent name");
     if (trimmedName !== existing.name && agentStore.getAgentByName(trimmedName)) {
       throw new ConnectError(`Agent with name "${trimmedName}" already exists`, Code.AlreadyExists);
     }
@@ -175,10 +155,7 @@ export async function deleteAgent(req: grackle.AgentId): Promise<grackle.Empty> 
 export async function setAgentHeartbeat(
   req: grackle.SetAgentHeartbeatRequest,
 ): Promise<grackle.Schedule> {
-  const agent = agentStore.getAgent(req.agentId);
-  if (!agent) {
-    throw new ConnectError(`Agent not found: ${req.agentId}`, Code.NotFound);
-  }
+  const agent = requireAgent(req.agentId);
   const rootTask = taskStore.getRootTaskForAgent(req.agentId);
   if (!rootTask) {
     throw new ConnectError(`Agent has no root task: ${req.agentId}`, Code.FailedPrecondition);

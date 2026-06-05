@@ -32,6 +32,7 @@ import { toPersonaResolveInput } from "@grackle-ai/core";
 import { sendInputToSession } from "@grackle-ai/core";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, killSessionAndCleanup } from "./grpc-shared.js";
+import { requireEnvironment, requireField, requireSession } from "./require-helpers.js";
 import { buildCreateSessionParams } from "./spawn-request.js";
 import { buildMcpUrl, executeSpawnTail } from "./spawn-orchestration.js";
 import {
@@ -48,13 +49,7 @@ import { isReconnecting } from "@grackle-ai/core";
 
 /** Spawn a new agent session in the given environment. */
 export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Session> {
-  if (!req.environmentId) {
-    throw new ConnectError("environment_id is required", Code.InvalidArgument);
-  }
-  const env = envRegistry.getEnvironment(req.environmentId);
-  if (!env) {
-    throw new ConnectError(`Environment not found: ${req.environmentId}`, Code.NotFound);
-  }
+  const env = requireEnvironment(req.environmentId);
 
   let conn = adapterManager.getConnection(req.environmentId);
   if (!conn) {
@@ -293,10 +288,7 @@ export async function resumeAgent(req: grackle.ResumeRequest): Promise<grackle.S
 
 /** Send text input to a running session. */
 export async function sendInput(req: grackle.InputMessage): Promise<grackle.Empty> {
-  const session = sessionStore.getSession(req.sessionId);
-  if (!session) {
-    throw new ConnectError(`Session not found: ${req.sessionId}`, Code.NotFound);
-  }
+  const session = requireSession(req.sessionId);
   if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
     throw new ConnectError(
       `Session ${req.sessionId} has ended (status: ${session.status})`,
@@ -325,10 +317,7 @@ export async function sendInput(req: grackle.InputMessage): Promise<grackle.Empt
 
 /** Kill (or gracefully stop) an agent session. */
 export async function killAgent(req: grackle.KillAgentRequest): Promise<grackle.Empty> {
-  const session = sessionStore.getSession(req.id);
-  if (!session) {
-    throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
-  }
+  const session = requireSession(req.id);
 
   if (req.graceful) {
     // ── SIGTERM: deliver signal message, return immediately ──
@@ -369,15 +358,10 @@ export async function killAgent(req: grackle.KillAgentRequest): Promise<grackle.
 
 /** Get aggregated usage stats for a session, task, task tree, workspace, or environment. */
 export async function getUsage(req: grackle.GetUsageRequest): Promise<grackle.UsageStats> {
-  if (!req.id) {
-    throw new ConnectError("id is required", Code.InvalidArgument);
-  }
+  requireField(req.id, "id");
   switch (req.scope) {
     case "session": {
-      const session = sessionStore.getSession(req.id);
-      if (!session) {
-        throw new ConnectError(`Session not found: ${req.id}`, Code.NotFound);
-      }
+      const session = requireSession(req.id);
       return create(grackle.UsageStatsSchema, {
         inputTokens: session.inputTokens,
         outputTokens: session.outputTokens,
