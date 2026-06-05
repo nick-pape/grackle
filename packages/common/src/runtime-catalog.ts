@@ -30,6 +30,47 @@ export interface RuntimeModelInfo {
   provider: string;
 }
 
+// ─── Factory Descriptors ───────────────────────────────────
+// Describe how to instantiate a runtime. PowerLine's runtime-loader reads
+// these to dynamically import and construct each runtime — no hardcoded
+// imports or registration calls.
+
+/** Import a class from a workspace/npm package and call `new Class()`. */
+export interface SdkRuntimeFactory {
+  /** Discriminant. */
+  type: "sdk";
+  /** npm package name to import (e.g. `"@grackle-ai/runtime-claude-code"`). */
+  package: string;
+  /** Named export of the runtime class (e.g. `"ClaudeCodeRuntime"`). */
+  exportName: string;
+}
+
+/** Serializable ACP agent config (no `name` — the catalog key IS the name). */
+export interface AcpRuntimeFactoryConfig {
+  /** CLI command to spawn (e.g. `"goose"`, `"claude-agent-acp"`). */
+  command: string;
+  /** CLI arguments. */
+  args: string[];
+  /** Isolate `~/.claude` config for headless agents. */
+  isolateClaudeConfig?: boolean;
+}
+
+/** Import `AcpRuntime` from `@grackle-ai/runtime-acp` and pass config. */
+export interface AcpRuntimeFactory {
+  /** Discriminant. */
+  type: "acp";
+  /** ACP agent config passed to `new AcpRuntime({ name, ...config })`. */
+  config: AcpRuntimeFactoryConfig;
+}
+
+/**
+ * Discriminated union describing how to instantiate a runtime.
+ *
+ * - `"sdk"` — import a class from a workspace package, call `new Class()`
+ * - `"acp"` — import `AcpRuntime`, pass per-agent config
+ */
+export type RuntimeFactoryDescriptor = SdkRuntimeFactory | AcpRuntimeFactory;
+
 /**
  * A single runtime in the catalog. Mirrors AHP `AgentInfo` (presentation +
  * models); `install` is the lazy-install spec (absent for built-in/test
@@ -44,6 +85,8 @@ export interface RuntimeCatalogEntry {
   models: RuntimeModelInfo[];
   /** npm packages to lazily install for this runtime; omitted for built-ins. */
   install?: RuntimePackageManifest;
+  /** How to instantiate this runtime; absent for local-only runtimes (stubs). */
+  factory?: RuntimeFactoryDescriptor;
 }
 
 /**
@@ -60,6 +103,11 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
       { id: "haiku", name: "Claude Haiku", provider: "claude-code" },
     ],
     install: { packages: { "@anthropic-ai/claude-agent-sdk": "^0.3.0" } },
+    factory: {
+      type: "sdk",
+      package: "@grackle-ai/runtime-claude-code",
+      exportName: "ClaudeCodeRuntime",
+    },
   },
   copilot: {
     displayName: "GitHub Copilot",
@@ -69,18 +117,21 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
       packages: { "@github/copilot-sdk": "^1.0.0", "@github/copilot": "^1.0.43" },
       needsJsonRpcHook: true,
     },
+    factory: { type: "sdk", package: "@grackle-ai/runtime-copilot", exportName: "CopilotRuntime" },
   },
   codex: {
     displayName: "Codex",
     description: "OpenAI Codex via the Codex SDK.",
     models: [{ id: "gpt-5.5", name: "GPT-5.5", provider: "codex" }],
     install: { packages: { "@openai/codex-sdk": "^0.136.0" } },
+    factory: { type: "sdk", package: "@grackle-ai/runtime-codex", exportName: "CodexRuntime" },
   },
   goose: {
     displayName: "Goose",
     description: "Block Goose via the Agent Client Protocol (experimental).",
     models: [],
     install: { packages: { "@agentclientprotocol/sdk": "^0.24.0" } },
+    factory: { type: "acp", config: { command: "goose", args: ["acp"] } },
   },
   "codex-acp": {
     displayName: "Codex (ACP)",
@@ -89,12 +140,14 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
     install: {
       packages: { "@agentclientprotocol/sdk": "^0.24.0", "@zed-industries/codex-acp": "^0.15.0" },
     },
+    factory: { type: "acp", config: { command: "codex-acp", args: [] } },
   },
   "copilot-acp": {
     displayName: "Copilot (ACP)",
     description: "GitHub Copilot via the Agent Client Protocol (experimental).",
     models: [],
     install: { packages: { "@agentclientprotocol/sdk": "^0.24.0", "@github/copilot": "^1.0.43" } },
+    factory: { type: "acp", config: { command: "copilot", args: ["--acp", "--stdio"] } },
   },
   "claude-code-acp": {
     displayName: "Claude Code (ACP)",
@@ -106,12 +159,21 @@ export const RUNTIME_CATALOG: Readonly<Record<string, RuntimeCatalogEntry>> = {
         "@zed-industries/claude-agent-acp": "^0.23.0",
       },
     },
+    factory: {
+      type: "acp",
+      config: { command: "claude-agent-acp", args: [], isolateClaudeConfig: true },
+    },
   },
   genaiscript: {
     displayName: "GenAIScript",
     description: "GenAIScript CLI scripting runtime.",
     models: [],
     install: { packages: { genaiscript: "^2.5.1" } },
+    factory: {
+      type: "sdk",
+      package: "@grackle-ai/runtime-genaiscript",
+      exportName: "GenAIScriptRuntime",
+    },
   },
   stub: {
     displayName: "Stub",
