@@ -1,5 +1,5 @@
 /**
- * AHP action handlers: dispatch, authenticate, ping.
+ * AHP action handlers: dispatch and authenticate.
  * @module handlers/action-handlers
  */
 
