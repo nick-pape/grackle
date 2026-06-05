@@ -358,29 +358,6 @@ function createSessionActionStoreMock(): MockedStore<SessionActionStore> {
   };
 }
 
-/** Create mock store registry functions that mirror real throw-until-initialized semantics. */
-function createStoreRegistryMock(): {
-  setDatabaseStores: Mock;
-  getDatabaseStores: Mock;
-  clearDatabaseStores: Mock;
-} {
-  let stored: unknown;
-  return {
-    setDatabaseStores: vi.fn((s: unknown) => {
-      stored = s;
-    }),
-    getDatabaseStores: vi.fn(() => {
-      if (!stored) {
-        throw new Error("Database stores not initialized. Call setDatabaseStores() at startup.");
-      }
-      return stored;
-    }),
-    clearDatabaseStores: vi.fn(() => {
-      stored = undefined;
-    }),
-  };
-}
-
 /**
  * Create a complete mock of the `@grackle-ai/database` barrel export.
  *
@@ -419,6 +396,14 @@ export function createDatabaseMock(): DatabaseMock {
   };
 
   return {
+    // Database lifecycle mocks
+    db: {},
+    sqlite: undefined,
+    openDatabase: vi.fn(),
+    initDatabase: vi.fn(),
+    seedDatabase: vi.fn(),
+    schema: {},
+
     ...stores,
 
     // Direct barrel re-exports — same references as the namespace mocks above
