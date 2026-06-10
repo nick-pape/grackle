@@ -10,6 +10,7 @@ import type { GenEnum } from '@bufbuild/protobuf/codegenv2';
 import type { GenFile } from '@bufbuild/protobuf/codegenv2';
 import type { GenMessage } from '@bufbuild/protobuf/codegenv2';
 import type { GenService } from '@bufbuild/protobuf/codegenv2';
+import { Logger } from 'pino';
 import type { Message } from '@bufbuild/protobuf';
 import { StateAction } from '@grackle-ai/ahp';
 import { z } from 'zod';
@@ -527,6 +528,15 @@ type CreatePersonaRequest = Message<"grackle.CreatePersonaRequest"> & {
 
 // @public
 const CreatePersonaRequestSchema: GenMessage<CreatePersonaRequest>;
+
+// @public
+export function createPinoLogger(options: CreatePinoLoggerOptions): Logger;
+
+// @public
+export interface CreatePinoLoggerOptions {
+    mixin?: () => object;
+    name: string;
+}
 
 // @public
 type CreateScheduleRequest = Message<"grackle.CreateScheduleRequest"> & {
@@ -2325,6 +2335,8 @@ export interface LogConfig {
     isProduction: boolean;
     level: LogLevel;
 }
+
+export { Logger }
 
 // @public
 export type LogLevel = "fatal" | "error" | "warn" | "info" | "debug" | "trace" | "silent";
