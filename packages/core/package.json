@@ -54,7 +54,6 @@
     "@opentelemetry/sdk-logs": "^0.218.0",
     "@opentelemetry/semantic-conventions": "^1.29.0",
     "cron-parser": "^4.9.0",
-    "pino": "^10.3.1",
     "ulid": "^2.3.0",
     "uuid": "^11.1.1"
   },
@@ -64,6 +63,7 @@
     "@rushstack/heft": "1.2.7",
     "@types/node": "^22.0.0",
     "@types/uuid": "^10.0.0",
+    "pino": "^10.3.1",
     "@vitest/coverage-v8": "^4.1.0",
     "vitest": "^4.1.0",
     "@vitest/spy": "^4.1.0"
