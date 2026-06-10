@@ -56,3 +56,5 @@ export type {
   ReverseMapResult,
   PendingToolCall,
 } from "./ahp-reverse-mapper.js";
+export { createPinoLogger } from "./logger-factory.js";
+export type { CreatePinoLoggerOptions, Logger } from "./logger-factory.js";

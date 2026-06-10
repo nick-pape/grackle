@@ -19,6 +19,18 @@ vi.mock("@grackle-ai/common", () => ({
   DEFAULT_SERVER_PORT: 7434,
   GRACKLE_DIR: ".grackle",
   API_KEY_FILENAME: "api_key",
+  createPinoLogger: vi.fn(() => ({
+    fatal: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+    bindings: vi.fn().mockReturnValue({}),
+    level: "info",
+    isLevelEnabled: vi.fn().mockReturnValue(false),
+  })),
 }));
 
 vi.mock("node:fs", () => ({

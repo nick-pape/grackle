@@ -364,6 +364,9 @@ importers:
       fuse.js:
         specifier: ^7.0.0
         version: 7.1.0
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
       zod:
         specifier: ^4.3.0
         version: 4.3.6
@@ -452,9 +455,6 @@ importers:
       cron-parser:
         specifier: ^4.9.0
         version: 4.9.0
-      pino:
-        specifier: ^10.3.1
-        version: 10.3.1
       ulid:
         specifier: ^2.3.0
         version: 2.4.0
@@ -483,6 +483,9 @@ importers:
       '@vitest/spy':
         specifier: ^4.1.0
         version: 4.1.8
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
       vitest:
         specifier: ^4.1.0
         version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.8)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
@@ -557,15 +560,15 @@ importers:
 
   ../../packages/knowledge-core:
     dependencies:
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../common
       '@huggingface/transformers':
         specifier: ^3.4.0
         version: 3.8.1
       neo4j-driver:
         specifier: ^6.0.1
         version: 6.0.1
-      pino:
-        specifier: ^10.3.1
-        version: 10.3.1
     devDependencies:
       '@grackle-ai/heft-rig':
         specifier: workspace:*
@@ -609,9 +612,6 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@4.3.6)
-      pino:
-        specifier: ^10.3.1
-        version: 10.3.1
       zod:
         specifier: ^4.3.0
         version: 4.3.6
@@ -943,9 +943,6 @@ importers:
       picomatch:
         specifier: 4.0.4
         version: 4.0.4
-      pino:
-        specifier: ^10.3.1
-        version: 10.3.1
       zod:
         specifier: ^4.0.0
         version: 4.3.6
@@ -1145,9 +1142,6 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@4.3.6)
-      pino:
-        specifier: ^10.3.1
-        version: 10.3.1
     devDependencies:
       '@grackle-ai/heft-rig':
         specifier: workspace:*
