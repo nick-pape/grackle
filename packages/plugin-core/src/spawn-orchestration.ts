@@ -8,19 +8,120 @@
  */
 
 import type { PipeMode } from "@grackle-ai/common";
-import { DEFAULT_MCP_PORT } from "@grackle-ai/common";
-import type { ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
-import { sessionStore } from "@grackle-ai/database";
+import { DEFAULT_MCP_PORT, UnavailableError, PreconditionError } from "@grackle-ai/common";
+import type { ServerActionEnvelope, PowerLineConnection } from "@grackle-ai/adapter-sdk";
+import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
+import type { EnvironmentRow } from "@grackle-ai/database";
+import { envRegistry, sessionStore } from "@grackle-ai/database";
 import {
   streamRegistry,
   pipeDelivery,
   processEventStream,
   ensureStdinStream,
+  adapterManager,
+  isReconnecting,
+  emit,
+  logger,
+  recoverSuspendedSessions,
+  parseAdapterConfig,
+  resolveBootstrapRuntime,
   type EventStreamOptions,
 } from "@grackle-ai/core";
 import { toDialableHost } from "./grpc-shared.js";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
 import type { grackle } from "@grackle-ai/common";
+
+/**
+ * Return a live connection for the given environment, auto-provisioning it if
+ * it is currently disconnected.
+ *
+ * When a connection already exists it is returned immediately. Otherwise the
+ * environment is provisioned via {@link reconnectOrProvision} and then
+ * connected. Progress is broadcast as `environment.provision_progress` events.
+ *
+ * Throws {@link UnavailableError} if an auto-reconnect is already in flight.
+ * Throws {@link PreconditionError} if no adapter is registered for the
+ * environment's type, or if provisioning or connecting fails.
+ */
+export async function ensureSpawnConnection(
+  environmentId: string,
+  env: EnvironmentRow,
+): Promise<PowerLineConnection> {
+  const existing = adapterManager.getConnection(environmentId);
+  if (existing) {
+    return existing;
+  }
+
+  // If auto-reconnect is already in-flight for this environment, fail fast
+  // rather than racing with a duplicate provision attempt that could overwrite
+  // the connection, collide on session recovery, or open duplicate tunnels.
+  if (isReconnecting(environmentId)) {
+    throw new UnavailableError(
+      `Environment ${environmentId} is reconnecting — retry shortly`,
+    );
+  }
+
+  // Auto-provision: attempt to reconnect/provision a disconnected environment
+  const adapter = adapterManager.getAdapter(env.adapterType);
+  if (!adapter) {
+    throw new PreconditionError(`No adapter for type: ${env.adapterType}`);
+  }
+
+  logger.info({ environmentId }, "Auto-provisioning environment for SpawnAgent");
+  envRegistry.updateEnvironmentStatus(environmentId, "connecting");
+  emit("environment.changed", {});
+
+  const config = parseAdapterConfig(env.adapterConfig);
+  config.defaultRuntime = resolveBootstrapRuntime(env);
+  const powerlineToken = env.powerlineToken;
+
+  try {
+    for await (const provEvent of reconnectOrProvision(
+      environmentId,
+      adapter,
+      config,
+      powerlineToken,
+      !!env.bootstrapped,
+    )) {
+      logger.info(
+        { environmentId, stage: provEvent.stage },
+        "Auto-provision progress (SpawnAgent)",
+      );
+      emit("environment.provision_progress", {
+        environmentId,
+        stage: provEvent.stage,
+        message: provEvent.message,
+        progress: provEvent.progress,
+      });
+    }
+
+    const conn = await adapter.connect(environmentId, config, powerlineToken);
+    adapterManager.setConnection(environmentId, conn);
+    // Credentials are supplied on demand at spawn (AHP HR6), not eagerly on connect.
+    envRegistry.updateEnvironmentStatus(environmentId, "connected");
+    envRegistry.markBootstrapped(environmentId);
+    emit("environment.changed", {});
+    // Auto-recover suspended sessions (fire-and-forget)
+    recoverSuspendedSessions(environmentId, conn).catch((err) => {
+      logger.error({ environmentId, err }, "Session recovery failed");
+    });
+    logger.info({ environmentId }, "Auto-provision complete (SpawnAgent)");
+    emit("environment.provision_progress", {
+      environmentId,
+      stage: "ready",
+      message: "Environment connected",
+      progress: 1,
+    });
+    return conn;
+  } catch (err) {
+    logger.error({ environmentId, err }, "Auto-provision failed (SpawnAgent)");
+    envRegistry.updateEnvironmentStatus(environmentId, "error");
+    emit("environment.changed", {});
+    throw new PreconditionError(
+      `Failed to auto-connect environment ${environmentId}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
 
 /** Build the MCP endpoint URL from environment variables or defaults. */
 export function buildMcpUrl(): string {
