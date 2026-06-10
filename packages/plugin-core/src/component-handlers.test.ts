@@ -164,7 +164,6 @@ describe("gRPC component handlers", () => {
     const err = (await handlers
       .getComponent({ id: created.id, workspaceId: WS2 })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
@@ -177,7 +176,6 @@ describe("gRPC component handlers", () => {
     const err = (await handlers
       .updateComponent({ id: created.id, workspaceId: WS2, body: "hijacked" })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
@@ -247,7 +245,6 @@ describe("gRPC component handlers", () => {
     const err = (await handlers
       .searchComponents({ query: "  ", workspaceId: WS1 })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
   });
 
@@ -255,7 +252,6 @@ describe("gRPC component handlers", () => {
     const err = (await handlers
       .searchComponents({ query: "button", workspaceId: "no-such-workspace" })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
@@ -306,7 +302,6 @@ describe("gRPC component handlers", () => {
     const err = (await handlers
       .setComponentPromotion({ id: created.id, workspaceId: WS2, promoted: true })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
@@ -314,7 +309,6 @@ describe("gRPC component handlers", () => {
     const err = (await handlers
       .setComponentPromotion({ id: "no-such-id", workspaceId: WS1, promoted: true })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
   });
 
@@ -322,7 +316,6 @@ describe("gRPC component handlers", () => {
     const err = (await handlers
       .setComponentPromotion({ workspaceId: WS1, promoted: true })
       .catch((e: unknown) => e)) as ConnectError;
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
   });
 

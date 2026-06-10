@@ -4,11 +4,17 @@ vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-vi.mock("@grackle-ai/database", () => ({
-  envRegistry: {
-    listEnvironments: vi.fn(),
-  },
-}));
+vi.mock("@grackle-ai/database", () => {
+  const stores = {
+    envRegistry: {
+      listEnvironments: vi.fn(),
+    },
+  };
+  return {
+    ...stores,
+    getDatabaseStores: () => stores,
+  };
+});
 
 import { findFirstConnectedEnvironment } from "./find-connected-environment.js";
 import { envRegistry } from "@grackle-ai/database";

@@ -71,7 +71,7 @@ describe("session-store", () => {
 
       const after = sessionStore.getSession("s1");
       expect(after?.status).toBe("stopped");
-      expect(after?.endedAt).toBeTruthy();
+      expect(after?.endedAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
       expect(after?.endReason).toBe("completed");
     });
   });
@@ -192,7 +192,7 @@ describe("session-store", () => {
       sessionStore.createSession("sig-1", "test-env", "claude-code", "test", "model", "/tmp/log");
       sessionStore.setSigtermSentAt("sig-1");
       const session = sessionStore.getSession("sig-1");
-      expect(session?.sigtermSentAt).toBeTruthy();
+      expect(session?.sigtermSentAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
     });
 
     it("returns sigtermSentAt as null by default", () => {

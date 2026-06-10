@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 
 // ── Mocks (must be before imports) ──────────────────────────
 vi.mock("./logger.js", () => ({
@@ -15,8 +15,10 @@ vi.mock("./log-writer.js", () => ({
 
 // ── Imports (after mocks) ───────────────────────────────────
 import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore } from "@grackle-ai/database";
+import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils/db";
 openDatabase(":memory:");
 initDatabase();
+initRealDatabaseStores();
 const sqlite = _sqlite!;
 import * as streamRegistry from "./stream-registry.js";
 import * as adapterManager from "./adapter-manager.js";
@@ -67,6 +69,10 @@ function applySchema(): void {
 }
 
 describe("stdin-delivery", () => {
+  afterAll(() => {
+    clearDatabaseStores();
+  });
+
   let mockSendInput: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {

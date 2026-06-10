@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 
 // ── Mock dependencies before importing ──────────────
 vi.mock("./logger.js", () => ({
@@ -6,8 +6,10 @@ vi.mock("./logger.js", () => ({
 }));
 
 import { openDatabase, initDatabase, sqlite as _sqlite } from "@grackle-ai/database";
+import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils/db";
 openDatabase(":memory:");
 initDatabase();
+initRealDatabaseStores();
 const sqlite = _sqlite!;
 import { emit, subscribe, _resetForTesting, type GrackleEvent } from "./event-bus.js";
 
@@ -27,6 +29,10 @@ function applySchema(): void {
 }
 
 describe("event-bus", () => {
+  afterAll(() => {
+    clearDatabaseStores();
+  });
+
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS domain_events");
     applySchema();

@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, SESSION_STATUS, END_REASON, serverTimestamp } from "@grackle-ai/common";
-import { sessionStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import * as adapterManager from "../adapter-manager.js";
 import { reanimateAgent } from "../reanimate-agent.js";
 import * as streamHub from "../stream-hub.js";
@@ -35,6 +35,8 @@ export async function deliverSignalToTask(
   signalType: string,
   message: string,
 ): Promise<boolean> {
+  const { sessionStore } = getDatabaseStores();
+
   // ── 1. Try an active session ──────────────────────────────
   const activeSessions = sessionStore.getActiveSessionsForTask(taskId);
   if (activeSessions.length > 0) {
@@ -124,6 +126,7 @@ export async function sendInputToSession(
 
   try {
     // Record the signal as a SIGNAL event in the session log and stream.
+    const { sessionStore } = getDatabaseStores();
     const session = sessionStore.getSession(sessionId);
     const signalEvent = create(grackle.SessionEventSchema, {
       sessionId,
@@ -170,6 +173,7 @@ function waitForSessionIdle(sessionId: string, timeoutMs: number): IdleWaiter {
 
   const promise = (async () => {
     // Check DB after subscribing to close the race window.
+    const { sessionStore } = getDatabaseStores();
     const current = sessionStore.getSession(sessionId);
     if (current?.status === SESSION_STATUS.IDLE) {
       stream.cancel();

@@ -8,7 +8,7 @@
  * Persist-first, route-second: escalations are SQLite rows before this runs.
  */
 
-import { escalationStore, settingsStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import type { EscalationModel } from "./domain/index.js";
 import { toEscalationModel } from "./domain/index.js";
 import { emit } from "./event-bus.js";
@@ -26,6 +26,7 @@ let drainInFlight: boolean = false;
  * POSTs to a webhook if configured. Updates escalation status to "delivered".
  */
 export async function routeEscalation(escalation: EscalationModel): Promise<void> {
+  const { escalationStore, settingsStore } = getDatabaseStores();
   // Channel 1: Domain event broadcast (always fires — reaches connected web UIs)
   emit("notification.escalated", {
     escalationId: escalation.id,
@@ -94,6 +95,7 @@ export async function deliverPendingEscalations(): Promise<void> {
   }
   drainInFlight = true;
   try {
+    const { escalationStore } = getDatabaseStores();
     const pending = escalationStore.listPendingEscalations();
     for (const row of pending) {
       await routeEscalation(toEscalationModel(row));

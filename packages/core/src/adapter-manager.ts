@@ -1,5 +1,5 @@
 import type { EnvironmentAdapter, PowerLineConnection } from "@grackle-ai/adapter-sdk";
-import { envRegistry } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 
 const HEARTBEAT_INTERVAL_MS: number = 30_000;
@@ -53,6 +53,7 @@ export function startHeartbeat(
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   heartbeatInterval = setInterval(async () => {
+    const { envRegistry } = getDatabaseStores();
     for (const [environmentId, conn] of connections) {
       const env = envRegistry.getEnvironment(environmentId);
       if (!env) {

@@ -1,6 +1,5 @@
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, NotFoundError, PreconditionError } from "@grackle-ai/common";
 import { pluginStore } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
 import { getPluginRegistry, isPluginLoaded } from "./plugin-registry.js";
@@ -34,13 +33,10 @@ export async function setPluginEnabled(
 ): Promise<grackle.PluginInfo> {
   const entry = getPluginRegistry().find((p) => p.name === req.name);
   if (!entry) {
-    throw new ConnectError(`Unknown plugin: ${req.name}`, Code.NotFound);
+    throw new NotFoundError(`Plugin not found: ${req.name}`);
   }
   if (entry.required) {
-    throw new ConnectError(
-      `Plugin "${req.name}" is required and cannot be disabled`,
-      Code.FailedPrecondition,
-    );
+    throw new PreconditionError(`Plugin "${req.name}" is required and cannot be disabled`);
   }
 
   pluginStore.setPluginEnabled(req.name, req.enabled);

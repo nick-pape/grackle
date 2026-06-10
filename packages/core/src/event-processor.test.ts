@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { powerline, grackle } from "@grackle-ai/common";
 import type { ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
@@ -52,8 +52,10 @@ import {
   workspaceStore,
   querySessionActions,
 } from "@grackle-ai/database";
+import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils/db";
 openDatabase(":memory:");
 initDatabase();
+initRealDatabaseStores();
 const sqlite = _sqlite!;
 import { processEventStream, publishWidgetEvent } from "./event-processor.js";
 import * as processorRegistry from "./processor-registry.js";
@@ -203,6 +205,10 @@ function waitForProcessing(
   });
 }
 
+afterAll(() => {
+  clearDatabaseStores();
+});
+
 describe("stream error handling", () => {
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS findings");
@@ -252,7 +258,7 @@ describe("stream error handling", () => {
 
     const session = sessionStore.getSession("sess1");
     expect(session?.status).toBe("suspended");
-    expect(session?.suspendedAt).toBeTruthy();
+    expect(session?.suspendedAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
     expect(session?.endedAt).toBeNull();
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({ sessionId: "sess1" }),
@@ -286,7 +292,7 @@ describe("stream error handling", () => {
 
     const session = sessionStore.getSession("sess1");
     expect(session?.status).toBe("suspended");
-    expect(session?.suspendedAt).toBeTruthy();
+    expect(session?.suspendedAt).toMatch(/^\d{4}-\d{2}-\d{2}/);
     expect(session?.endedAt).toBeNull();
   });
 

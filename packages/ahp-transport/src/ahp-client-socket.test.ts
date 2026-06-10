@@ -514,7 +514,7 @@ describe("AhpClientSocket", () => {
         backoff: exponentialBackoff({ initialMs: 1_000_000, maxMs: 1_000_000, jitter: 0 }),
       });
       try {
-        await expect(client.open()).rejects.toBeDefined();
+        await expect(client.open()).rejects.toThrow();
         expect(client.state).toBe("closed");
       } finally {
         await client.close();
@@ -536,7 +536,7 @@ describe("AhpClientSocket", () => {
         backoff: exponentialBackoff({ initialMs: 1_000_000, maxMs: 1_000_000, jitter: 0 }),
       });
       try {
-        await expect(client.open()).rejects.toBeDefined();
+        await expect(client.open()).rejects.toThrow();
         // Handshake failure is terminal — must NOT start background retries.
         expect(client.state).toBe("closed");
       } finally {

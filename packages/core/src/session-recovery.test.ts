@@ -3,7 +3,7 @@
  * Covers: drain + reanimate, empty drain, reanimate failure, concurrent lock,
  * and the "server died" scenario (RUNNING/IDLE sessions in DB).
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 
 // ── Mock dependencies before importing ──────────────────────
 
@@ -47,8 +47,10 @@ vi.mock("./reanimate-agent.js", () => ({
 // ── Imports (after mocks) ───────────────────────────────────
 
 import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore } from "@grackle-ai/database";
+import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils/db";
 openDatabase(":memory:");
 initDatabase();
+initRealDatabaseStores();
 const sqlite = _sqlite!;
 import * as logWriter from "./log-writer.js";
 import { reanimateAgent } from "./reanimate-agent.js";
@@ -170,6 +172,10 @@ function makeConnection(
 // ── Tests ───────────────────────────────────────────────────
 
 describe("session recovery", () => {
+  afterAll(() => {
+    clearDatabaseStores();
+  });
+
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS sessions");
     sqlite.exec("DROP TABLE IF EXISTS tasks");

@@ -6,7 +6,7 @@
  * `gh auth token`, and registers them in the `github_accounts` database table —
  * skipping any account whose username is already stored.
  */
-import { githubAccountStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { exec } from "./utils/exec.js";
 import { logger } from "./logger.js";
 
@@ -56,6 +56,7 @@ export interface ImportAccountsResult {
  * Returns an empty result (0 imported) if `gh` is unavailable or not logged in.
  */
 export async function importAccountsFromGhCli(): Promise<ImportAccountsResult> {
+  const { githubAccountStore } = getDatabaseStores();
   let statusOutput: GhAuthStatusOutput;
   try {
     const result = await exec("gh", ["auth", "status", "--json", "hosts"], {

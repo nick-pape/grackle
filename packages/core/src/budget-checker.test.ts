@@ -3,18 +3,24 @@ import type { TaskRow } from "@grackle-ai/database";
 import type { WorkspaceRow } from "@grackle-ai/database";
 
 // ── Mocks ────────────────────────────────────────────────────
-vi.mock("@grackle-ai/database", () => ({
-  taskStore: {
-    getTask: vi.fn(),
-    listTasks: vi.fn().mockReturnValue([]),
-  },
-  workspaceStore: {
-    getWorkspace: vi.fn(),
-  },
-  sessionStore: {
-    aggregateUsage: vi.fn(),
-  },
-}));
+vi.mock("@grackle-ai/database", () => {
+  const stores = {
+    taskStore: {
+      getTask: vi.fn(),
+      listTasks: vi.fn().mockReturnValue([]),
+    },
+    workspaceStore: {
+      getWorkspace: vi.fn(),
+    },
+    sessionStore: {
+      aggregateUsage: vi.fn(),
+    },
+  };
+  return {
+    ...stores,
+    getDatabaseStores: () => stores,
+  };
+});
 
 import { taskStore, workspaceStore, sessionStore } from "@grackle-ai/database";
 import { checkBudget } from "./budget-checker.js";

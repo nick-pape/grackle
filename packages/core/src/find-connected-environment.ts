@@ -5,7 +5,7 @@
  * so that the cron phase and other server-internal code can reuse the logic.
  */
 
-import { envRegistry } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import type { EnvironmentModel } from "./domain/index.js";
 import { toEnvironmentModel } from "./domain/index.js";
 
@@ -14,6 +14,7 @@ import { toEnvironmentModel } from "./domain/index.js";
  * Returns undefined if no environment is connected.
  */
 export function findFirstConnectedEnvironment(): EnvironmentModel | undefined {
+  const { envRegistry } = getDatabaseStores();
   const all = envRegistry.listEnvironments();
   const found =
     all.find((e) => e.status === "connected" && e.adapterType === "local") ||

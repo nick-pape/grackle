@@ -45,7 +45,10 @@ type MockedDatabaseStores = {
 };
 
 /** Full mock return type — store namespaces are typed, extra barrel exports use an index signature. */
-type DatabaseMock = MockedDatabaseStores & Record<string, unknown>;
+type DatabaseMock = MockedDatabaseStores & {
+  /** Wire the mock stores into the registry. Call once in the vi.mock factory or beforeAll. */
+  wire: () => void;
+} & Record<string, unknown>;
 
 /** A store where every function is replaced with a vitest Mock that preserves the original call signature. */
 type MockedStore<T> = {
@@ -358,29 +361,6 @@ function createSessionActionStoreMock(): MockedStore<SessionActionStore> {
   };
 }
 
-/** Create mock store registry functions that mirror real throw-until-initialized semantics. */
-function createStoreRegistryMock(): {
-  setDatabaseStores: Mock;
-  getDatabaseStores: Mock;
-  clearDatabaseStores: Mock;
-} {
-  let stored: unknown;
-  return {
-    setDatabaseStores: vi.fn((s: unknown) => {
-      stored = s;
-    }),
-    getDatabaseStores: vi.fn(() => {
-      if (!stored) {
-        throw new Error("Database stores not initialized. Call setDatabaseStores() at startup.");
-      }
-      return stored;
-    }),
-    clearDatabaseStores: vi.fn(() => {
-      stored = undefined;
-    }),
-  };
-}
-
 /**
  * Create a complete mock of the `@grackle-ai/database` barrel export.
  *
@@ -395,14 +375,7 @@ export function createDatabaseMock(): DatabaseMock {
   const streamMessageStoreMock = createStreamMessageStoreMock();
   const sessionActionStoreMock = createSessionActionStoreMock();
 
-  return {
-    db: {},
-    sqlite: undefined,
-    openDatabase: vi.fn(),
-    initDatabase: vi.fn(),
-    seedDatabase: vi.fn(),
-    schema: {},
-
+  const stores: MockedDatabaseStores = {
     sessionStore: createSessionStoreMock(),
     taskStore: createTaskStoreMock(),
     envRegistry: createEnvRegistryMock(),
@@ -423,6 +396,18 @@ export function createDatabaseMock(): DatabaseMock {
     eventStore: eventStoreMock,
     streamMessageStore: streamMessageStoreMock,
     sessionActionStore: sessionActionStoreMock,
+  };
+
+  return {
+    // Database lifecycle mocks
+    db: {},
+    sqlite: undefined,
+    openDatabase: vi.fn(),
+    initDatabase: vi.fn(),
+    seedDatabase: vi.fn(),
+    schema: {},
+
+    ...stores,
 
     // Direct barrel re-exports — same references as the namespace mocks above
     persistEvent: eventStoreMock.persistEvent,
@@ -439,8 +424,30 @@ export function createDatabaseMock(): DatabaseMock {
     parseCredentialProviderConfig: credentialProvidersMock.parseCredentialProviderConfig,
     isValidCredentialProviderConfig: credentialProvidersMock.isValidCredentialProviderConfig,
 
-    // Store registry — mirrors real semantics (throws until initialized)
-    ...createStoreRegistryMock(),
+    // Store registry — starts uninitialized to mirror production behavior.
+    // Call wire() in the vi.mock factory or beforeAll to seed with the mock stores.
+    ...(() => {
+      let current: MockedDatabaseStores | undefined = undefined;
+      return {
+        wire: () => {
+          current = stores;
+        },
+        setDatabaseStores: vi.fn((s: MockedDatabaseStores) => {
+          current = s;
+        }),
+        getDatabaseStores: vi.fn(() => {
+          if (!current) {
+            throw new Error(
+              "Database stores not initialized. Call setDatabaseStores() at startup.",
+            );
+          }
+          return current;
+        }),
+        clearDatabaseStores: vi.fn(() => {
+          current = undefined;
+        }),
+      };
+    })(),
 
     // Utilities
     grackleHome: "/tmp/test-grackle",

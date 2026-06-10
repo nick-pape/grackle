@@ -13,6 +13,7 @@ import {
   seedDatabase,
   sqlite,
 } from "@grackle-ai/database";
+import { initRealDatabaseStores, clearDatabaseStores } from "./real-database-stores.js";
 
 /** Handle returned by {@link setupTestDatabase} for test lifecycle control. */
 export interface TestDatabaseHandle {
@@ -38,9 +39,11 @@ export interface TestDatabaseHandle {
 export function setupTestDatabase(): TestDatabaseHandle {
   openDatabase(":memory:");
   initDatabase();
+  initRealDatabaseStores();
 
   return {
     cleanup(): void {
+      clearDatabaseStores();
       closeDatabase();
     },
 

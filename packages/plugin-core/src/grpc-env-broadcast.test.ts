@@ -3,13 +3,20 @@
  * (provision, stop, destroy) broadcast environment updates to
  * WebSocket clients after each status transition.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 
 // ── Mock heavy dependencies before importing the module ──────────
 
 vi.mock("@grackle-ai/database", async () => {
   const { createDatabaseMock } = await import("@grackle-ai/test-utils");
-  return createDatabaseMock();
+  const mock = createDatabaseMock();
+  // Wire mock stores into the registry so getDatabaseStores() calls in core functions work
+  mock.wire();
+  return {
+    ...mock,
+    // environment-handlers.ts uses sqlite.transaction() for atomic removeEnvironment
+    sqlite: { transaction: (fn: Function) => fn },
+  };
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
@@ -103,6 +110,11 @@ function getHandlers(): Record<string, (...args: unknown[]) => unknown> {
   registerGrackleRoutes(fakeRouter);
   return handlers;
 }
+
+afterAll(async () => {
+  const { clearDatabaseStores } = await import("@grackle-ai/database");
+  clearDatabaseStores();
+});
 
 describe("gRPC environment broadcast", () => {
   let handlers: Record<string, (...args: unknown[]) => unknown>;

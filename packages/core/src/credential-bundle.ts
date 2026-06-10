@@ -12,8 +12,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { type RuntimeName } from "@grackle-ai/common";
 import {
-  credentialProviders,
-  githubAccountStore,
+  getDatabaseStores,
   type CredentialProviderConfig,
   type DatabaseInstance,
 } from "@grackle-ai/database";
@@ -440,6 +439,7 @@ export async function buildProviderTokenBundle(
   database?: DatabaseInstance,
   githubAccountId?: string,
 ): Promise<ProviderTokenBundle> {
+  const { credentialProviders, githubAccountStore } = getDatabaseStores();
   const config = credentialProviders.getCredentialProviders(database);
   // When runtime is given, look it up in the map. Unknown runtimes get [] (empty, not all providers).
   const runtimeProviders =

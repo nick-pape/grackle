@@ -3,9 +3,16 @@ import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 
 // Mock the durable store and logger before importing the module under test.
-vi.mock("@grackle-ai/database", () => ({
-  persistSessionAction: vi.fn(),
-}));
+vi.mock("@grackle-ai/database", () => {
+  const persistSessionAction = vi.fn();
+  const stores = {
+    sessionActionStore: { persistSessionAction },
+  };
+  return {
+    persistSessionAction,
+    getDatabaseStores: () => stores,
+  };
+});
 vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));

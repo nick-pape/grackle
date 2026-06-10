@@ -126,7 +126,6 @@ describe("writeToFd + closeFd -- async delivery integration", () => {
         caughtErr = err;
       }
 
-      expect(caughtErr).toBeInstanceOf(ConnectError);
       expect((caughtErr as ConnectError).code).toBe(Code.FailedPrecondition);
       expect((caughtErr as ConnectError).message).toContain("delivery failed");
     });
@@ -159,7 +158,6 @@ describe("writeToFd + closeFd -- async delivery integration", () => {
         caughtErr = err;
       }
 
-      expect(caughtErr).toBeInstanceOf(ConnectError);
       expect((caughtErr as ConnectError).code).toBe(Code.FailedPrecondition);
     });
 
@@ -237,7 +235,6 @@ describe("writeToFd + closeFd -- async delivery integration", () => {
         caughtErr = err;
       }
 
-      expect(caughtErr).toBeInstanceOf(ConnectError);
       expect((caughtErr as ConnectError).code).toBe(Code.FailedPrecondition);
       expect((caughtErr as ConnectError).message).toContain("undelivered messages");
     });

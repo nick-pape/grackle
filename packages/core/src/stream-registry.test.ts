@@ -242,7 +242,7 @@ describe("stream-registry", () => {
 
       expect(msg.content).toBe("hello");
       expect(msg.senderId).toBe("sess-1");
-      expect(msg.timestamp).toBeTruthy();
+      expect(msg.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}/);
     });
 
     it("throws for unknown stream", () => {

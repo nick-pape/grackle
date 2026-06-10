@@ -37,7 +37,7 @@ describe("checkVersionStatus", () => {
 
     expect(result.updateAvailable).toBe(true);
     expect(result.latestVersion).toBe("99.0.0");
-    expect(result.currentVersion).toBeTruthy();
+    expect(result.currentVersion).toMatch(/^\d+\.\d+\.\d+/);
   });
 
   it("returns no update when versions match", async () => {

@@ -1,6 +1,6 @@
 import { ulid } from "ulid";
 import { SequencedLog, type LogSink, serverTimestamp } from "@grackle-ai/common";
-import { persistEvent } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 
 // ─── Event Types ──────────────────────────────────────────
@@ -103,9 +103,9 @@ const DOMAIN_EVENT_CHANNEL: string = "domain";
 
 /**
  * Storage sink for the domain-event log: persists each entry to the SQLite
- * `domain_events` table via {@link persistEvent}, using the log-assigned
+ * `domain_events` table via the event store, using the log-assigned
  * sequence key as the row id. (Kept inline next to the writer so `@grackle-ai/core`
- * depends only on `persistEvent`; the database-side sink + reader arrive in
+ * depends only on the event store; the database-side sink + reader arrive in
  * RFC #1264 Phase 1.)
  */
 const domainEventSink: LogSink<DomainEventBody> = {
@@ -113,7 +113,7 @@ const domainEventSink: LogSink<DomainEventBody> = {
     if (channelId !== DOMAIN_EVENT_CHANNEL) {
       throw new Error(`domainEventSink received unexpected channel "${channelId}"`);
     }
-    persistEvent({
+    getDatabaseStores().eventStore.persistEvent({
       id: entry.seq,
       type: entry.payload.type,
       timestamp: entry.payload.timestamp,

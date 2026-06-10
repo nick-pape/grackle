@@ -9,7 +9,7 @@
  *   by the WaitForPipe consumer after it reads the message.
  */
 
-import { sessionStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import * as adapterManager from "./adapter-manager.js";
 import * as streamRegistry from "./stream-registry.js";
 import { cleanupLifecycleStream } from "./lifecycle-streams.js";
@@ -47,6 +47,7 @@ export function ensureAsyncDeliveryListener(sessionId: string): void {
   }
 
   const unsubscribe = streamRegistry.registerAsyncListener(sessionId, (sub, msg) => {
+    const { sessionStore } = getDatabaseStores();
     const session = sessionStore.getSession(sessionId);
     if (!session) {
       throw new Error(`Async pipe delivery: session ${sessionId} not found`);
@@ -134,6 +135,7 @@ export async function publishChildCompletion(
   childSessionId: string,
   status: string,
 ): Promise<void> {
+  const { sessionStore } = getDatabaseStores();
   const session = sessionStore.getSession(childSessionId);
   if (!session) {
     return;

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
 
 // ── Mocks ───────────────────────────────────────────────────
 vi.mock("@grackle-ai/core", async (importOriginal) => {
@@ -15,8 +15,10 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
 
 // ── Imports ─────────────────────────────────────────────────
 import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore } from "@grackle-ai/database";
+import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils/db";
 openDatabase(":memory:");
 initDatabase();
+initRealDatabaseStores();
 const sqlite = _sqlite!;
 import { streamRegistry, adapterManager } from "@grackle-ai/core";
 import {
@@ -74,6 +76,10 @@ function applySchema(): void {
 function createMockContext(): PluginContext {
   return createMockPluginContext();
 }
+
+afterAll(() => {
+  clearDatabaseStores();
+});
 
 describe("lifecycle manager", () => {
   let mockKill: ReturnType<typeof vi.fn>;

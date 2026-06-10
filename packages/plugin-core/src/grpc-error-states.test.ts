@@ -88,7 +88,6 @@ describe("gRPC error states", () => {
   it("createTask with missing title returns error", async () => {
     const err = (await handlers.createTask({ title: "" }).catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.InvalidArgument);
     expect(err.message).toContain("required");
   });
@@ -98,7 +97,6 @@ describe("gRPC error states", () => {
       .createTask({ workspaceId: "does-not-exist-999", title: "ghost-task" })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
     expect(err.message).toContain("not found");
   });
@@ -110,7 +108,6 @@ describe("gRPC error states", () => {
       .startTask({ taskId: "nonexistent-task-id" })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.NotFound);
     expect(err.message).toContain("not found");
   });
@@ -148,7 +145,6 @@ describe("gRPC error states", () => {
       .startTask({ taskId: dependent.id })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("unmet dependencies");
   });
@@ -160,7 +156,6 @@ describe("gRPC error states", () => {
       .spawnAgent({ environmentId: "", prompt: "hello" })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.message).toContain("required");
   });
 
@@ -175,7 +170,6 @@ describe("gRPC error states", () => {
       .spawnAgent({ environmentId: "env-reconnecting", prompt: "hello" })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.code).toBe(Code.Unavailable);
     expect(err.message).toContain("reconnecting");
   });
@@ -187,7 +181,6 @@ describe("gRPC error states", () => {
       .createWorkspace({ name: "" })
       .catch((e: unknown) => e)) as ConnectError;
 
-    expect(err).toBeInstanceOf(ConnectError);
     expect(err.message).toContain("required");
   });
 });
