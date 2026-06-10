@@ -519,6 +519,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       createAgent: agentsHook.createAgent,
       updateAgent: agentsHook.updateAgent,
       deleteAgent: agentsHook.deleteAgent,
+      setHeartbeat: agentsHook.setHeartbeat,
       domainHook: agentsHook.domainHook,
     }),
     [
@@ -527,6 +528,7 @@ export function useGrackleSocket(): UseGrackleSocketResult {
       agentsHook.createAgent,
       agentsHook.updateAgent,
       agentsHook.deleteAgent,
+      agentsHook.setHeartbeat,
       agentsHook.domainHook,
     ],
   );

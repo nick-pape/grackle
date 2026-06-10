@@ -3826,6 +3826,7 @@ type UpdateAgentRequest = Message<"grackle.UpdateAgentRequest"> & {
     name?: string;
     avatar?: string;
     primaryPersonaId?: string;
+    environmentId?: string;
 };
 
 // @public

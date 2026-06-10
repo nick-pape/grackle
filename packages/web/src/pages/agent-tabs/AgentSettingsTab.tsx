@@ -19,7 +19,6 @@ import {
   useToast,
   type SelectOption,
 } from "@grackle-ai/web-components";
-import { orchestrationClient } from "../../hooks/useGrackleClient.js";
 import { useAgentContext } from "../AgentLayout.js";
 import styles from "./AgentSettingsTab.module.scss";
 
@@ -34,7 +33,7 @@ export function AgentSettingsTab(): JSX.Element {
   const navigate = useAppNavigate();
   const { showToast } = useToast();
   const {
-    agents: { updateAgent, deleteAgent },
+    agents: { updateAgent, deleteAgent, setHeartbeat },
     personas: { personas },
     environments: { environments },
   } = useGrackle();
@@ -46,6 +45,20 @@ export function AgentSettingsTab(): JSX.Element {
     { value: "", label: "(none)" },
     ...personas.map((p) => ({ value: p.id, label: p.name })),
   ];
+
+  const environmentOptions: SelectOption[] = (() => {
+    const opts = environments.map((e) => ({
+      value: e.id,
+      label: e.displayName || e.id,
+    }));
+    // Always ensure the agent's current environment appears even if the
+    // environments list hasn't finished loading — prevents the field from
+    // briefly showing the placeholder "None" on first render.
+    if (agent.environmentId && !opts.some((o) => o.value === agent.environmentId)) {
+      opts.unshift({ value: agent.environmentId, label: agent.environmentId });
+    }
+    return opts;
+  })();
 
   const handleSaveName = (value: string): void => {
     updateAgent(agent.id, { name: value }).then(
@@ -68,23 +81,30 @@ export function AgentSettingsTab(): JSX.Element {
     );
   };
 
+  const handleSaveEnvironment = (value: string): void => {
+    updateAgent(agent.id, { environmentId: value }).then(
+      () => showToast("Environment updated", "success"),
+      () => showToast("Failed to update environment", "error"),
+    );
+  };
+
   const handleSaveHeartbeatCadence = (value: string): void => {
     const cadence = value.trim();
-    orchestrationClient.setAgentHeartbeat({ agentId: agent.id, cadence: cadence || "" }).then(
+    setHeartbeat(agent.id, { cadence: cadence || "" }).then(
       () => showToast(cadence ? "Heartbeat updated" : "Heartbeat cleared", "success"),
       () => showToast("Failed to update heartbeat", "error"),
     );
   };
 
   const handleSaveHeartbeatRules = (value: string): void => {
-    orchestrationClient.setAgentHeartbeat({ agentId: agent.id, rules: value }).then(
+    setHeartbeat(agent.id, { rules: value }).then(
       () => showToast("Heartbeat rules updated", "success"),
       () => showToast("Failed to update rules", "error"),
     );
   };
 
   const handleToggleHeartbeat = (enabled: boolean): void => {
-    orchestrationClient.setAgentHeartbeat({ agentId: agent.id, enabled }).then(
+    setHeartbeat(agent.id, { enabled }).then(
       () => showToast(enabled ? "Heartbeat resumed" : "Heartbeat paused", "success"),
       () => showToast("Failed to toggle heartbeat", "error"),
     );
@@ -149,10 +169,16 @@ export function AgentSettingsTab(): JSX.Element {
         </div>
         <div className={styles.field}>
           <label className={styles.label}>Environment</label>
-          <div className={styles.readOnly} data-testid="agent-settings-environment">
-            {environments.find((e) => e.id === agent.environmentId)?.displayName ||
-              agent.environmentId}
-          </div>
+          <EditableSelect
+            value={agent.environmentId}
+            onSave={handleSaveEnvironment}
+            options={environmentOptions}
+            fieldId="agent-environment"
+            activeFieldId={activeFieldId}
+            onActivate={setActiveFieldId}
+            ariaLabel="Home environment"
+            data-testid="agent-settings-environment"
+          />
         </div>
       </section>
 

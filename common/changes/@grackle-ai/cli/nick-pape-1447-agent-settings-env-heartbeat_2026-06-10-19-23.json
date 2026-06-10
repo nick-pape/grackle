@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add environment re-homing to UpdateAgentRequest (proto optional field), route heartbeat mutations through useAgents hook, and expose editable environment picker in Agent Settings tab",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

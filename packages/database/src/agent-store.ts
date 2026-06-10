@@ -18,7 +18,7 @@ export interface AgentStore {
   listAgents(): AgentRow[];
   updateAgent(
     id: string,
-    fields: { name?: string; avatar?: string; primaryPersonaId?: string },
+    fields: { name?: string; avatar?: string; primaryPersonaId?: string; environmentId?: string },
   ): void;
   deleteAgent(id: string): void;
   getAgentsByEnvironment(environmentId: string): AgentRow[];
@@ -70,7 +70,7 @@ export function listAgents(): AgentRow[] {
  */
 export function updateAgent(
   id: string,
-  fields: { name?: string; avatar?: string; primaryPersonaId?: string },
+  fields: { name?: string; avatar?: string; primaryPersonaId?: string; environmentId?: string },
 ): void {
   const updates: Record<string, unknown> = {
     updatedAt: sql`datetime('now')`,
@@ -83,6 +83,9 @@ export function updateAgent(
   }
   if (fields.primaryPersonaId !== undefined) {
     updates.primaryPersonaId = fields.primaryPersonaId;
+  }
+  if (fields.environmentId !== undefined) {
+    updates.environmentId = fields.environmentId;
   }
   db.update(agents).set(updates).where(eq(agents.id, id)).run();
 }
