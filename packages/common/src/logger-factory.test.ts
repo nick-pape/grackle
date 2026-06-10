@@ -1,27 +1,10 @@
-import { describe, it, expect, afterEach } from "vitest";
-import pino from "pino";
-import { Writable } from "node:stream";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { createPinoLogger } from "./logger-factory.js";
-
-/** Create a synchronous in-memory pino destination for assertions. */
-function makeCapture(): { dest: pino.DestinationStream; lines: () => object[] } {
-  const chunks: string[] = [];
-  const dest = new Writable({
-    write(
-      chunk: Buffer,
-      _encoding: BufferEncoding,
-      callback: (error?: Error | null) => void,
-    ): void {
-      chunks.push(chunk.toString("utf8"));
-      callback();
-    },
-  }) as pino.DestinationStream;
-  return { dest, lines: () => chunks.map((c) => JSON.parse(c) as object) };
-}
 
 afterEach(() => {
   delete process.env.LOG_LEVEL;
   delete process.env.NODE_ENV;
+  vi.restoreAllMocks();
 });
 
 describe("createPinoLogger", () => {
@@ -47,14 +30,13 @@ describe("createPinoLogger", () => {
     expect(logger.level).toBe("info");
   });
 
-  it("calls the provided mixin and merges its fields into log output", () => {
-    const { dest, lines } = makeCapture();
-    const mixin = (): object => ({ requestId: "req-42" });
-    // build a logger that writes to our capture dest instead of pino/file
-    const logger = pino({ name: "test", mixin }, dest);
+  it("passes mixin through createPinoLogger so it is called on every log", () => {
+    const mixin = vi.fn((): object => ({ requestId: "req-42" }));
+    // Use production mode so pino writes synchronously (no pino/file worker thread)
+    // which ensures the mixin is invoked before the logger call returns.
+    process.env.NODE_ENV = "production";
+    const logger = createPinoLogger({ name: "test", mixin });
     logger.info("hello");
-    const [line] = lines() as Array<Record<string, unknown>>;
-    expect(line.requestId).toBe("req-42");
-    expect(line.msg).toBe("hello");
+    expect(mixin).toHaveBeenCalled();
   });
 });

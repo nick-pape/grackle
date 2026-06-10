@@ -19,7 +19,7 @@ export interface CreatePinoLoggerOptions {
  * Create a pino logger with Grackle's standard level and transport config.
  *
  * Level is read from `LOG_LEVEL` (validated; invalid values fall back to `"info"`).
- * In non-production environments the pretty `pino/file` transport is used.
+ * In non-production environments the `pino/file` transport writes JSON to stdout (fd 1).
  */
 export function createPinoLogger(options: CreatePinoLoggerOptions): Logger {
   const logConfig = resolveLogConfig();
