@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { ConnectError, Code } from "@connectrpc/connect";
 import type { ConnectRouter } from "@connectrpc/connect";
-import { setupTestDatabase } from "@grackle-ai/test-utils";
+import { setupTestDatabase } from "@grackle-ai/test-utils/db";
 
 // ── Mock dependencies ───────────────────────────────────────────
 

@@ -5,7 +5,7 @@
  * disconnected, and reconnectOrProvision receives the force flag.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { setupTestDatabase } from "@grackle-ai/test-utils";
+import { setupTestDatabase } from "@grackle-ai/test-utils/db";
 
 // ── Mock heavy dependencies before importing the module ──────────
 

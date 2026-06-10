@@ -15,7 +15,7 @@ import { grackle } from "@grackle-ai/common";
 import { streamRegistry, pipeDelivery, adapterManager } from "@grackle-ai/core";
 import { sessionStore, envRegistry } from "@grackle-ai/database";
 import { writeToFd, closeFd } from "./session-handlers.js";
-import { setupTestDatabase } from "@grackle-ai/test-utils";
+import { setupTestDatabase } from "@grackle-ai/test-utils/db";
 
 // NOTE: @grackle-ai/database is NOT mocked -- real stores run against
 // an in-memory SQLite database initialized by setupTestDatabase().

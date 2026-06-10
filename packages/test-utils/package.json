@@ -6,6 +6,16 @@
   "description": "Shared test utilities for Grackle packages",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./db": {
+      "types": "./dist/setup-test-database.d.ts",
+      "default": "./dist/setup-test-database.js"
+    }
+  },
   "scripts": {
     "build": "heft build --clean",
     "_phase:build": "heft build --clean"

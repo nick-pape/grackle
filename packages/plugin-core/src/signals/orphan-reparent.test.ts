@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll, afterEach, vi } from "vitest";
-import { setupTestDatabase } from "@grackle-ai/test-utils";
+import { setupTestDatabase } from "@grackle-ai/test-utils/db";
 
 // ── Mock dependencies ────────────────────────────────────────
 

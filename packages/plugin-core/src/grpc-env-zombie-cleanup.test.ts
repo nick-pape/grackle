@@ -13,7 +13,7 @@
  * Regression coverage for #1485 (zombie sessions on env stop/destroy).
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { setupTestDatabase } from "@grackle-ai/test-utils";
+import { setupTestDatabase } from "@grackle-ai/test-utils/db";
 
 // NOTE: @grackle-ai/database is NOT mocked -- real stores run against
 // an in-memory SQLite database initialized by setupTestDatabase().
