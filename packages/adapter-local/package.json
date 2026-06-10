@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/adapter-local",
-  "version": "0.180.0",
+  "version": "0.181.0",
   "description": "Grackle local environment adapter",
   "license": "MIT",
   "repository": {
