@@ -241,9 +241,7 @@ describe("gRPC spawnAgent handler", () => {
   // ── Credential push (fail-fast pre-flight) ──────────────────────
 
   it("throws before creating session when credential push fails", async () => {
-    vi.mocked(tokenPush.authenticateForRuntime).mockRejectedValue(
-      new Error("missing API key"),
-    );
+    vi.mocked(tokenPush.authenticateForRuntime).mockRejectedValue(new Error("missing API key"));
 
     await expect(
       handlers.spawnAgent({ environmentId: "test-env", prompt: "hello" }),
@@ -257,11 +255,9 @@ describe("gRPC spawnAgent handler", () => {
 
     await handlers.spawnAgent({ environmentId: "test-env", prompt: "hello" });
 
-    expect(tokenPush.authenticateForRuntime).toHaveBeenCalledWith(
-      "test-env",
-      expect.any(String),
-      { excludeFileTokens: true },
-    );
+    expect(tokenPush.authenticateForRuntime).toHaveBeenCalledWith("test-env", expect.any(String), {
+      excludeFileTokens: true,
+    });
   });
 
   it("passes undefined options for non-local adapter type", async () => {
@@ -300,7 +296,7 @@ describe("gRPC spawnAgent handler", () => {
     await handlers.spawnAgent({ environmentId: "test-env", prompt: "hello" });
 
     expect(resolvePersona).toHaveBeenCalledWith(
-      "",           // request persona id — empty
+      "", // request persona id — empty
       undefined,
       undefined,
       "default-persona-id",
@@ -333,8 +329,8 @@ describe("gRPC spawnAgent handler", () => {
 
     expect(sessionStore.createSession).toHaveBeenCalledOnce();
     const createArgs = vi.mocked(sessionStore.createSession).mock.calls[0];
-    expect(createArgs[1]).toBe("test-env");   // environmentId
-    expect(createArgs[3]).toBe("say hello");  // prompt
+    expect(createArgs[1]).toBe("test-env"); // environmentId
+    expect(createArgs[3]).toBe("say hello"); // prompt
 
     expect(executeSpawnTail).toHaveBeenCalledOnce();
   });

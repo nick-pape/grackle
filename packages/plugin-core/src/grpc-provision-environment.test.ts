@@ -196,11 +196,17 @@ describe("gRPC provisionEnvironment edge cases", () => {
   it("yields a single error event and returns when environment is not found", async () => {
     vi.mocked(envRegistry.getEnvironment).mockReturnValue(undefined);
 
-    const gen = handlers.provisionEnvironment({ id: "nonexistent", force: false }) as AsyncGenerator;
+    const gen = handlers.provisionEnvironment({
+      id: "nonexistent",
+      force: false,
+    }) as AsyncGenerator;
     const events = await drain(gen);
 
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ stage: "error", message: expect.stringContaining("not found") });
+    expect(events[0]).toMatchObject({
+      stage: "error",
+      message: expect.stringContaining("not found"),
+    });
     expect(envRegistry.updateEnvironmentStatus).not.toHaveBeenCalled();
   });
 
@@ -211,7 +217,10 @@ describe("gRPC provisionEnvironment edge cases", () => {
     const events = await drain(gen);
 
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ stage: "error", message: expect.stringContaining("No adapter") });
+    expect(events[0]).toMatchObject({
+      stage: "error",
+      message: expect.stringContaining("No adapter"),
+    });
     expect(envRegistry.updateEnvironmentStatus).not.toHaveBeenCalled();
   });
 

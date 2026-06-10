@@ -56,9 +56,7 @@ export async function ensureSpawnConnection(
   // rather than racing with a duplicate provision attempt that could overwrite
   // the connection, collide on session recovery, or open duplicate tunnels.
   if (isReconnecting(environmentId)) {
-    throw new UnavailableError(
-      `Environment ${environmentId} is reconnecting — retry shortly`,
-    );
+    throw new UnavailableError(`Environment ${environmentId} is reconnecting — retry shortly`);
   }
 
   // Auto-provision: attempt to reconnect/provision a disconnected environment
