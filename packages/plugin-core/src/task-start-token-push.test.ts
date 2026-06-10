@@ -79,8 +79,36 @@ vi.mock("@grackle-ai/database", async (importOriginal) => {
       setCredentialProviders: vi.fn(),
     },
   };
-  // Wire mock stores into the real registry so cross-package getDatabaseStores() calls work
-  actual.setDatabaseStores(mockStores as unknown as Parameters<typeof actual.setDatabaseStores>[0]);
+  // Wire a complete registry into getDatabaseStores() — use real stores for unused slots,
+  // mock stores for the 6 paths this test exercises. No cast required.
+  actual.setDatabaseStores({
+    sessionStore: actual.sessionStore,
+    taskStore: mockStores.taskStore,
+    envRegistry: mockStores.envRegistry,
+    workspaceStore: mockStores.workspaceStore,
+    personaStore: mockStores.personaStore,
+    agentStore: actual.agentStore,
+    componentStore: actual.componentStore,
+    settingsStore: mockStores.settingsStore,
+    tokenStore: actual.tokenStore,
+    credentialProviders: mockStores.credentialProviders,
+    scheduleStore: actual.scheduleStore,
+    escalationStore: actual.escalationStore,
+    workspaceEnvironmentLinkStore: actual.workspaceEnvironmentLinkStore,
+    dispatchQueueStore: actual.dispatchQueueStore,
+    pluginStore: actual.pluginStore,
+    githubAccountStore: actual.githubAccountStore,
+    channelGrantStore: actual.channelGrantStore,
+    eventStore: { persistEvent: actual.persistEvent, queryDomainEvents: actual.queryDomainEvents },
+    streamMessageStore: {
+      persistStreamMessage: actual.persistStreamMessage,
+      queryStreamMessages: actual.queryStreamMessages,
+    },
+    sessionActionStore: {
+      persistSessionAction: actual.persistSessionAction,
+      querySessionActions: actual.querySessionActions,
+    },
+  });
   return {
     ...actual,
     ...mockStores,

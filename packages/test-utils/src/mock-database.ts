@@ -45,7 +45,10 @@ type MockedDatabaseStores = {
 };
 
 /** Full mock return type — store namespaces are typed, extra barrel exports use an index signature. */
-type DatabaseMock = MockedDatabaseStores & Record<string, unknown>;
+type DatabaseMock = MockedDatabaseStores & {
+  /** Wire the mock stores into the registry. Call once in the vi.mock factory or beforeAll. */
+  wire: () => void;
+} & Record<string, unknown>;
 
 /** A store where every function is replaced with a vitest Mock that preserves the original call signature. */
 type MockedStore<T> = {
@@ -421,10 +424,14 @@ export function createDatabaseMock(): DatabaseMock {
     parseCredentialProviderConfig: credentialProvidersMock.parseCredentialProviderConfig,
     isValidCredentialProviderConfig: credentialProvidersMock.isValidCredentialProviderConfig,
 
-    // Store registry — pre-initialized with mock stores, consistent lifecycle
+    // Store registry — starts uninitialized to mirror production behavior.
+    // Call wire() in the vi.mock factory or beforeAll to seed with the mock stores.
     ...(() => {
-      let current: MockedDatabaseStores | undefined = stores;
+      let current: MockedDatabaseStores | undefined = undefined;
       return {
+        wire: () => {
+          current = stores;
+        },
         setDatabaseStores: vi.fn((s: MockedDatabaseStores) => {
           current = s;
         }),

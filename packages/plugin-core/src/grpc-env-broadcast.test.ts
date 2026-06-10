@@ -10,9 +10,8 @@ import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 vi.mock("@grackle-ai/database", async () => {
   const { createDatabaseMock } = await import("@grackle-ai/test-utils");
   const mock = createDatabaseMock();
-  // Wire mock stores into the real registry so cross-package getDatabaseStores() calls work
-  const real = await vi.importActual<typeof import("@grackle-ai/database")>("@grackle-ai/database");
-  real.setDatabaseStores(mock as unknown as Parameters<typeof real.setDatabaseStores>[0]);
+  // Wire mock stores into the registry so getDatabaseStores() calls in core functions work
+  mock.wire();
   return {
     ...mock,
     // environment-handlers.ts uses sqlite.transaction() for atomic removeEnvironment
@@ -113,8 +112,8 @@ function getHandlers(): Record<string, (...args: unknown[]) => unknown> {
 }
 
 afterAll(async () => {
-  const real = await vi.importActual<typeof import("@grackle-ai/database")>("@grackle-ai/database");
-  real.clearDatabaseStores();
+  const { clearDatabaseStores } = await import("@grackle-ai/database");
+  clearDatabaseStores();
 });
 
 describe("gRPC environment broadcast", () => {

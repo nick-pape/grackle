@@ -15,8 +15,7 @@ export const logger: Logger = pino({
   name: "grackle-server",
   level: logConfig.level,
   mixin: createLoggerMixin,
-  transport:
-    !logConfig.isProduction && !process.env.VITEST
-      ? { target: "pino/file", options: { destination: 1 } }
-      : undefined,
+  transport: !logConfig.isProduction
+    ? { target: "pino/file", options: { destination: 1 } }
+    : undefined,
 });

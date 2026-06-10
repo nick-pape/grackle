@@ -1,5 +1,3 @@
 import { createVitestConfig } from "@grackle-ai/heft-rig/vitest-base.mjs";
 
-export default createVitestConfig({
-  test: { teardownTimeout: 5000 },
-});
+export default createVitestConfig();
