@@ -1,3 +1,3 @@
 export default function (): void {
-  setTimeout(() => process.exit(0), 1000).unref();
+  setTimeout(() => process.exit(process.exitCode ?? 0), 1000).unref();
 }
