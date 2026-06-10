@@ -42,6 +42,18 @@ vi.mock("@grackle-ai/common", () => ({
     FAILED: "failed",
   },
   ROOT_TASK_ID: "system",
+  createPinoLogger: vi.fn(() => ({
+    fatal: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+    bindings: vi.fn().mockReturnValue({}),
+    level: "info",
+    isLevelEnabled: vi.fn().mockReturnValue(false),
+  })),
 }));
 
 vi.mock("@grackle-ai/database", () => ({

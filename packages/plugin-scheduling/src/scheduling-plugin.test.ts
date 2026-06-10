@@ -41,6 +41,18 @@ vi.mock("@grackle-ai/core", () => ({
 vi.mock("@grackle-ai/common", () => ({
   grackle: { GrackleScheduling: { typeName: "grackle.GrackleScheduling" } },
   SESSION_STATUS: { PENDING: "pending", RUNNING: "running", IDLE: "idle", STOPPED: "stopped" },
+  createPinoLogger: vi.fn(() => ({
+    fatal: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+    bindings: vi.fn().mockReturnValue({}),
+    level: "info",
+    isLevelEnabled: vi.fn().mockReturnValue(false),
+  })),
 }));
 
 import { agentStore } from "@grackle-ai/database";

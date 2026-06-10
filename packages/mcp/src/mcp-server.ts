@@ -11,6 +11,8 @@ import {
   ROOT_TASK_ID,
   RENDER_TOOL_PREFIX,
   selectPromotedRenderTools,
+  type Logger,
+  createPinoLogger,
 } from "@grackle-ai/common";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -25,7 +27,6 @@ import {
   type CallToolResult,
   type ReadResourceResult,
 } from "@modelcontextprotocol/sdk/types.js";
-import pino, { type Logger } from "pino";
 import { z } from "zod";
 import type { AuthContext } from "@grackle-ai/auth";
 import { authenticateMcpRequest, pruneRevocations } from "@grackle-ai/auth";
@@ -48,14 +49,7 @@ const PACKAGE_VERSION: string = (
   ) as { version: string }
 ).version;
 
-const logger: Logger = pino({
-  name: "grackle-mcp",
-  level: process.env.LOG_LEVEL || "info",
-  transport:
-    process.env.NODE_ENV !== "production"
-      ? { target: "pino/file", options: { destination: 1 } }
-      : undefined,
-});
+const logger: Logger = createPinoLogger({ name: "grackle-mcp" });
 
 /**
  * Pushes an MCP Apps widget render event into a session's stream. Injected by the
