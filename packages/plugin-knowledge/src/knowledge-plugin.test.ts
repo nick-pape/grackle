@@ -85,6 +85,18 @@ vi.mock("./logger.js", () => ({
 
 vi.mock("@grackle-ai/common", () => ({
   grackle: { GrackleKnowledge: { typeName: "grackle.GrackleKnowledge" } },
+  createPinoLogger: vi.fn(() => ({
+    fatal: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+    bindings: vi.fn().mockReturnValue({}),
+    level: "info",
+    isLevelEnabled: vi.fn().mockReturnValue(false),
+  })),
 }));
 
 import { createKnowledgePlugin } from "./knowledge-plugin.js";

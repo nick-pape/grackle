@@ -8,6 +8,18 @@ vi.mock("@grackle-ai/core", () => ({
 
 vi.mock("@grackle-ai/common", () => ({
   grackle: { GrackleOrchestration: { typeName: "grackle.GrackleOrchestration" } },
+  createPinoLogger: vi.fn(() => ({
+    fatal: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+    bindings: vi.fn().mockReturnValue({}),
+    level: "info",
+    isLevelEnabled: vi.fn().mockReturnValue(false),
+  })),
 }));
 
 vi.mock("@grackle-ai/database", () => ({
