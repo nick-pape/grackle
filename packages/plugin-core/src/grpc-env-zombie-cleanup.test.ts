@@ -99,12 +99,6 @@ function insertBaseEntities(): void {
   envRegistry.updateEnvironmentStatus("test-env", "connected");
 }
 
-function insertActiveSession(id: string, taskId: string): void {
-  taskStore.createTask(taskId, undefined, `Task ${taskId}`, "", [], "");
-  sessionStore.createSession(id, "test-env", "stub", "", "claude", "/tmp/log", taskId);
-  sessionStore.updateSession(id, "running" as never);
-}
-
 function getHandlers(): Record<string, (...args: unknown[]) => unknown> {
   let handlers: Record<string, (...args: unknown[]) => unknown> = {};
   const fakeRouter = {
