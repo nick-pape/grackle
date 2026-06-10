@@ -50,7 +50,7 @@ vi.mock("./reanimate-agent.js", () => ({
 // ── Imports (after mocks) ───────────────────────────────────
 
 import { openDatabase, initDatabase, sqlite as _sqlite, envRegistry } from "@grackle-ai/database";
-import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils";
+import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils/db";
 openDatabase(":memory:");
 initDatabase();
 initRealDatabaseStores();

@@ -15,7 +15,7 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
 
 // ── Imports ─────────────────────────────────────────────────
 import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore } from "@grackle-ai/database";
-import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils";
+import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils/db";
 openDatabase(":memory:");
 initDatabase();
 initRealDatabaseStores();

@@ -52,7 +52,7 @@ import {
   workspaceStore,
   querySessionActions,
 } from "@grackle-ai/database";
-import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils";
+import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils/db";
 openDatabase(":memory:");
 initDatabase();
 initRealDatabaseStores();
