@@ -1,6 +1,22 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Wed, 10 Jun 2026 17:44:59 GMT and should not be manually modified.
+This log was last generated on Wed, 10 Jun 2026 19:17:46 GMT and should not be manually modified.
+
+## 0.180.0
+Wed, 10 Jun 2026 19:17:46 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Extract shared createPinoLogger() factory to @grackle-ai/common; all server-side packages now route through validated resolveLogConfig() instead of raw process.env reads
+- Fix useStreams hook ignoring showInternals toggle on stream lifecycle events and socket reconnect
+- Add InternalError and ResourceExhaustedError subclasses to @grackle-ai/common; migrate all plugin-core handlers from ConnectError to typed GrackleError subclasses
 
 ## 0.179.0
 Wed, 10 Jun 2026 17:44:59 GMT
