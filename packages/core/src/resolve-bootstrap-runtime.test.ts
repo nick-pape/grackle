@@ -9,14 +9,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock the database stores so we can control what they return
-vi.mock("@grackle-ai/database", () => ({
-  settingsStore: {
-    getSetting: vi.fn(),
-  },
-  personaStore: {
-    getPersona: vi.fn(),
-  },
-}));
+vi.mock("@grackle-ai/database", () => {
+  const stores = {
+    settingsStore: {
+      getSetting: vi.fn(),
+    },
+    personaStore: {
+      getPersona: vi.fn(),
+    },
+  };
+  return {
+    ...stores,
+    getDatabaseStores: () => stores,
+  };
+});
 
 // Import after mocks
 import { settingsStore, personaStore } from "@grackle-ai/database";

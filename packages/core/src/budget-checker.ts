@@ -1,4 +1,4 @@
-import { taskStore, workspaceStore, sessionStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 
 /** Result from a budget check. undefined means no budget exceeded. */
 export interface BudgetExceeded {
@@ -17,6 +17,7 @@ export interface BudgetExceeded {
  * Checks task budget first (most specific), then workspace budget.
  */
 export function checkBudget(taskId: string, workspaceId?: string): BudgetExceeded | undefined {
+  const { taskStore, workspaceStore, sessionStore } = getDatabaseStores();
   const task = taskStore.getTask(taskId);
   if (!task) {
     return undefined;

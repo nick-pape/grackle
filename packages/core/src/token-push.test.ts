@@ -16,17 +16,23 @@ function allOff(): CredentialProviderConfig {
 const mockGetCredentialProviders = vi.fn(() => allOff());
 
 vi.mock("./adapter-manager.js", () => ({ getConnection: vi.fn() }));
-vi.mock("@grackle-ai/database", () => ({
-  envRegistry: { getEnvironment: vi.fn(() => ({})) },
-  tokenStore: { getBundle: vi.fn(() => ({ tokens: [] })) },
-  githubAccountStore: {
-    getDefaultGitHubAccount: vi.fn(() => undefined),
-    resolveStoredGitHubToken: vi.fn(() => undefined),
-  },
-  credentialProviders: {
-    getCredentialProviders: (...args: unknown[]) => mockGetCredentialProviders(...args),
-  },
-}));
+vi.mock("@grackle-ai/database", () => {
+  const stores = {
+    envRegistry: { getEnvironment: vi.fn(() => ({})) },
+    tokenStore: { getBundle: vi.fn(() => ({ tokens: [] })) },
+    githubAccountStore: {
+      getDefaultGitHubAccount: vi.fn(() => undefined),
+      resolveStoredGitHubToken: vi.fn(() => undefined),
+    },
+    credentialProviders: {
+      getCredentialProviders: (...args: unknown[]) => mockGetCredentialProviders(...args),
+    },
+  };
+  return {
+    ...stores,
+    getDatabaseStores: () => stores,
+  };
+});
 // Keep the real pre-flight helpers (deriveCredentialNeeds / findUnsatisfiedNeeds /
 // formatPreflightCredentialError); only stub the secret-materializing builder so
 // tests drive the bundle contents directly.

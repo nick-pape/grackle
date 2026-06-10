@@ -3,7 +3,7 @@
  * Covers: successful reconnect, backoff timing, max retries,
  * concurrent lock, clearReconnectState, session recovery trigger.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from "vitest";
 
 // ── Mock dependencies before importing ──────────────────────
 
@@ -50,8 +50,10 @@ vi.mock("./reanimate-agent.js", () => ({
 // ── Imports (after mocks) ───────────────────────────────────
 
 import { openDatabase, initDatabase, sqlite as _sqlite, envRegistry } from "@grackle-ai/database";
+import { initRealDatabaseStores, clearDatabaseStores } from "@grackle-ai/test-utils/db";
 openDatabase(":memory:");
 initDatabase();
+initRealDatabaseStores();
 const sqlite = _sqlite!;
 import * as adapterManager from "./adapter-manager.js";
 import { recoverSuspendedSessions } from "./session-recovery.js";
@@ -122,6 +124,10 @@ function makeAdapter(connectResult?: PowerLineConnection): EnvironmentAdapter {
 // ── Tests ───────────────────────────────────────────────────
 
 describe("auto-reconnect", () => {
+  afterAll(() => {
+    clearDatabaseStores();
+  });
+
   beforeEach(() => {
     sqlite.exec("DROP TABLE IF EXISTS environments");
     applySchema();

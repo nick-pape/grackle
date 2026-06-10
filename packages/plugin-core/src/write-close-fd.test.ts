@@ -19,7 +19,9 @@ import { writeToFd, closeFd } from "./session-handlers.js";
 // by writeToFd/closeFd and can stay as vi.fn() stubs.
 vi.mock("@grackle-ai/database", async () => {
   const { createDatabaseMock } = await import("@grackle-ai/test-utils");
-  return createDatabaseMock();
+  const mock = createDatabaseMock();
+  mock.wire();
+  return mock;
 });
 
 /** Minimal session shape used by the pipe-delivery async listener. */

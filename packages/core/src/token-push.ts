@@ -14,7 +14,7 @@
 import { PreconditionError } from "@grackle-ai/common";
 import { type AuthenticateTokenItem } from "@grackle-ai/adapter-sdk";
 import * as adapterManager from "./adapter-manager.js";
-import { credentialProviders, envRegistry, tokenStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import {
   buildProviderTokenBundle,
   deriveCredentialNeeds,
@@ -53,6 +53,7 @@ export async function authenticateForRuntime(
   runtime: string,
   options?: AuthenticateOptions,
 ): Promise<void> {
+  const { credentialProviders, envRegistry, tokenStore } = getDatabaseStores();
   const conn = adapterManager.getConnection(environmentId);
   if (!conn) {
     return;

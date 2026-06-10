@@ -13,7 +13,7 @@ import {
 } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
 import type { ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
-import { sessionStore, taskStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { recordSessionAction } from "./session-action-recorder.js";
 import * as streamHub from "./stream-hub.js";
 import * as logWriter from "./log-writer.js";
@@ -94,6 +94,7 @@ export type PublishWidgetEvent = (sessionId: string, payload: WidgetEventPayload
  * session log (replays on reload) and broadcast live. Non-fatal on error.
  */
 export function publishWidgetEvent(sessionId: string, payload: WidgetEventPayload): void {
+  const { sessionStore } = getDatabaseStores();
   try {
     const event = create(grackle.SessionEventSchema, {
       sessionId,
@@ -141,6 +142,7 @@ export type PublishDocumentShow = (sessionId: string, payload: DocumentShowPaylo
  * Non-fatal on error / unknown session.
  */
 export function publishDocumentShow(sessionId: string, payload: DocumentShowPayload): void {
+  const { sessionStore } = getDatabaseStores();
   try {
     const session = sessionStore.getSession(sessionId);
     if (!session) {
@@ -195,6 +197,7 @@ export function processEventStream(
 
   /** Inner processing logic, extracted so it can be wrapped in runWithTrace. */
   const processEvents = async (): Promise<void> => {
+    const { sessionStore, taskStore } = getDatabaseStores();
     try {
       logWriter.initLog(logPath);
       sessionStore.updateSessionStatus(sessionId, SESSION_STATUS.RUNNING);

@@ -17,7 +17,7 @@
 import type { grackle } from "@grackle-ai/common";
 import { eventTypeToString } from "@grackle-ai/common";
 import { monotonicFactory } from "ulid";
-import { persistSessionAction } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 
 /**
@@ -39,7 +39,7 @@ const nextServerSeq: () => string = monotonicFactory();
 export function recordSessionAction(event: grackle.SessionEvent): string | undefined {
   const seq = nextServerSeq();
   try {
-    persistSessionAction({
+    getDatabaseStores().sessionActionStore.persistSessionAction({
       seq,
       sessionId: event.sessionId,
       type: eventTypeToString(event.type),
