@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, ValidationError, NotFoundError, PreconditionError } from "@grackle-ai/common";
-import { workspaceStore, workspaceEnvironmentLinkStore, slugify } from "@grackle-ai/database";
+import { getDatabaseStores, slugify } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { emit } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
@@ -17,6 +17,7 @@ import {
 export async function listWorkspaces(
   req: grackle.ListWorkspacesRequest,
 ): Promise<grackle.WorkspaceList> {
+  const { workspaceStore, workspaceEnvironmentLinkStore } = getDatabaseStores();
   const rows = workspaceStore.listWorkspaces(req.environmentId || undefined);
   // Batch-fetch linked environment IDs to avoid N+1 queries
   const linkedEnvMap = workspaceEnvironmentLinkStore.getLinkedEnvironmentIdsByWorkspaces(
@@ -31,6 +32,7 @@ export async function listWorkspaces(
 export async function createWorkspace(
   req: grackle.CreateWorkspaceRequest,
 ): Promise<grackle.Workspace> {
+  const { workspaceStore } = getDatabaseStores();
   requireField(req.name, "name");
   requireEnvironment(req.environmentId);
   let id = slugify(req.name) || uuid().slice(0, 8);
@@ -69,6 +71,7 @@ export async function getWorkspace(req: grackle.WorkspaceId): Promise<grackle.Wo
 
 /** Archive a workspace. */
 export async function archiveWorkspace(req: grackle.WorkspaceId): Promise<grackle.Empty> {
+  const { workspaceStore } = getDatabaseStores();
   workspaceStore.archiveWorkspace(req.id);
   emit("workspace.archived", { workspaceId: req.id });
   logger.info({ workspaceId: req.id }, "Workspace archived");
@@ -79,6 +82,7 @@ export async function archiveWorkspace(req: grackle.WorkspaceId): Promise<grackl
 export async function updateWorkspace(
   req: grackle.UpdateWorkspaceRequest,
 ): Promise<grackle.Workspace> {
+  const { workspaceStore } = getDatabaseStores();
   const existing = requireWorkspace(req.id);
   if (req.name !== undefined) {
     requireNonEmpty(req.name, "name");
@@ -108,6 +112,7 @@ export async function updateWorkspace(
 export async function linkEnvironment(
   req: grackle.LinkEnvironmentRequest,
 ): Promise<grackle.Workspace> {
+  const { workspaceEnvironmentLinkStore } = getDatabaseStores();
   const workspace = requireWorkspace(req.workspaceId);
   requireEnvironment(req.environmentId);
   if (workspaceEnvironmentLinkStore.isLinked(req.workspaceId, req.environmentId)) {
@@ -141,6 +146,7 @@ export async function linkEnvironment(
 export async function unlinkEnvironment(
   req: grackle.UnlinkEnvironmentRequest,
 ): Promise<grackle.Workspace> {
+  const { workspaceEnvironmentLinkStore } = getDatabaseStores();
   const workspace = requireWorkspace(req.workspaceId);
   if (!workspaceEnvironmentLinkStore.isLinked(req.workspaceId, req.environmentId)) {
     throw new NotFoundError(

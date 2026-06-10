@@ -110,7 +110,7 @@ export type { ComponentStore } from "./component-store.js";
 export type { SettingsStore } from "./settings-store.js";
 export type { TokenStore } from "./token-store.js";
 export type { CredentialProviderStore } from "./credential-providers.js";
-export type { ScheduleStore } from "./schedule-store.js";
+export type { ScheduleStore, ScheduleUpdate } from "./schedule-store.js";
 export type { EscalationStore } from "./escalation-store.js";
 export type { WorkspaceEnvironmentLinkStore } from "./workspace-environment-link-store.js";
 export type { DispatchQueueStore } from "./dispatch-queue-store.js";

@@ -9,8 +9,10 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
 });
 
 import { openDatabase, initDatabase, sqlite as _sqlite, sessionStore } from "@grackle-ai/database";
+import { initRealDatabaseStores } from "@grackle-ai/test-utils/db";
 openDatabase(":memory:");
 initDatabase();
+initRealDatabaseStores();
 const sqlite = _sqlite!;
 import { streamRegistry } from "@grackle-ai/core";
 import { lifecycleCleanupPhase } from "./lifecycle-cleanup.js";

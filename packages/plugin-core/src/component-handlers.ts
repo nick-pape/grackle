@@ -8,7 +8,8 @@ import {
   NotFoundError,
   ValidationError,
 } from "@grackle-ai/common";
-import { componentStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
+import type { ComponentRow } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
 import { v4 as uuid } from "uuid";
 import { componentRowToProto } from "./grpc-proto-converters.js";
@@ -23,6 +24,7 @@ function asInvalidArgument(err: unknown): never {
 export async function registerComponent(
   req: grackle.RegisterComponentRequest,
 ): Promise<grackle.Component> {
+  const { componentStore } = getDatabaseStores();
   requireWorkspace(req.workspaceId);
   requireField(req.name, "name");
   requireField(req.body, "body");
@@ -52,6 +54,7 @@ export async function registerComponent(
 export async function updateComponent(
   req: grackle.UpdateComponentRequest,
 ): Promise<grackle.Component> {
+  const { componentStore } = getDatabaseStores();
   requireField(req.id, "id");
   const existing = componentStore.getComponent(req.id);
   // Workspace isolation: treat a component in another workspace as not found.
@@ -79,7 +82,8 @@ export async function updateComponent(
 
 /** Resolve a component by id (precedence) or by name within a workspace. */
 export async function getComponent(req: grackle.GetComponentRequest): Promise<grackle.Component> {
-  let row: componentStore.ComponentRow | undefined;
+  const { componentStore } = getDatabaseStores();
+  let row: ComponentRow | undefined;
   if (req.id) {
     row = componentStore.getComponent(req.id);
     // Workspace isolation: hide components that belong to another workspace.
@@ -108,6 +112,7 @@ export async function getComponent(req: grackle.GetComponentRequest): Promise<gr
 export async function listComponents(
   req: grackle.ListComponentsRequest,
 ): Promise<grackle.ComponentList> {
+  const { componentStore } = getDatabaseStores();
   requireWorkspace(req.workspaceId);
   return create(grackle.ComponentListSchema, {
     components: componentStore.listComponents(req.workspaceId).map(componentRowToProto),
@@ -148,6 +153,7 @@ interface SearchableComponent {
 export async function searchComponents(
   req: grackle.SearchComponentsRequest,
 ): Promise<grackle.SearchComponentsResponse> {
+  const { componentStore } = getDatabaseStores();
   const query = requireTrimmed(req.query, "query");
   const limit = req.limit > 0 ? req.limit : DEFAULT_COMPONENT_SEARCH_LIMIT;
 
@@ -203,8 +209,9 @@ export async function searchComponents(
 export async function setComponentPromotion(
   req: grackle.SetComponentPromotionRequest,
 ): Promise<grackle.Component> {
+  const { componentStore } = getDatabaseStores();
   requireWorkspace(req.workspaceId);
-  let row: componentStore.ComponentRow | undefined;
+  let row: ComponentRow | undefined;
   if (req.id) {
     row = componentStore.getComponent(req.id);
     // Workspace isolation: a component in another workspace is not found.
@@ -256,9 +263,10 @@ const BUILTIN_COMPONENT_NAMES: ReadonlySet<string> = new Set(BUILTIN_COMPONENTS.
 export async function resolveComponentGraph(
   req: grackle.ResolveComponentGraphRequest,
 ): Promise<grackle.ResolveComponentGraphResponse> {
+  const { componentStore } = getDatabaseStores();
   requireWorkspace(req.workspaceId);
 
-  let root: componentStore.ComponentRow | undefined;
+  let root: ComponentRow | undefined;
   let rootBody: string;
   if (req.source) {
     rootBody = req.source;
@@ -282,7 +290,7 @@ export async function resolveComponentGraph(
     rootBody = ""; // unreachable — requireOneOf throws
   }
 
-  const ordered: componentStore.ComponentRow[] = [];
+  const ordered: ComponentRow[] = [];
   const visited = new Set<string>(); // component ids already resolved (cycle-safe + dedupe)
   let totalBytes = 0;
 

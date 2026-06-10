@@ -1,11 +1,12 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, NotFoundError, PreconditionError } from "@grackle-ai/common";
-import { pluginStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
 import { getPluginRegistry, isPluginLoaded } from "./plugin-registry.js";
 
 /** Build a PluginInfo message from registry metadata and DB state. */
 function buildPluginInfo(name: string): grackle.PluginInfo {
+  const { pluginStore } = getDatabaseStores();
   const entry = getPluginRegistry().find((p) => p.name === name);
   const row = pluginStore.getPlugin(name);
 
@@ -39,6 +40,7 @@ export async function setPluginEnabled(
     throw new PreconditionError(`Plugin "${req.name}" is required and cannot be disabled`);
   }
 
+  const { pluginStore } = getDatabaseStores();
   pluginStore.setPluginEnabled(req.name, req.enabled);
   emit("plugin.changed", { name: req.name, enabled: req.enabled });
 

@@ -1,12 +1,10 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import {
-  queryDomainEvents as queryDomainEventsStore,
-  type DomainEventQuery,
-  queryStreamMessages as queryStreamMessagesStore,
-  type StreamMessageQuery,
-  querySessionActions as querySessionActionsStore,
-  type SessionActionQuery,
+import { getDatabaseStores } from "@grackle-ai/database";
+import type {
+  DomainEventQuery,
+  StreamMessageQuery,
+  SessionActionQuery,
 } from "@grackle-ai/database";
 
 /** Map a `domain_events` row to the proto {@link grackle.DomainEvent} message. */
@@ -35,6 +33,7 @@ function rowToProto(row: {
 export async function queryDomainEvents(
   req: grackle.QueryDomainEventsRequest,
 ): Promise<grackle.DomainEventList> {
+  const { eventStore } = getDatabaseStores();
   const query: DomainEventQuery = {};
   if (req.beforeId) {
     query.beforeId = req.beforeId;
@@ -52,7 +51,7 @@ export async function queryDomainEvents(
     query.limit = req.limit;
   }
 
-  const rows = queryDomainEventsStore(query);
+  const rows = eventStore.queryDomainEvents(query);
   return create(grackle.DomainEventListSchema, { events: rows.map(rowToProto) });
 }
 
@@ -83,6 +82,7 @@ function streamRowToProto(row: {
 export async function getStreamTranscript(
   req: grackle.GetStreamTranscriptRequest,
 ): Promise<grackle.StreamTranscript> {
+  const { streamMessageStore } = getDatabaseStores();
   const query: StreamMessageQuery = { streamId: req.streamId };
   if (req.beforeSeq) {
     query.beforeSeq = req.beforeSeq;
@@ -91,7 +91,7 @@ export async function getStreamTranscript(
     query.limit = req.limit;
   }
 
-  const rows = queryStreamMessagesStore(query);
+  const rows = streamMessageStore.queryStreamMessages(query);
   return create(grackle.StreamTranscriptSchema, { messages: rows.map(streamRowToProto) });
 }
 
@@ -125,6 +125,7 @@ function sessionActionRowToProto(row: {
 export async function getSessionActions(
   req: grackle.GetSessionActionsRequest,
 ): Promise<grackle.SessionActionList> {
+  const { sessionActionStore } = getDatabaseStores();
   const query: SessionActionQuery = { sessionId: req.sessionId };
   if (req.fromSeq) {
     query.fromSeq = req.fromSeq;
@@ -133,6 +134,6 @@ export async function getSessionActions(
     query.limit = req.limit;
   }
 
-  const rows = querySessionActionsStore(query);
+  const rows = sessionActionStore.querySessionActions(query);
   return create(grackle.SessionActionListSchema, { actions: rows.map(sessionActionRowToProto) });
 }

@@ -24,148 +24,155 @@ const mockDb: {
   schedules: new Map(),
 };
 
-vi.mock("@grackle-ai/database", () => ({
-  agentStore: {
-    listAgents: (): Array<Record<string, unknown>> =>
-      [...mockDb.agents.values()].sort((a, b) =>
-        (a as { name: string }).name.localeCompare((b as { name: string }).name),
-      ),
-    getAgent: (id: string): Record<string, unknown> | undefined => mockDb.agents.get(id),
-    getAgentByName: (name: string): Record<string, unknown> | undefined =>
-      [...mockDb.agents.values()].find((a) => (a as { name: string }).name === name),
-    createAgent: (
-      id: string,
-      name: string,
-      avatar: string,
-      primaryPersonaId: string,
-      environmentId: string,
-    ): void => {
-      mockDb.agents.set(id, {
-        id,
-        name,
-        avatar,
-        primaryPersonaId,
-        environmentId,
-        createdAt: "2024-01-01",
-        updatedAt: "2024-01-01",
-      });
-    },
-    updateAgent: (
-      id: string,
-      fields: {
-        name?: string;
-        avatar?: string;
-        primaryPersonaId?: string;
-        environmentId?: string;
-      },
-    ): void => {
-      const existing = mockDb.agents.get(id);
-      if (existing) {
+vi.mock("@grackle-ai/database", () => {
+  const stores = {
+    agentStore: {
+      listAgents: (): Array<Record<string, unknown>> =>
+        [...mockDb.agents.values()].sort((a, b) =>
+          (a as { name: string }).name.localeCompare((b as { name: string }).name),
+        ),
+      getAgent: (id: string): Record<string, unknown> | undefined => mockDb.agents.get(id),
+      getAgentByName: (name: string): Record<string, unknown> | undefined =>
+        [...mockDb.agents.values()].find((a) => (a as { name: string }).name === name),
+      createAgent: (
+        id: string,
+        name: string,
+        avatar: string,
+        primaryPersonaId: string,
+        environmentId: string,
+      ): void => {
         mockDb.agents.set(id, {
-          ...existing,
-          name: fields.name ?? (existing as { name: string }).name,
-          avatar: fields.avatar ?? (existing as { avatar: string }).avatar,
-          primaryPersonaId:
-            fields.primaryPersonaId ?? (existing as { primaryPersonaId: string }).primaryPersonaId,
-          environmentId:
-            fields.environmentId ?? (existing as { environmentId: string }).environmentId,
+          id,
+          name,
+          avatar,
+          primaryPersonaId,
+          environmentId,
+          createdAt: "2024-01-01",
+          updatedAt: "2024-01-01",
         });
-      }
-    },
-    deleteAgent: (id: string): void => {
-      mockDb.agents.delete(id);
-    },
-  },
-  envRegistry: {
-    getEnvironment: (id: string): Record<string, unknown> | undefined =>
-      mockDb.environments.get(id),
-  },
-  sessionStore: {
-    listSessionsForTask: (taskId: string): Array<Record<string, unknown>> =>
-      mockDb.taskSessions.get(taskId) ?? [],
-  },
-  taskStore: {
-    getTasksForAgent: (agentId: string): Array<Record<string, unknown>> =>
-      mockDb.agentTasks.get(agentId) ?? [],
-    deleteTask: (id: string): void => {
-      mockDb.deletedTaskIds.push(id);
-    },
-    getRootTaskForAgent: (agentId: string): Record<string, unknown> | undefined =>
-      mockDb.agentRootTasks.get(agentId),
-  },
-  scheduleStore: {
-    getSchedule: (id: string): Record<string, unknown> | undefined => mockDb.schedules.get(id),
-    getHeartbeatForTask: (taskId: string): Record<string, unknown> | undefined => {
-      for (const s of mockDb.schedules.values()) {
-        if ((s as { taskId: string | null }).taskId === taskId) {
-          return s;
+      },
+      updateAgent: (
+        id: string,
+        fields: {
+          name?: string;
+          avatar?: string;
+          primaryPersonaId?: string;
+          environmentId?: string;
+        },
+      ): void => {
+        const existing = mockDb.agents.get(id);
+        if (existing) {
+          mockDb.agents.set(id, {
+            ...existing,
+            name: fields.name ?? (existing as { name: string }).name,
+            avatar: fields.avatar ?? (existing as { avatar: string }).avatar,
+            primaryPersonaId:
+              fields.primaryPersonaId ??
+              (existing as { primaryPersonaId: string }).primaryPersonaId,
+            environmentId:
+              fields.environmentId ?? (existing as { environmentId: string }).environmentId,
+          });
         }
-      }
-      return undefined;
+      },
+      deleteAgent: (id: string): void => {
+        mockDb.agents.delete(id);
+      },
     },
-    createSchedule: (
-      id: string,
-      title: string,
-      description: string,
-      scheduleExpression: string,
-      personaId: string,
-      workspaceId: string,
-      parentTaskId: string,
-      nextRunAt: string | null,
-      taskId: string | null = null,
-    ): void => {
-      // Mirror partial-unique behavior of the real DB.
-      if (taskId !== null) {
+    envRegistry: {
+      getEnvironment: (id: string): Record<string, unknown> | undefined =>
+        mockDb.environments.get(id),
+    },
+    sessionStore: {
+      listSessionsForTask: (taskId: string): Array<Record<string, unknown>> =>
+        mockDb.taskSessions.get(taskId) ?? [],
+    },
+    taskStore: {
+      getTasksForAgent: (agentId: string): Array<Record<string, unknown>> =>
+        mockDb.agentTasks.get(agentId) ?? [],
+      deleteTask: (id: string): void => {
+        mockDb.deletedTaskIds.push(id);
+      },
+      getRootTaskForAgent: (agentId: string): Record<string, unknown> | undefined =>
+        mockDb.agentRootTasks.get(agentId),
+    },
+    scheduleStore: {
+      getSchedule: (id: string): Record<string, unknown> | undefined => mockDb.schedules.get(id),
+      getHeartbeatForTask: (taskId: string): Record<string, unknown> | undefined => {
         for (const s of mockDb.schedules.values()) {
           if ((s as { taskId: string | null }).taskId === taskId) {
-            throw new Error("UNIQUE constraint failed: schedules.task_id");
+            return s;
           }
         }
-      }
-      mockDb.schedules.set(id, {
-        id,
-        title,
-        description,
-        scheduleExpression,
-        personaId,
-        workspaceId,
-        parentTaskId,
-        enabled: true,
-        lastRunAt: null,
-        nextRunAt,
-        runCount: 0,
-        taskId,
-        createdAt: "2024-01-01",
-        updatedAt: "2024-01-01",
-      });
-    },
-    updateSchedule: (
-      id: string,
-      fields: {
-        scheduleExpression?: string;
-        description?: string;
-        enabled?: boolean;
-        nextRunAt?: string | null;
+        return undefined;
       },
-    ): void => {
-      const existing = mockDb.schedules.get(id);
-      if (!existing) return;
-      mockDb.schedules.set(id, {
-        ...existing,
-        ...(fields.scheduleExpression !== undefined
-          ? { scheduleExpression: fields.scheduleExpression }
-          : {}),
-        ...(fields.description !== undefined ? { description: fields.description } : {}),
-        ...(fields.enabled !== undefined ? { enabled: fields.enabled } : {}),
-        ...(fields.nextRunAt !== undefined ? { nextRunAt: fields.nextRunAt } : {}),
-      });
+      createSchedule: (
+        id: string,
+        title: string,
+        description: string,
+        scheduleExpression: string,
+        personaId: string,
+        workspaceId: string,
+        parentTaskId: string,
+        nextRunAt: string | null,
+        taskId: string | null = null,
+      ): void => {
+        // Mirror partial-unique behavior of the real DB.
+        if (taskId !== null) {
+          for (const s of mockDb.schedules.values()) {
+            if ((s as { taskId: string | null }).taskId === taskId) {
+              throw new Error("UNIQUE constraint failed: schedules.task_id");
+            }
+          }
+        }
+        mockDb.schedules.set(id, {
+          id,
+          title,
+          description,
+          scheduleExpression,
+          personaId,
+          workspaceId,
+          parentTaskId,
+          enabled: true,
+          lastRunAt: null,
+          nextRunAt,
+          runCount: 0,
+          taskId,
+          createdAt: "2024-01-01",
+          updatedAt: "2024-01-01",
+        });
+      },
+      updateSchedule: (
+        id: string,
+        fields: {
+          scheduleExpression?: string;
+          description?: string;
+          enabled?: boolean;
+          nextRunAt?: string | null;
+        },
+      ): void => {
+        const existing = mockDb.schedules.get(id);
+        if (!existing) return;
+        mockDb.schedules.set(id, {
+          ...existing,
+          ...(fields.scheduleExpression !== undefined
+            ? { scheduleExpression: fields.scheduleExpression }
+            : {}),
+          ...(fields.description !== undefined ? { description: fields.description } : {}),
+          ...(fields.enabled !== undefined ? { enabled: fields.enabled } : {}),
+          ...(fields.nextRunAt !== undefined ? { nextRunAt: fields.nextRunAt } : {}),
+        });
+      },
+      deleteSchedule: (id: string): void => {
+        mockDb.schedules.delete(id);
+      },
     },
-    deleteSchedule: (id: string): void => {
-      mockDb.schedules.delete(id);
-    },
-  },
-  slugify: (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-}));
+  };
+  return {
+    ...stores,
+    slugify: (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    getDatabaseStores: () => stores,
+  };
+});
 
 // killSessionAndCleanup is imported from grpc-shared. Mock the module to
 // record calls without pulling in the real streamHub / lifecycle plumbing.

@@ -11,7 +11,8 @@
 
 import { create } from "@bufbuild/protobuf";
 import { grackle, ConflictError, ValidationError, PreconditionError } from "@grackle-ai/common";
-import { agentStore, scheduleStore, sessionStore, taskStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
+import type { ScheduleRow, ScheduleUpdate } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { slugify } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
@@ -29,7 +30,8 @@ import {
  * Resolve the heartbeat schedule for an agent (#1438). Returns undefined when
  * the agent has no root task or no schedule attached to it.
  */
-function getHeartbeatForAgent(agentId: string): scheduleStore.ScheduleRow | undefined {
+function getHeartbeatForAgent(agentId: string): ScheduleRow | undefined {
+  const { taskStore, scheduleStore } = getDatabaseStores();
   const root = taskStore.getRootTaskForAgent(agentId);
   if (!root) {
     return undefined;
@@ -39,6 +41,7 @@ function getHeartbeatForAgent(agentId: string): scheduleStore.ScheduleRow | unde
 
 /** List all agents. Each agent's `heartbeat` field is populated when set (#1438). */
 export async function listAgents(): Promise<grackle.AgentList> {
+  const { agentStore } = getDatabaseStores();
   const rows = agentStore.listAgents();
   return create(grackle.AgentListSchema, {
     agents: rows.map((row) => agentRowToProto(row, getHeartbeatForAgent(row.id))),
@@ -47,6 +50,7 @@ export async function listAgents(): Promise<grackle.AgentList> {
 
 /** Create a new agent. */
 export async function createAgent(req: grackle.CreateAgentRequest): Promise<grackle.Agent> {
+  const { agentStore } = getDatabaseStores();
   const name = requireTrimmed(req.name, "Agent name");
   if (agentStore.getAgentByName(name)) {
     throw new ConflictError(`Agent with name "${name}" already exists`);
@@ -80,6 +84,7 @@ export async function getAgent(req: grackle.AgentId): Promise<grackle.Agent> {
 
 /** Update an existing agent. Optional fields left unset preserve the stored value. */
 export async function updateAgent(req: grackle.UpdateAgentRequest): Promise<grackle.Agent> {
+  const { agentStore } = getDatabaseStores();
   const existing = requireAgent(req.id);
 
   if (
@@ -139,6 +144,7 @@ export async function updateAgent(req: grackle.UpdateAgentRequest): Promise<grac
  * `ON DELETE CASCADE` (project convention; see `db.ts` migration comments).
  */
 export async function deleteAgent(req: grackle.AgentId): Promise<grackle.Empty> {
+  const { agentStore, taskStore, sessionStore } = getDatabaseStores();
   const agentTasks = taskStore.getTasksForAgent(req.id);
   for (const task of agentTasks) {
     for (const session of sessionStore.listSessionsForTask(task.id)) {
@@ -169,6 +175,7 @@ export async function deleteAgent(req: grackle.AgentId): Promise<grackle.Empty> 
 export async function setAgentHeartbeat(
   req: grackle.SetAgentHeartbeatRequest,
 ): Promise<grackle.Schedule> {
+  const { agentStore, taskStore, scheduleStore } = getDatabaseStores();
   const agent = requireAgent(req.agentId);
   const rootTask = taskStore.getRootTaskForAgent(req.agentId);
   if (!rootTask) {
@@ -208,7 +215,7 @@ export async function setAgentHeartbeat(
   //   - cadence change on an enabled row recomputes nextRunAt
   // Otherwise leave nextRunAt alone (advanceSchedule keeps it current).
   if (existing) {
-    const updates: scheduleStore.ScheduleUpdate = {};
+    const updates: ScheduleUpdate = {};
     if (req.cadence !== undefined) {
       updates.scheduleExpression = req.cadence;
     }

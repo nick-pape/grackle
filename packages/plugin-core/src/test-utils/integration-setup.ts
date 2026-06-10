@@ -5,6 +5,7 @@
  * and a helper to extract handler methods via {@link createDefaultCollector}.
  */
 import { openDatabase, initDatabase, sqlite, seedDatabase } from "@grackle-ai/database";
+import { initRealDatabaseStores } from "@grackle-ai/test-utils/db";
 import { grackle } from "@grackle-ai/common";
 import { createDefaultCollector } from "../grpc-service.js";
 
@@ -15,6 +16,7 @@ import { createDefaultCollector } from "../grpc-service.js";
 export function initTestDatabase(): void {
   openDatabase(":memory:");
   initDatabase();
+  initRealDatabaseStores();
   seedDatabase(sqlite!);
 }
 

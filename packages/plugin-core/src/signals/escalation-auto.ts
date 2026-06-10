@@ -9,7 +9,7 @@
 
 import { SESSION_STATUS, ROOT_TASK_ID, serverTimestamp } from "@grackle-ai/common";
 import type { GrackleEvent } from "@grackle-ai/core";
-import { taskStore, sessionStore, escalationStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { readLastTextEntry } from "@grackle-ai/core";
 import { routeEscalation } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
@@ -60,6 +60,7 @@ export function createEscalationAutoSubscriber(ctx: PluginContext): Disposable {
  * whose latest session has gone IDLE, and if so, auto-escalate.
  */
 async function handleTaskUpdated(delivered: Map<string, number>, taskId: string): Promise<void> {
+  const { taskStore, sessionStore, escalationStore } = getDatabaseStores();
   const task = taskStore.getTask(taskId);
   if (!task) {
     return;

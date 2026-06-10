@@ -2,11 +2,21 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 
-vi.mock("@grackle-ai/database", () => ({
-  queryDomainEvents: vi.fn(() => []),
-  queryStreamMessages: vi.fn(() => []),
-  querySessionActions: vi.fn(() => []),
-}));
+vi.mock("@grackle-ai/database", () => {
+  const queryDomainEvents = vi.fn(() => []);
+  const queryStreamMessages = vi.fn(() => []);
+  const querySessionActions = vi.fn(() => []);
+  return {
+    queryDomainEvents,
+    queryStreamMessages,
+    querySessionActions,
+    getDatabaseStores: () => ({
+      eventStore: { queryDomainEvents },
+      streamMessageStore: { queryStreamMessages },
+      sessionActionStore: { querySessionActions },
+    }),
+  };
+});
 
 import {
   queryDomainEvents as storeQuery,

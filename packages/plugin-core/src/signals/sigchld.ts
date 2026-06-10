@@ -1,6 +1,6 @@
 import { SESSION_STATUS } from "@grackle-ai/common";
 import type { GrackleEvent } from "@grackle-ai/core";
-import { taskStore, sessionStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { readLastTextEntry } from "@grackle-ai/core";
 import { deliverSignalToTask } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
@@ -81,6 +81,7 @@ async function handleTaskUpdated(
   delivered: Map<string, number>,
   childTaskId: string,
 ): Promise<void> {
+  const { taskStore, sessionStore } = getDatabaseStores();
   const childTask = taskStore.getTask(childTaskId);
   if (!childTask) {
     return;

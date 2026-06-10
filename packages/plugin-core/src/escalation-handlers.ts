@@ -1,7 +1,7 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle, serverTimestamp } from "@grackle-ai/common";
-import { escalationStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { ulid } from "ulid";
 import { routeEscalation, toEscalationModel } from "@grackle-ai/core";
 import { escalationRowToProto } from "./grpc-proto-converters.js";
@@ -14,6 +14,7 @@ const VALID_URGENCY: ReadonlySet<string> = new Set(["low", "normal", "high"]);
 export async function createEscalation(
   req: grackle.CreateEscalationRequest,
 ): Promise<grackle.Escalation> {
+  const { escalationStore } = getDatabaseStores();
   requireField(req.message, "message");
   const urgency = VALID_URGENCY.has(req.urgency) ? req.urgency : "normal";
   const id = ulid();
@@ -59,6 +60,7 @@ export async function createEscalation(
 export async function listEscalations(
   req: grackle.ListEscalationsRequest,
 ): Promise<grackle.EscalationList> {
+  const { escalationStore } = getDatabaseStores();
   const rows = escalationStore.listEscalations(
     req.workspaceId || undefined,
     req.status || undefined,
@@ -73,6 +75,7 @@ export async function listEscalations(
 export async function acknowledgeEscalation(
   req: grackle.AcknowledgeEscalationRequest,
 ): Promise<grackle.Escalation> {
+  const { escalationStore } = getDatabaseStores();
   const row = requireEscalation(req.id);
   escalationStore.updateEscalationStatus(req.id, "acknowledged");
   const updated = escalationStore.getEscalation(req.id);
