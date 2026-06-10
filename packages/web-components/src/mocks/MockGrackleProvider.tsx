@@ -1140,7 +1140,10 @@ export function MockGrackleProvider({ children }: MockGrackleProviderProps): JSX
         deleteAgent: async (id: string) => {
           setAgents((prev) => prev.filter((a) => a.id !== id));
         },
-        setHeartbeat: async (agentId: string, opts) => {
+        setHeartbeat: async (
+          agentId: string,
+          opts: { cadence?: string; rules?: string; enabled?: boolean },
+        ) => {
           console.log("[MockGrackle] setHeartbeat", { agentId, opts });
         },
         domainHook: NOOP_DOMAIN_HOOK,

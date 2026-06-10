@@ -46,10 +46,19 @@ export function AgentSettingsTab(): JSX.Element {
     ...personas.map((p) => ({ value: p.id, label: p.name })),
   ];
 
-  const environmentOptions: SelectOption[] = environments.map((e) => ({
-    value: e.id,
-    label: e.displayName || e.id,
-  }));
+  const environmentOptions: SelectOption[] = (() => {
+    const opts = environments.map((e) => ({
+      value: e.id,
+      label: e.displayName || e.id,
+    }));
+    // Always ensure the agent's current environment appears even if the
+    // environments list hasn't finished loading — prevents the field from
+    // briefly showing the placeholder "None" on first render.
+    if (agent.environmentId && !opts.some((o) => o.value === agent.environmentId)) {
+      opts.unshift({ value: agent.environmentId, label: agent.environmentId });
+    }
+    return opts;
+  })();
 
   const handleSaveName = (value: string): void => {
     updateAgent(agent.id, { name: value }).then(

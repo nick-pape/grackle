@@ -3,6 +3,12 @@
  *
  * Verifies editable environment picker and heartbeat fields without
  * a running server stack.
+ *
+ * testid suffix convention used by the Editable* components:
+ *   - display mode (button): `${testId}-button`
+ *   - edit mode (input/textarea): `${testId}-input`
+ *   - edit mode (select): `${testId}-select`
+ *   - EditableCheckbox: uses base `${testId}` directly on the label
  */
 import type { JSX } from "react";
 import { MemoryRouter, Routes, Route, Outlet } from "react-router";
@@ -79,11 +85,14 @@ export const Default: Story = {
   render: () => <SettingsTabRoute agent={AGENT} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    // Outer container — direct testid on the section div
     await expect(canvas.getByTestId("agent-settings-tab")).toBeInTheDocument();
-    await expect(canvas.getByTestId("agent-settings-name")).toBeInTheDocument();
-    await expect(canvas.getByTestId("agent-settings-environment")).toBeInTheDocument();
-    await expect(canvas.getByTestId("agent-settings-persona")).toBeInTheDocument();
-    await expect(canvas.getByTestId("agent-settings-heartbeat-cadence")).toBeInTheDocument();
+    // Editable* display-mode elements render the base testid with `-button` suffix
+    await expect(canvas.getByTestId("agent-settings-name-button")).toBeInTheDocument();
+    await expect(canvas.getByTestId("agent-settings-environment-button")).toBeInTheDocument();
+    await expect(canvas.getByTestId("agent-settings-persona-button")).toBeInTheDocument();
+    await expect(canvas.getByTestId("agent-settings-heartbeat-cadence-button")).toBeInTheDocument();
+    // Delete button is a plain <Button> — uses the base testid directly
     await expect(canvas.getByTestId("agent-settings-delete")).toBeInTheDocument();
   },
 };
@@ -98,32 +107,27 @@ export const EnvironmentEditable: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    const envField = canvas.getByTestId("agent-settings-environment");
-    await expect(envField).toBeInTheDocument();
+    // EditableSelect in display mode renders a button with the `-button` suffix.
+    const envButton = canvas.getByTestId("agent-settings-environment-button");
+    await expect(envButton).toBeInTheDocument();
 
-    // Should show the display name of the current environment.
-    // AGENT.environmentId = "env-local-01" → MockGrackleProvider default displayName is "Local Dev".
-    await expect(envField).toHaveTextContent("Local Dev");
+    // AGENT.environmentId = "env-local-01" → MockGrackleProvider maps it to "Local Dev".
+    await expect(envButton).toHaveTextContent("Local Dev");
   },
 };
 
-/** Clicking the environment field opens an editable select. */
+/** Clicking the environment field switches it to edit mode (renders a <select>). */
 export const EnvironmentSelectOpens: Story = {
   render: () => <SettingsTabRoute agent={AGENT} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const envField = canvas.getByTestId("agent-settings-environment");
 
-    await userEvent.click(envField);
+    // Click the display-mode button to enter edit mode
+    const envButton = canvas.getByTestId("agent-settings-environment-button");
+    await userEvent.click(envButton);
 
-    // After clicking, a <select> element should be visible inside the field.
-    const select = envField.querySelector("select");
-    if (select) {
-      await expect(select).toBeInTheDocument();
-    } else {
-      // EditableSelect may render differently; just confirm the field is interactive.
-      await expect(envField).toBeInTheDocument();
-    }
+    // EditableSelect in edit mode renders a <select> with the `-select` suffix
+    await expect(canvas.getByTestId("agent-settings-environment-select")).toBeInTheDocument();
   },
 };
 
@@ -136,9 +140,11 @@ export const HeartbeatVisible: Story = {
   render: () => <SettingsTabRoute agent={AGENT} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByTestId("agent-settings-heartbeat-cadence")).toBeInTheDocument();
+    // EditableTextField / EditableTextArea display-mode buttons use `-button` suffix
+    await expect(canvas.getByTestId("agent-settings-heartbeat-cadence-button")).toBeInTheDocument();
+    await expect(canvas.getByTestId("agent-settings-heartbeat-rules-button")).toBeInTheDocument();
+    // EditableCheckbox uses the base testid directly on its <label>
     await expect(canvas.getByTestId("agent-settings-heartbeat-enabled")).toBeInTheDocument();
-    await expect(canvas.getByTestId("agent-settings-heartbeat-rules")).toBeInTheDocument();
   },
 };
 
@@ -148,9 +154,9 @@ export const HeartbeatAbsent: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText(/No heartbeat configured/i)).toBeInTheDocument();
-    // Cadence field still shown so the user can set one.
-    await expect(canvas.getByTestId("agent-settings-heartbeat-cadence")).toBeInTheDocument();
-    // No enabled checkbox without a schedule.
+    // Cadence field still shown so the user can set one (display-mode button)
+    await expect(canvas.getByTestId("agent-settings-heartbeat-cadence-button")).toBeInTheDocument();
+    // No enabled checkbox when there is no schedule
     await expect(canvas.queryByTestId("agent-settings-heartbeat-enabled")).not.toBeInTheDocument();
   },
 };
