@@ -113,8 +113,14 @@ export async function ensureSpawnConnection(
     return conn;
   } catch (err) {
     logger.error({ environmentId, err }, "Auto-provision failed (SpawnAgent)");
-    envRegistry.updateEnvironmentStatus(environmentId, "error");
-    emit("environment.changed", {});
+    // Guard against clobbering a concurrent successful provision: if another
+    // caller connected the environment while this attempt was failing, keep
+    // the "connected" status rather than reverting it to "error".
+    const currentEnv = envRegistry.getEnvironment(environmentId);
+    if (currentEnv?.status !== "connected") {
+      envRegistry.updateEnvironmentStatus(environmentId, "error");
+      emit("environment.changed", {});
+    }
     throw new PreconditionError(
       `Failed to auto-connect environment ${environmentId}: ${err instanceof Error ? err.message : String(err)}`,
     );

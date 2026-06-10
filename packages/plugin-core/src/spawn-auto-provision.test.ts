@@ -197,6 +197,28 @@ describe("ensureSpawnConnection", () => {
     expect(emit).toHaveBeenCalledWith("environment.changed", {});
   });
 
+  it("does not clobber connected status when a concurrent provision succeeds while this one fails", async () => {
+    vi.mocked(adapterManager.getConnection).mockReturnValue(undefined);
+    const fakeAdapter = {
+      connect: vi.fn().mockRejectedValue(new Error("connection refused")),
+      disconnect: vi.fn(),
+      stop: vi.fn(),
+      destroy: vi.fn(),
+    };
+    vi.mocked(adapterManager.getAdapter).mockReturnValue(fakeAdapter as never);
+    // Simulate another caller having connected the environment concurrently
+    vi.mocked(envRegistry.getEnvironment).mockReturnValue({
+      ...FAKE_ENV,
+      status: "connected",
+    });
+
+    await expect(ensureSpawnConnection("test-env", FAKE_ENV)).rejects.toBeInstanceOf(
+      PreconditionError,
+    );
+    // Status must NOT be reverted to "error" — the concurrent provision won
+    expect(envRegistry.updateEnvironmentStatus).not.toHaveBeenCalledWith("test-env", "error");
+  });
+
   it("swallows recoverSuspendedSessions rejection (fire-and-forget)", async () => {
     vi.mocked(adapterManager.getConnection).mockReturnValue(undefined);
     const fakeConn = makeFakeConn();
