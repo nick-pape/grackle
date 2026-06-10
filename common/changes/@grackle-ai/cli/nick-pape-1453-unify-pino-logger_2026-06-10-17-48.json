@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Extract shared createPinoLogger() factory to @grackle-ai/common; all server-side packages now route through validated resolveLogConfig() instead of raw process.env reads",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
