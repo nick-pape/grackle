@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Fri, 05 Jun 2026 17:59:37 GMT and should not be manually modified.
+This log was last generated on Wed, 10 Jun 2026 16:43:26 GMT and should not be manually modified.
+
+## 0.178.0
+Wed, 10 Jun 2026 16:43:26 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Migrate packages/core from direct store imports to getDatabaseStores() registry
 
 ## 0.177.0
 Fri, 05 Jun 2026 17:59:37 GMT
