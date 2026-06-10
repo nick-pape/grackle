@@ -65,13 +65,16 @@ export async function ensureSpawnConnection(
     throw new PreconditionError(`No adapter for type: ${env.adapterType}`);
   }
 
-  logger.info({ environmentId }, "Auto-provisioning environment for SpawnAgent");
-  envRegistry.updateEnvironmentStatus(environmentId, "connecting");
-  emit("environment.changed", {});
-
+  // Parse config before flipping status to "connecting" — parseAdapterConfig
+  // can throw on invalid JSON, and a throw here would leave the environment
+  // stuck in "connecting" with no follow-up error status/event.
   const config = parseAdapterConfig(env.adapterConfig);
   config.defaultRuntime = resolveBootstrapRuntime(env);
   const powerlineToken = env.powerlineToken;
+
+  logger.info({ environmentId }, "Auto-provisioning environment for SpawnAgent");
+  envRegistry.updateEnvironmentStatus(environmentId, "connecting");
+  emit("environment.changed", {});
 
   try {
     for await (const provEvent of reconnectOrProvision(
