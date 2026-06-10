@@ -12,8 +12,8 @@
       "default": "./dist/index.js"
     },
     "./db": {
-      "types": "./dist/real-database-stores.d.ts",
-      "default": "./dist/real-database-stores.js"
+      "types": "./dist/setup-test-database.d.ts",
+      "default": "./dist/setup-test-database.js"
     }
   },
   "scripts": {

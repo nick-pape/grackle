@@ -87,6 +87,7 @@ npx buf generate
 - **Rebuild before manual testing**: After making code changes to any package, you must run `rush build -t @grackle-ai/<package>` before starting or restarting the server. The server runs compiled JS from `dist/`, not TypeScript source files.
 - **CLI uses `GRACKLE_URL`, not `GRACKLE_PORT`**: The CLI client reads `GRACKLE_URL` (e.g., `http://127.0.0.1:7500`) to find the gRPC server. Setting `GRACKLE_PORT` only affects the server's listen port, not the CLI's connection target.
 - **Playwright runs in parallel**: Each worker spawns its own isolated Grackle stack (4 ports + GRACKLE_HOME). Worker count defaults to `min(4, cpuCount/2)` locally, 2 in CI. Override via `E2E_WORKERS` env var.
+- **The `@grackle-ai/test-utils` barrel (`index.ts`) must never import `@grackle-ai/database`** (directly or transitively). Many test files mock `@grackle-ai/database` with a factory that dynamically imports the barrel (`createDatabaseMock` pattern); if the barrel pulls in `@grackle-ai/database`, vitest re-enters the in-flight mock factory and **deadlocks the fork worker forever** — no `testTimeout` applies, the pool starves, and CI hangs indefinitely (symptom: `rush test` stalls inside a package's `vitest run` with some files ✓ and the rest never reporting). Database-touching helpers (e.g. `setupTestDatabase`) live behind the separate `@grackle-ai/test-utils/db` entry point instead.
 
 ### Coverage
 
