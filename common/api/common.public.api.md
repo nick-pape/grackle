@@ -2112,6 +2112,11 @@ const InputMessageSchema: GenMessage<InputMessage>;
 const InputMessageSchema_2: GenMessage<InputMessage_2>;
 
 // @public
+export class InternalError extends GrackleError {
+    constructor(message: string, context?: Record<string, unknown>);
+}
+
+// @public
 export class InvalidSessionTransitionError extends PreconditionError {
     constructor(from: SessionStatus, to: SessionStatus);
     // (undocumented)
@@ -2821,6 +2826,11 @@ type ResourceDirectoryEntry = Message<"grackle.ResourceDirectoryEntry"> & {
 
 // @public
 const ResourceDirectoryEntrySchema: GenMessage<ResourceDirectoryEntry>;
+
+// @public
+export class ResourceExhaustedError extends GrackleError {
+    constructor(message: string, context?: Record<string, unknown>);
+}
 
 // @public
 type ResourceListing = Message<"grackle.ResourceListing"> & {

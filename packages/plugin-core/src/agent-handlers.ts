@@ -9,9 +9,8 @@
  * @module
  */
 
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, ConflictError, ValidationError, PreconditionError } from "@grackle-ai/common";
 import { agentStore, scheduleStore, sessionStore, taskStore } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { slugify } from "@grackle-ai/database";
@@ -50,7 +49,7 @@ export async function listAgents(): Promise<grackle.AgentList> {
 export async function createAgent(req: grackle.CreateAgentRequest): Promise<grackle.Agent> {
   const name = requireTrimmed(req.name, "Agent name");
   if (agentStore.getAgentByName(name)) {
-    throw new ConnectError(`Agent with name "${name}" already exists`, Code.AlreadyExists);
+    throw new ConflictError(`Agent with name "${name}" already exists`);
   }
 
   const environmentId = requireTrimmed(req.environmentId, "environment_id");
@@ -84,7 +83,7 @@ export async function updateAgent(req: grackle.UpdateAgentRequest): Promise<grac
   const existing = requireAgent(req.id);
 
   if (req.name === undefined && req.avatar === undefined && req.primaryPersonaId === undefined) {
-    throw new ConnectError("No updatable fields provided", Code.InvalidArgument);
+    throw new ValidationError("No updatable fields provided");
   }
 
   // Optional (presence-tracked) fields: undefined = keep existing. When `name`
@@ -94,7 +93,7 @@ export async function updateAgent(req: grackle.UpdateAgentRequest): Promise<grac
   if (req.name !== undefined) {
     trimmedName = requireNonEmpty(req.name, "Agent name");
     if (trimmedName !== existing.name && agentStore.getAgentByName(trimmedName)) {
-      throw new ConnectError(`Agent with name "${trimmedName}" already exists`, Code.AlreadyExists);
+      throw new ConflictError(`Agent with name "${trimmedName}" already exists`);
     }
   }
 
@@ -158,7 +157,7 @@ export async function setAgentHeartbeat(
   const agent = requireAgent(req.agentId);
   const rootTask = taskStore.getRootTaskForAgent(req.agentId);
   if (!rootTask) {
-    throw new ConnectError(`Agent has no root task: ${req.agentId}`, Code.FailedPrecondition);
+    throw new PreconditionError(`Agent has no root task: ${req.agentId}`);
   }
 
   const existing = scheduleStore.getHeartbeatForTask(rootTask.id);
@@ -176,10 +175,7 @@ export async function setAgentHeartbeat(
   // Resolve effective fields with presence semantics.
   const effectiveCadence = req.cadence ?? existing?.scheduleExpression;
   if (!effectiveCadence) {
-    throw new ConnectError(
-      "cadence is required when no heartbeat schedule exists",
-      Code.InvalidArgument,
-    );
+    throw new ValidationError("cadence is required when no heartbeat schedule exists");
   }
 
   // Validate the (possibly new) cadence string.
@@ -187,10 +183,7 @@ export async function setAgentHeartbeat(
     try {
       validateExpression(req.cadence);
     } catch (err) {
-      throw new ConnectError(
-        err instanceof Error ? err.message : "Invalid cadence expression",
-        Code.InvalidArgument,
-      );
+      throw new ValidationError(err instanceof Error ? err.message : "Invalid cadence expression");
     }
   }
 

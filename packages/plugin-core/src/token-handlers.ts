@@ -1,6 +1,5 @@
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, ValidationError } from "@grackle-ai/common";
 import { claudeProviderModeToEnum, providerToggleToEnum } from "@grackle-ai/common";
 import { tokenStore, credentialProviders } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
@@ -64,9 +63,8 @@ export async function setCredentialProvider(
   req: grackle.SetCredentialProviderRequest,
 ): Promise<grackle.CredentialProviderConfig> {
   if (!credentialProviders.VALID_PROVIDERS.includes(req.provider)) {
-    throw new ConnectError(
+    throw new ValidationError(
       `Invalid provider: ${req.provider}. Must be one of: ${credentialProviders.VALID_PROVIDERS.join(", ")}`,
-      Code.InvalidArgument,
     );
   }
 
@@ -76,9 +74,8 @@ export async function setCredentialProvider(
       : credentialProviders.VALID_TOGGLE_VALUES;
 
   if (!allowed.has(req.value)) {
-    throw new ConnectError(
+    throw new ValidationError(
       `Invalid value for ${req.provider}: ${req.value}. Must be one of: ${[...allowed].join(", ")}`,
-      Code.InvalidArgument,
     );
   }
 

@@ -1,6 +1,5 @@
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, PreconditionError, AuthError, ValidationError } from "@grackle-ai/common";
 import {
   TERMINAL_SESSION_STATUSES,
   type SessionStatus,
@@ -116,16 +115,12 @@ export async function createTask(req: grackle.CreateTaskRequest): Promise<grackl
   if (req.parentTaskId) {
     const parent = requireTask(req.parentTaskId);
     if (!parent.canDecompose) {
-      throw new ConnectError(
+      throw new PreconditionError(
         `Parent task "${parent.title}" (${req.parentTaskId}) does not have decomposition rights`,
-        Code.FailedPrecondition,
       );
     }
     if (parent.depth + 1 > MAX_TASK_DEPTH) {
-      throw new ConnectError(
-        `Task depth would exceed maximum of ${MAX_TASK_DEPTH}`,
-        Code.FailedPrecondition,
-      );
+      throw new PreconditionError(`Task depth would exceed maximum of ${MAX_TASK_DEPTH}`);
     }
   }
 
@@ -174,27 +169,26 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
   let reqStatus = existing.status;
   if (req.status !== grackle.TaskStatus.UNSPECIFIED) {
     if (req.id === ROOT_TASK_ID) {
-      throw new ConnectError("Cannot change the status of the system task", Code.PermissionDenied);
+      throw new AuthError("Cannot change the status of the system task");
     }
     const converted = taskStatusToString(req.status);
     if (!converted) {
-      throw new ConnectError(`Unknown task status enum value: ${req.status}`, Code.InvalidArgument);
+      throw new ValidationError(`Unknown task status enum value: ${req.status}`);
     }
     reqStatus = converted;
   }
 
   if (req.dependsOn.length > 0) {
     if (req.dependsOn.includes(req.id)) {
-      throw new ConnectError(`Task ${req.id} cannot depend on itself`, Code.InvalidArgument);
+      throw new ValidationError(`Task ${req.id} cannot depend on itself`);
     }
     for (const depId of req.dependsOn) {
       requireTask(depId);
     }
     const cycle = taskStore.detectDependencyCycle(req.id, [...req.dependsOn]);
     if (cycle) {
-      throw new ConnectError(
+      throw new ValidationError(
         `Circular dependency detected: ${req.id} → ${cycle.join(" → ")} → ${req.id}`,
-        Code.InvalidArgument,
       );
     }
   }
@@ -227,18 +221,14 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
   if (req.sessionId !== "") {
     const session = requireSession(req.sessionId);
     if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
-      throw new ConnectError(
+      throw new PreconditionError(
         `Cannot bind terminal session ${req.sessionId} (status: ${session.status})`,
-        Code.FailedPrecondition,
       );
     }
 
     // Verify the processor exists before mutating DB state to avoid partial updates
     if (!processorRegistry.get(req.sessionId)) {
-      throw new ConnectError(
-        `No active event processor for session ${req.sessionId}`,
-        Code.FailedPrecondition,
-      );
+      throw new PreconditionError(`No active event processor for session ${req.sessionId}`);
     }
 
     sessionStore.setSessionTask(req.sessionId, req.id);

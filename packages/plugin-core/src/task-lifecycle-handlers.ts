@@ -1,5 +1,4 @@
 /** Task lifecycle handlers extracted from task-handlers.ts (#1470). @module */
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import {
   grackle,
@@ -7,6 +6,8 @@ import {
   GrackleError,
   NotFoundError,
   ValidationError,
+  AuthError,
+  PreconditionError,
 } from "@grackle-ai/common";
 import {
   SESSION_STATUS,
@@ -36,7 +37,7 @@ import { requireTask } from "./require-helpers.js";
 /** Mark a task as complete and clean up active sessions. */
 export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
   if (req.id === ROOT_TASK_ID) {
-    throw new ConnectError("Cannot complete the system task", Code.PermissionDenied);
+    throw new AuthError("Cannot complete the system task");
   }
   const task = requireTask(req.id);
 
@@ -109,10 +110,7 @@ export async function setWorkpad(req: grackle.SetWorkpadRequest): Promise<grackl
   const MAX_WORKPAD_BYTES = 64 * 1024; // 64 KB
   const workpadBytes = Buffer.byteLength(req.workpad, "utf8");
   if (workpadBytes > MAX_WORKPAD_BYTES) {
-    throw new ConnectError(
-      `Workpad exceeds maximum size of ${MAX_WORKPAD_BYTES} bytes`,
-      Code.InvalidArgument,
-    );
+    throw new ValidationError(`Workpad exceeds maximum size of ${MAX_WORKPAD_BYTES} bytes`);
   }
   taskStore.setWorkpad(req.taskId, req.workpad);
   const row = taskStore.getTask(req.taskId)!;
@@ -127,29 +125,24 @@ export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> 
 
   const latestSession = sessionStore.getLatestSessionForTask(req.id);
   if (!latestSession) {
-    throw new ConnectError(`Task ${req.id} has no sessions to resume`, Code.FailedPrecondition);
+    throw new PreconditionError(`Task ${req.id} has no sessions to resume`);
   }
   if (
     !([SESSION_STATUS.STOPPED, SESSION_STATUS.SUSPENDED] as string[]).includes(latestSession.status)
   ) {
-    throw new ConnectError(
+    throw new PreconditionError(
       `Latest session ${latestSession.id} is not resumable (status: ${latestSession.status})`,
-      Code.FailedPrecondition,
     );
   }
   if (!latestSession.runtimeSessionId) {
-    throw new ConnectError(
+    throw new PreconditionError(
       `Latest session ${latestSession.id} has no runtime session ID — cannot resume`,
-      Code.FailedPrecondition,
     );
   }
 
   const conn = adapterManager.getConnection(latestSession.environmentId);
   if (!conn) {
-    throw new ConnectError(
-      `Environment ${latestSession.environmentId} not connected`,
-      Code.FailedPrecondition,
-    );
+    throw new PreconditionError(`Environment ${latestSession.environmentId} not connected`);
   }
 
   const logPath = latestSession.logPath || join(grackleHome, LOGS_DIR, latestSession.id);
@@ -242,15 +235,12 @@ export async function stopTask(req: grackle.TaskId): Promise<grackle.Task> {
 /** Delete a task and all its sessions. */
 export async function deleteTask(req: grackle.TaskId): Promise<grackle.Empty> {
   if (req.id === ROOT_TASK_ID) {
-    throw new ConnectError("Cannot delete the system task", Code.PermissionDenied);
+    throw new AuthError("Cannot delete the system task");
   }
   const task = requireTask(req.id);
   const children = taskStore.getChildren(req.id);
   if (children.length > 0) {
-    throw new ConnectError(
-      "Cannot delete task with children. Delete children first.",
-      Code.FailedPrecondition,
-    );
+    throw new PreconditionError("Cannot delete task with children. Delete children first.");
   }
 
   // Terminate all active sessions via lifecycle cleanup before deleting the task

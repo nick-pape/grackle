@@ -1,4 +1,3 @@
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle, ValidationError } from "@grackle-ai/common";
 import { channelGrantStore, sessionStore, type ChannelGrantRow } from "@grackle-ai/database";
@@ -44,7 +43,7 @@ export async function exposeChannel(
   const verbs = req.verbs.length > 0 ? req.verbs : [...DEFAULT_VERBS];
   for (const verb of verbs) {
     if (!SUPPORTED_VERBS.has(verb)) {
-      throw new ConnectError(`Unsupported verb: ${verb}`, Code.InvalidArgument);
+      throw new ValidationError(`Unsupported verb: ${verb}`);
     }
   }
 

@@ -5,9 +5,14 @@
  * @module
  */
 
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import {
+  grackle,
+  ValidationError,
+  ConflictError,
+  NotFoundError,
+  AuthError,
+} from "@grackle-ai/common";
 import { streamRegistry, pipeDelivery, RESERVED_PREFIXES } from "@grackle-ai/core";
 import { requireField } from "./require-helpers.js";
 
@@ -28,21 +33,16 @@ function isPermissionSubset(requested: string, callerHas: string): boolean {
 /** Validate permission and deliveryMode, enforcing the w-only → detach rule. */
 export function validateSubscriptionParams(permission: string, deliveryMode: string): void {
   if (!VALID_PERMISSIONS.has(permission)) {
-    throw new ConnectError(
-      `Invalid permission "${permission}" — must be "r", "w", or "rw"`,
-      Code.InvalidArgument,
-    );
+    throw new ValidationError(`Invalid permission "${permission}" — must be "r", "w", or "rw"`);
   }
   if (!VALID_DELIVERY_MODES.has(deliveryMode)) {
-    throw new ConnectError(
+    throw new ValidationError(
       `Invalid delivery_mode "${deliveryMode}" — must be "sync", "async", or "detach"`,
-      Code.InvalidArgument,
     );
   }
   if (permission === "w" && deliveryMode !== "detach") {
-    throw new ConnectError(
+    throw new ValidationError(
       `Write-only permission requires delivery_mode "detach" (got "${deliveryMode}")`,
-      Code.InvalidArgument,
     );
   }
 }
@@ -54,17 +54,14 @@ export async function createStream(
   requireField(req.sessionId, "session_id");
   requireField(req.name, "name");
   if (RESERVED_PREFIXES.some((prefix) => req.name.startsWith(prefix))) {
-    throw new ConnectError(
-      `Stream name "${req.name}" uses a reserved prefix`,
-      Code.InvalidArgument,
-    );
+    throw new ValidationError(`Stream name "${req.name}" uses a reserved prefix`);
   }
 
   let stream;
   try {
     stream = streamRegistry.createStream(req.name, req.selfEcho);
   } catch {
-    throw new ConnectError(`Stream name "${req.name}" already exists`, Code.AlreadyExists);
+    throw new ConflictError(`Stream name "${req.name}" already exists`);
   }
 
   const sub = streamRegistry.subscribe(stream.id, req.sessionId, "rw", "async", false);
@@ -85,9 +82,8 @@ export async function attachStream(
 
   const callerSub = streamRegistry.getSubscription(req.sessionId, req.fd);
   if (!callerSub) {
-    throw new ConnectError(
+    throw new NotFoundError(
       `No subscription found for session ${req.sessionId} fd ${String(req.fd)}`,
-      Code.NotFound,
     );
   }
 
@@ -97,10 +93,7 @@ export async function attachStream(
   validateSubscriptionParams(permission, deliveryMode);
 
   if (!isPermissionSubset(permission, callerSub.permission)) {
-    throw new ConnectError(
-      `Cannot grant "${permission}" — caller only has "${callerSub.permission}"`,
-      Code.PermissionDenied,
-    );
+    throw new AuthError(`Cannot grant "${permission}" — caller only has "${callerSub.permission}"`);
   }
 
   const targetSub = streamRegistry.subscribe(

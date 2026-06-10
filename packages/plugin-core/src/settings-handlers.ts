@@ -1,6 +1,10 @@
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle, PreconditionError, ValidationError } from "@grackle-ai/common";
+import {
+  grackle,
+  PreconditionError,
+  ResourceExhaustedError,
+  ValidationError,
+} from "@grackle-ai/common";
 import { DEFAULT_WEB_PORT } from "@grackle-ai/common";
 import {
   settingsStore,
@@ -66,9 +70,8 @@ export async function setSetting(req: grackle.SetSettingRequest): Promise<grackl
 export async function generatePairingCode(): Promise<grackle.PairingCodeResponse> {
   const code = authGeneratePairingCode();
   if (!code) {
-    throw new ConnectError(
+    throw new ResourceExhaustedError(
       "Maximum active pairing codes reached. Wait for existing codes to expire.",
-      Code.ResourceExhausted,
     );
   }
 

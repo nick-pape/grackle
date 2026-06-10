@@ -6,9 +6,14 @@
  * @module
  */
 
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import {
+  grackle,
+  ValidationError,
+  ConflictError,
+  NotFoundError,
+  PreconditionError,
+} from "@grackle-ai/common";
 import { sessionStore, taskStore } from "@grackle-ai/database";
 import {
   streamRegistry,
@@ -56,17 +61,14 @@ export async function operatorCreateStream(
 ): Promise<grackle.OperatorCreateStreamResponse> {
   requireField(req.name, "name");
   if (RESERVED_PREFIXES.some((prefix) => req.name.startsWith(prefix))) {
-    throw new ConnectError(
-      `Stream name "${req.name}" uses a reserved prefix`,
-      Code.InvalidArgument,
-    );
+    throw new ValidationError(`Stream name "${req.name}" uses a reserved prefix`);
   }
 
   let stream;
   try {
     stream = streamRegistry.createStream(req.name, req.selfEcho);
   } catch {
-    throw new ConnectError(`Stream name "${req.name}" already exists`, Code.AlreadyExists);
+    throw new ConflictError(`Stream name "${req.name}" already exists`);
   }
 
   // Anchor the room with the operator principal: `rw` so a later OperatorPublish
@@ -91,13 +93,10 @@ export async function operatorAttachTask(
 
   const stream = streamRegistry.getStream(req.streamId);
   if (!stream) {
-    throw new ConnectError(`Stream not found: ${req.streamId}`, Code.NotFound);
+    throw new NotFoundError(`Stream not found: ${req.streamId}`);
   }
   if (!isOperatorRoom(stream)) {
-    throw new ConnectError(
-      `Stream ${req.streamId} is not an operator-owned room`,
-      Code.FailedPrecondition,
-    );
+    throw new PreconditionError(`Stream ${req.streamId} is not an operator-owned room`);
   }
 
   // The operator principal holds `rw`, so any requested grant ("r"/"w"/"rw") is
@@ -108,9 +107,8 @@ export async function operatorAttachTask(
 
   const sessionId = resolveLiveSessionForTask(req.taskId);
   if (!sessionId) {
-    throw new ConnectError(
+    throw new PreconditionError(
       `Task ${req.taskId} has no live session to attach (durable attach lands in T2)`,
-      Code.FailedPrecondition,
     );
   }
 
@@ -148,10 +146,7 @@ export async function operatorDetachTask(
     return create(grackle.OperatorDetachTaskResponseSchema, { detached: false });
   }
   if (!isOperatorRoom(stream)) {
-    throw new ConnectError(
-      `Stream ${req.streamId} is not an operator-owned room`,
-      Code.FailedPrecondition,
-    );
+    throw new PreconditionError(`Stream ${req.streamId} is not an operator-owned room`);
   }
 
   const sessionId = resolveLiveSessionForTask(req.taskId);
@@ -217,19 +212,15 @@ export async function operatorCloseStream(
 
   const stream = streamRegistry.getStream(req.streamId);
   if (!stream) {
-    throw new ConnectError(`Stream not found: ${req.streamId}`, Code.NotFound);
+    throw new NotFoundError(`Stream not found: ${req.streamId}`);
   }
   if (isReservedStreamName(stream.name)) {
-    throw new ConnectError(
+    throw new ValidationError(
       `Stream "${stream.name}" is an internal plumbing stream and cannot be closed`,
-      Code.InvalidArgument,
     );
   }
   if (!isOperatorRoom(stream)) {
-    throw new ConnectError(
-      `Stream ${req.streamId} is not an operator-owned room`,
-      Code.FailedPrecondition,
-    );
+    throw new PreconditionError(`Stream ${req.streamId} is not an operator-owned room`);
   }
 
   // Snapshot the affected sessions before teardown so we can deregister their

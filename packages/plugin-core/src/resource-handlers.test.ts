@@ -6,7 +6,7 @@
  * idempotent unwatch of an unknown handle.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { Code, ConnectError } from "@connectrpc/connect";
+import { Code, PreconditionError } from "@grackle-ai/common";
 import { AhpErrorCodes, JsonRpcErrorCodes } from "@grackle-ai/adapter-sdk";
 import type {
   PowerLineConnection,
@@ -255,6 +255,6 @@ describe("watch registry", () => {
     getConnection.mockReturnValue(undefined);
     await expect(
       watchResource({ environmentId: "gone", uri: "file:///x", recursive: false } as never),
-    ).rejects.toBeInstanceOf(ConnectError);
+    ).rejects.toBeInstanceOf(PreconditionError);
   });
 });
