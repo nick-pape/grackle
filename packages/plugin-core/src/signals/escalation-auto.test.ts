@@ -73,17 +73,22 @@ async function flush(): Promise<void> {
 
 describe("createEscalationAutoSubscriber", () => {
   let ctx: PluginContext;
-  let capturedHandler: (event: GrackleEvent) => void;
+  let capturedHandler: (event: GrackleEvent) => void | Promise<void>;
   let disposable: Disposable;
   let unsubscribeFn: ReturnType<typeof vi.fn>;
 
+  /** Mirrors the event-bus: catches any returned Promise rejection to prevent
+   *  unhandled rejections in the test runner. */
   function fireTaskUpdated(taskId: string): void {
-    capturedHandler({
+    const result = capturedHandler({
       id: "evt-1",
       type: "task.updated",
       timestamp: new Date().toISOString(),
       payload: { taskId },
     });
+    if (result !== undefined && typeof (result as Promise<void>).then === "function") {
+      (result as Promise<void>).catch(() => {});
+    }
   }
 
   beforeEach(() => {
@@ -93,7 +98,7 @@ describe("createEscalationAutoSubscriber", () => {
 
     unsubscribeFn = vi.fn();
     ctx = createMockPluginContext({
-      subscribe: vi.fn((fn: (event: GrackleEvent) => void) => {
+      subscribe: vi.fn((fn: (event: GrackleEvent) => void | Promise<void>) => {
         capturedHandler = fn;
         return unsubscribeFn;
       }),

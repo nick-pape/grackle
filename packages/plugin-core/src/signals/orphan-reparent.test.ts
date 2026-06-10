@@ -78,13 +78,18 @@ function failTask(taskId: string): void {
 
 describe("createOrphanReparentSubscriber", () => {
   let ctx: PluginContext;
-  let capturedHandler: (event: GrackleEvent) => void;
+  let capturedHandler: (event: GrackleEvent) => void | Promise<void>;
   let disposable: Disposable;
   let unsubscribeFn: ReturnType<typeof vi.fn>;
 
-  /** Simulate an event by calling the subscriber callback directly. */
+  /** Simulate an event by calling the subscriber callback directly.
+   *  Mirrors the event-bus: catches any returned Promise rejection so it
+   *  doesn't surface as an unhandled rejection in the test runner. */
   function fireEvent(event: Partial<GrackleEvent>): void {
-    capturedHandler(event as GrackleEvent);
+    const result = capturedHandler(event as GrackleEvent);
+    if (result !== undefined && typeof (result as Promise<void>).then === "function") {
+      (result as Promise<void>).catch(() => {});
+    }
   }
 
   beforeEach(() => {
@@ -94,7 +99,7 @@ describe("createOrphanReparentSubscriber", () => {
 
     unsubscribeFn = vi.fn();
     ctx = createMockPluginContext({
-      subscribe: vi.fn((fn: (event: GrackleEvent) => void) => {
+      subscribe: vi.fn((fn: (event: GrackleEvent) => void | Promise<void>) => {
         capturedHandler = fn;
         return unsubscribeFn;
       }),

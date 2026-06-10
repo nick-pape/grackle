@@ -17,9 +17,14 @@ vi.mock("./event-bus.js", () => ({
   emit: vi.fn(),
 }));
 
+vi.mock("./webhook-publisher.js", () => ({
+  postWebhook: vi.fn(),
+}));
+
 // Import AFTER mocks
 import { escalationStore, settingsStore } from "@grackle-ai/database";
 import { emit } from "./event-bus.js";
+import { postWebhook } from "./webhook-publisher.js";
 import { routeEscalation, deliverPendingEscalations } from "./notification-router.js";
 import type { EscalationRow } from "@grackle-ai/database";
 
@@ -45,8 +50,7 @@ function makeEscalation(overrides: Partial<EscalationRow> = {}): EscalationRow {
 describe("notification-router", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset global fetch mock
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    vi.mocked(postWebhook).mockResolvedValue(undefined);
   });
 
   describe("routeEscalation", () => {
@@ -75,31 +79,37 @@ describe("notification-router", () => {
       expect(escalationStore.updateEscalationStatus).toHaveBeenCalledWith("esc-001", "delivered");
     });
 
-    it("POSTs to webhook URL when webhook_url setting exists", async () => {
+    it("calls postWebhook with correct URL and payload when webhook_url setting exists", async () => {
       vi.mocked(settingsStore.getSetting).mockReturnValue("https://hooks.example.com/notify");
       const esc = makeEscalation();
       await routeEscalation(esc);
 
-      expect(fetch).toHaveBeenCalledWith(
+      expect(postWebhook).toHaveBeenCalledWith(
         "https://hooks.example.com/notify",
         expect.objectContaining({
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          type: "awaiting_input",
+          escalationId: "esc-001",
+          workspaceId: "ws1",
+          task: expect.objectContaining({
+            taskId: "task-001",
+            title: "Need help",
+            urgency: "normal",
+          }),
         }),
       );
     });
 
-    it("does NOT call fetch when no webhook_url setting exists", async () => {
+    it("does NOT call postWebhook when no webhook_url setting exists", async () => {
       vi.mocked(settingsStore.getSetting).mockReturnValue(undefined);
       const esc = makeEscalation();
       await routeEscalation(esc);
 
-      expect(fetch).not.toHaveBeenCalled();
+      expect(postWebhook).not.toHaveBeenCalled();
     });
 
-    it("still emits domain event even if webhook fetch throws", async () => {
+    it("still emits domain event even if postWebhook throws", async () => {
       vi.mocked(settingsStore.getSetting).mockReturnValue("https://hooks.example.com/notify");
-      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network error")));
+      vi.mocked(postWebhook).mockRejectedValue(new Error("Network error"));
 
       const esc = makeEscalation();
       await routeEscalation(esc);
@@ -114,21 +124,19 @@ describe("notification-router", () => {
 
     it("logs error on webhook failure and does not throw", async () => {
       vi.mocked(settingsStore.getSetting).mockReturnValue("https://hooks.example.com/notify");
-      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Connection refused")));
+      vi.mocked(postWebhook).mockRejectedValue(new Error("Connection refused"));
 
       const esc = makeEscalation();
-      // Should not throw
       await expect(routeEscalation(esc)).resolves.toBeUndefined();
     });
 
     it("updates status to delivered even if webhook fails", async () => {
       vi.mocked(settingsStore.getSetting).mockReturnValue("https://hooks.example.com/notify");
-      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("fail")));
+      vi.mocked(postWebhook).mockRejectedValue(new Error("fail"));
 
       const esc = makeEscalation();
       await routeEscalation(esc);
 
-      // Domain event always fires, so status is delivered
       expect(escalationStore.updateEscalationStatus).toHaveBeenCalledWith("esc-001", "delivered");
     });
   });

@@ -62,7 +62,7 @@ export interface PluginContext {
     config: ServerConfig;
     emit: (type: GrackleEventType, payload: Record<string, unknown>) => GrackleEvent;
     logger: Logger;
-    subscribe: (cb: (event: GrackleEvent) => void) => () => void;
+    subscribe: (cb: (event: GrackleEvent) => void | Promise<void>) => () => void;
 }
 
 // @public

@@ -32,7 +32,7 @@ export function createEscalationAutoSubscriber(ctx: PluginContext): Disposable {
   /** Track delivered notifications to prevent duplicates: key -> delivery timestamp. */
   const delivered: Map<string, number> = new Map();
 
-  const unsubscribe = ctx.subscribe((event: GrackleEvent) => {
+  const unsubscribe = ctx.subscribe(async (event: GrackleEvent) => {
     if (event.type !== "task.updated") {
       return;
     }
@@ -42,16 +42,7 @@ export function createEscalationAutoSubscriber(ctx: PluginContext): Disposable {
       return;
     }
 
-    // Fire-and-forget async handler — errors are logged, never thrown
-    (async () => {
-      try {
-        await handleTaskUpdated(delivered, taskId);
-      } catch (err) {
-        logger.error({ err, taskId }, "Escalation auto-detect handler error");
-      }
-    })().catch(() => {
-      /* swallowed — logged above */
-    });
+    await handleTaskUpdated(delivered, taskId);
   });
 
   logger.info("Escalation auto-detect subscriber initialized");
