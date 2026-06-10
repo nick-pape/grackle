@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "DI: migrate plugin-core store consumers to getDatabaseStores() registry; export additional store types from database barrel",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
