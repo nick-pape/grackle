@@ -6,7 +6,7 @@
  * SQLite via setupTestDatabase() — do NOT add a vi.mock for @grackle-ai/database.
  */
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
-import { ConnectError, Code } from "@connectrpc/connect";
+import { Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 import { streamRegistry, pipeDelivery } from "@grackle-ai/core";
