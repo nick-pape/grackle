@@ -65,10 +65,9 @@ export function workspaceRowToProto(
   row: WorkspaceRow,
   linkedEnvMap?: Map<string, string[]>,
 ): grackle.Workspace {
-  const { workspaceEnvironmentLinkStore } = getDatabaseStores();
   const linkedIds = linkedEnvMap
     ? (linkedEnvMap.get(row.id) ?? [])
-    : workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(row.id);
+    : getDatabaseStores().workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(row.id);
   return create(grackle.WorkspaceSchema, {
     id: row.id,
     name: row.name,
@@ -93,7 +92,6 @@ export function taskRowToProto(
   computedStatus?: string,
   latestSessionId?: string,
 ): grackle.Task {
-  const { taskStore } = getDatabaseStores();
   return create(grackle.TaskSchema, {
     id: row.id,
     workspaceId: row.workspaceId ?? undefined,
@@ -110,7 +108,11 @@ export function taskRowToProto(
     sortOrder: row.sortOrder,
     parentTaskId: row.parentTaskId,
     depth: row.depth,
-    childTaskIds: childIds ?? taskStore.getChildren(row.id).map((c) => c.id),
+    childTaskIds:
+      childIds ??
+      getDatabaseStores()
+        .taskStore.getChildren(row.id)
+        .map((c) => c.id),
     canDecompose: row.canDecompose,
     injectKnowledge: row.injectKnowledge,
     defaultPersonaId: row.defaultPersonaId,
