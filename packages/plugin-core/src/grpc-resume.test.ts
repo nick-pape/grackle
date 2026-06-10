@@ -3,7 +3,7 @@
  * Verifies status-aware routing: idle/running/pending → FailedPrecondition; terminal → reanimate.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { ConnectError, Code } from "@connectrpc/connect";
+import { GrackleError, NotFoundError, PreconditionError, Code } from "@grackle-ai/common";
 
 // ── Mock heavy dependencies before importing the module ──────────
 
@@ -171,66 +171,60 @@ describe("gRPC resumeAgent", () => {
 
   it("throws NotFound when reanimateAgent throws NotFound", async () => {
     vi.mocked(reanimateAgent).mockImplementation(() => {
-      throw new ConnectError("Session not found: no-such", Code.NotFound);
+      throw new NotFoundError("Session not found: no-such");
     });
 
     const err = (await handlers
       .resumeAgent({ sessionId: "no-such" })
-      .catch((e: unknown) => e)) as ConnectError;
+      .catch((e: unknown) => e)) as GrackleError;
     expect(err.code).toBe(Code.NotFound);
     expect(err.message).toContain("no-such");
   });
 
   it("throws FailedPrecondition when session is already active", async () => {
     vi.mocked(reanimateAgent).mockImplementation(() => {
-      throw new ConnectError(
-        "Session sess-1 is already active (status: idle)",
-        Code.FailedPrecondition,
-      );
+      throw new PreconditionError("Session sess-1 is already active (status: idle)");
     });
 
     const err = (await handlers
       .resumeAgent({ sessionId: "sess-1" })
-      .catch((e: unknown) => e)) as ConnectError;
+      .catch((e: unknown) => e)) as GrackleError;
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("already active");
   });
 
   it("throws FailedPrecondition when terminal session has no runtimeSessionId", async () => {
     vi.mocked(reanimateAgent).mockImplementation(() => {
-      throw new ConnectError("Session sess-1 has no runtime session ID", Code.FailedPrecondition);
+      throw new PreconditionError("Session sess-1 has no runtime session ID");
     });
 
     const err = (await handlers
       .resumeAgent({ sessionId: "sess-1" })
-      .catch((e: unknown) => e)) as ConnectError;
+      .catch((e: unknown) => e)) as GrackleError;
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("no runtime session ID");
   });
 
   it("throws FailedPrecondition when another active session exists on the environment", async () => {
     vi.mocked(reanimateAgent).mockImplementation(() => {
-      throw new ConnectError(
-        "Environment already has active session sess-other",
-        Code.FailedPrecondition,
-      );
+      throw new PreconditionError("Environment already has active session sess-other");
     });
 
     const err = (await handlers
       .resumeAgent({ sessionId: "sess-1" })
-      .catch((e: unknown) => e)) as ConnectError;
+      .catch((e: unknown) => e)) as GrackleError;
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("already has active session");
   });
 
   it("throws FailedPrecondition when environment is offline (no connection)", async () => {
     vi.mocked(reanimateAgent).mockImplementation(() => {
-      throw new ConnectError("Environment env-1 not connected", Code.FailedPrecondition);
+      throw new PreconditionError("Environment env-1 not connected");
     });
 
     const err = (await handlers
       .resumeAgent({ sessionId: "sess-1" })
-      .catch((e: unknown) => e)) as ConnectError;
+      .catch((e: unknown) => e)) as GrackleError;
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("not connected");
   });
@@ -258,12 +252,12 @@ describe("gRPC resumeAgent", () => {
 
   it("propagates FailedPrecondition from reanimateAgent when env not connected", async () => {
     vi.mocked(reanimateAgent).mockImplementation(() => {
-      throw new ConnectError("Environment env-1 not connected", Code.FailedPrecondition);
+      throw new PreconditionError("Environment env-1 not connected");
     });
 
     const err = (await handlers
       .resumeAgent({ sessionId: "sess-1" })
-      .catch((e: unknown) => e)) as ConnectError;
+      .catch((e: unknown) => e)) as GrackleError;
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("not connected");
   });

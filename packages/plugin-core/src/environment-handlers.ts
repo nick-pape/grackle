@@ -1,6 +1,5 @@
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, ValidationError, PreconditionError } from "@grackle-ai/common";
 import {
   envRegistry,
   workspaceStore,
@@ -65,17 +64,17 @@ export async function updateEnvironment(
     try {
       parsed = JSON.parse(raw);
     } catch {
-      throw new ConnectError("adapterConfig is not valid JSON", Code.InvalidArgument);
+      throw new ValidationError("adapterConfig is not valid JSON");
     }
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      throw new ConnectError("adapterConfig must be a JSON object", Code.InvalidArgument);
+      throw new ValidationError("adapterConfig must be a JSON object");
     }
     adapterConfig = raw;
   }
   const trimmedName = displayName !== undefined ? displayName.trim() : undefined;
   const githubAccountId = req.githubAccountId !== undefined ? req.githubAccountId : undefined;
   if (trimmedName === undefined && adapterConfig === undefined && githubAccountId === undefined) {
-    throw new ConnectError("No updatable fields provided", Code.InvalidArgument);
+    throw new ValidationError("No updatable fields provided");
   }
   envRegistry.updateEnvironment(req.id, {
     displayName: trimmedName,
@@ -93,9 +92,8 @@ export async function removeEnvironment(req: grackle.EnvironmentId): Promise<gra
   // Block deletion if workspaces still reference this environment as primary
   const wsCount = workspaceStore.countWorkspacesByEnvironment(req.id);
   if (wsCount > 0) {
-    throw new ConnectError(
+    throw new PreconditionError(
       `Cannot remove environment: ${wsCount} active workspace(s) still reference it. Archive or reparent them first.`,
-      Code.FailedPrecondition,
     );
   }
   // Block deletion if standing Agents still call this their home (#1418).
@@ -112,9 +110,8 @@ export async function removeEnvironment(req: grackle.EnvironmentId): Promise<gra
     // Note: only "delete" is currently actionable — agent.environment_id is
     // immutable in the Phase-0 update RPC, so we don't tell the user they
     // can reassign (the option doesn't exist yet).
-    throw new ConnectError(
+    throw new PreconditionError(
       `Cannot remove environment: ${homedAgents.length} standing agent(s) still call it home (${names}${tail}). Delete those agents first.`,
-      Code.FailedPrecondition,
     );
   }
   // Stop auto-reconnect attempts for this environment

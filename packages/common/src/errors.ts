@@ -75,3 +75,19 @@ export class UnavailableError extends GrackleError {
     this.name = "UnavailableError";
   }
 }
+
+/** Thrown when an unexpected server-side failure occurs. */
+export class InternalError extends GrackleError {
+  public constructor(message: string, context?: Record<string, unknown>) {
+    super(message, Code.Internal, context);
+    this.name = "InternalError";
+  }
+}
+
+/** Thrown when a quota or rate limit is exceeded. */
+export class ResourceExhaustedError extends GrackleError {
+  public constructor(message: string, context?: Record<string, unknown>) {
+    super(message, Code.ResourceExhausted, context);
+    this.name = "ResourceExhaustedError";
+  }
+}

@@ -1,6 +1,5 @@
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, UnavailableError, PreconditionError, ValidationError } from "@grackle-ai/common";
 import type { PipeMode } from "@grackle-ai/common";
 import {
   SESSION_STATUS,
@@ -57,16 +56,15 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
     // rather than racing with a duplicate provision attempt that could overwrite
     // the connection, collide on session recovery, or open duplicate tunnels.
     if (isReconnecting(req.environmentId)) {
-      throw new ConnectError(
+      throw new UnavailableError(
         `Environment ${req.environmentId} is reconnecting — retry shortly`,
-        Code.Unavailable,
       );
     }
 
     // Auto-provision: attempt to reconnect/provision a disconnected environment
     const adapter = adapterManager.getAdapter(env.adapterType);
     if (!adapter) {
-      throw new ConnectError(`No adapter for type: ${env.adapterType}`, Code.FailedPrecondition);
+      throw new PreconditionError(`No adapter for type: ${env.adapterType}`);
     }
 
     logger.info(
@@ -121,9 +119,8 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
       logger.error({ environmentId: req.environmentId, err }, "Auto-provision failed (SpawnAgent)");
       envRegistry.updateEnvironmentStatus(req.environmentId, "error");
       emit("environment.changed", {});
-      throw new ConnectError(
+      throw new PreconditionError(
         `Failed to auto-connect environment ${req.environmentId}: ${err instanceof Error ? err.message : String(err)}`,
-        Code.FailedPrecondition,
       );
     }
   }
@@ -142,7 +139,7 @@ export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Ses
       },
     );
   } catch (err) {
-    throw new ConnectError((err as Error).message, Code.FailedPrecondition);
+    throw new PreconditionError((err as Error).message);
   }
 
   const sessionId = uuid();
@@ -290,18 +287,12 @@ export async function resumeAgent(req: grackle.ResumeRequest): Promise<grackle.S
 export async function sendInput(req: grackle.InputMessage): Promise<grackle.Empty> {
   const session = requireSession(req.sessionId);
   if (TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
-    throw new ConnectError(
-      `Session ${req.sessionId} has ended (status: ${session.status})`,
-      Code.FailedPrecondition,
-    );
+    throw new PreconditionError(`Session ${req.sessionId} has ended (status: ${session.status})`);
   }
 
   const conn = adapterManager.getConnection(session.environmentId);
   if (!conn) {
-    throw new ConnectError(
-      `Environment ${session.environmentId} not connected`,
-      Code.FailedPrecondition,
-    );
+    throw new PreconditionError(`Environment ${session.environmentId} not connected`);
   }
 
   logger.debug({ sessionId: req.sessionId }, "User input received");
@@ -393,7 +384,7 @@ export async function getUsage(req: grackle.GetUsageRequest): Promise<grackle.Us
       return create(grackle.UsageStatsSchema, usage);
     }
     default:
-      throw new ConnectError(`Invalid usage scope: ${req.scope}`, Code.InvalidArgument);
+      throw new ValidationError(`Invalid usage scope: ${req.scope}`);
   }
 }
 

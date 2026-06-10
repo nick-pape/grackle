@@ -1,6 +1,10 @@
 /** Task start handler extracted from task-handlers.ts (#1470). @module */
-import { ConnectError, Code } from "@connectrpc/connect";
-import { grackle } from "@grackle-ai/common";
+import {
+  grackle,
+  NotFoundError,
+  PreconditionError,
+  ResourceExhaustedError,
+} from "@grackle-ai/common";
 import type { PipeMode } from "@grackle-ai/common";
 import { TASK_STATUS, ROOT_TASK_ID, ROOT_TASK_INITIAL_PROMPT, LOGS_DIR } from "@grackle-ai/common";
 import {
@@ -48,7 +52,7 @@ import { buildMcpUrl, executeSpawnTail } from "./spawn-orchestration.js";
 export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.Session> {
   const task = taskStore.getTask(req.taskId);
   if (!task) {
-    throw new ConnectError(`Task not found: ${req.taskId}`, Code.NotFound);
+    throw new NotFoundError(`Task not found: ${req.taskId}`);
   }
   {
     const taskSessions = sessionStore.listSessionsForTask(req.taskId);
@@ -56,33 +60,31 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
     if (req.taskId === ROOT_TASK_ID) {
       // Root task is always re-startable unless actively working
       if (effectiveStatus === TASK_STATUS.WORKING) {
-        throw new ConnectError("System is already running", Code.FailedPrecondition);
+        throw new PreconditionError("System is already running");
       }
     } else if (
       !([TASK_STATUS.NOT_STARTED, TASK_STATUS.FAILED] as string[]).includes(effectiveStatus)
     ) {
-      throw new ConnectError(
+      throw new PreconditionError(
         `Task ${req.taskId} cannot be started (status: ${effectiveStatus})`,
-        Code.FailedPrecondition,
       );
     }
   }
   if (!taskStore.areDependenciesMet(req.taskId)) {
-    throw new ConnectError(`Task ${req.taskId} has unmet dependencies`, Code.FailedPrecondition);
+    throw new PreconditionError(`Task ${req.taskId} has unmet dependencies`);
   }
 
   // ── Pre-spawn budget check ──
   const budgetResult = checkBudget(req.taskId, task.workspaceId || undefined);
   if (budgetResult) {
-    throw new ConnectError(
+    throw new ResourceExhaustedError(
       `Budget exceeded (${budgetResult.scope} ${budgetResult.reason}): ${budgetResult.message}`,
-      Code.ResourceExhausted,
     );
   }
 
   const workspace = task.workspaceId ? workspaceStore.getWorkspace(task.workspaceId) : undefined;
   if (task.workspaceId && !workspace) {
-    throw new ConnectError(`Workspace not found: ${task.workspaceId}`, Code.NotFound);
+    throw new NotFoundError(`Workspace not found: ${task.workspaceId}`);
   }
 
   const environmentId =
@@ -93,15 +95,12 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
       : "") ||
     "";
   if (!environmentId) {
-    throw new ConnectError(
-      "No environment specified for task, ancestor, or workspace",
-      Code.FailedPrecondition,
-    );
+    throw new PreconditionError("No environment specified for task, ancestor, or workspace");
   }
 
   const conn = adapterManager.getConnection(environmentId);
   if (!conn) {
-    throw new ConnectError(`Environment ${environmentId} not connected`, Code.FailedPrecondition);
+    throw new PreconditionError(`Environment ${environmentId} not connected`);
   }
 
   // Resolve persona via cascade (request → task → workspace → app default)
@@ -118,7 +117,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
       },
     );
   } catch (err) {
-    throw new ConnectError((err as Error).message, Code.FailedPrecondition);
+    throw new PreconditionError((err as Error).message);
   }
 
   // Validate pipe inputs before creating the session
@@ -143,10 +142,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
         notes: req.notes || "",
       });
       logger.info({ taskId: task.id, environmentId }, "Task queued (environment at capacity)");
-      throw new ConnectError(
-        "Environment at capacity; task queued for dispatch",
-        Code.ResourceExhausted,
-      );
+      throw new ResourceExhaustedError("Environment at capacity; task queued for dispatch");
     }
 
     // If this task was previously enqueued but we now have capacity,

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, NotFoundError, PreconditionError } from "@grackle-ai/common";
 
 // ── Mock the leaf dependencies so we can drive every branch ──────────────────
 vi.mock("@grackle-ai/auth", () => ({ verifyChannelToken: vi.fn() }));
@@ -102,12 +101,12 @@ describe("ingestChannelMessage", () => {
   });
 
   it("maps a not-found session to not_found", async () => {
-    sendInputMock.mockRejectedValue(new ConnectError("missing", Code.NotFound));
+    sendInputMock.mockRejectedValue(new NotFoundError("missing"));
     expect((await ingestChannelMessage("tok", { message: "x" })).outcome).toBe("not_found");
   });
 
   it("maps an ended session (FailedPrecondition) to ended (410)", async () => {
-    sendInputMock.mockRejectedValue(new ConnectError("ended", Code.FailedPrecondition));
+    sendInputMock.mockRejectedValue(new PreconditionError("ended"));
     expect((await ingestChannelMessage("tok", { message: "x" })).outcome).toBe("ended");
   });
 

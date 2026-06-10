@@ -8,9 +8,8 @@
  */
 
 import { createHash } from "node:crypto";
-import { Code, ConnectError } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, GrackleError, Code } from "@grackle-ai/common";
 import { channelGrantStore } from "@grackle-ai/database";
 import { verifyChannelToken } from "@grackle-ai/auth";
 import { getChannelConfig } from "./channel-config.js";
@@ -111,7 +110,7 @@ export async function ingestChannelMessage(token: string, body: IngestBody): Pro
     await sendInput(create(grackle.InputMessageSchema, { sessionId, text }));
     return { outcome: "delivered", channelUri: claims.chan, sessionId };
   } catch (err) {
-    if (err instanceof ConnectError) {
+    if (err instanceof GrackleError) {
       if (err.code === Code.NotFound) {
         return { outcome: "not_found", channelUri: claims.chan };
       }

@@ -5,9 +5,8 @@
  * @module
  */
 
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, NotFoundError, PreconditionError } from "@grackle-ai/common";
 import { SESSION_STATUS } from "@grackle-ai/common";
 import { sessionStore } from "@grackle-ai/database";
 import { streamRegistry, pipeDelivery } from "@grackle-ai/core";
@@ -19,16 +18,12 @@ export async function waitForPipe(
 ): Promise<grackle.WaitForPipeResponse> {
   const sub = streamRegistry.getSubscription(req.sessionId, req.fd);
   if (!sub) {
-    throw new ConnectError(
-      `No subscription found for session ${req.sessionId} fd ${req.fd}`,
-      Code.NotFound,
-    );
+    throw new NotFoundError(`No subscription found for session ${req.sessionId} fd ${req.fd}`);
   }
 
   if (sub.deliveryMode !== "sync") {
-    throw new ConnectError(
+    throw new PreconditionError(
       `Subscription fd ${req.fd} is not a sync subscription (mode: ${sub.deliveryMode})`,
-      Code.FailedPrecondition,
     );
   }
 
@@ -60,21 +55,17 @@ export async function waitForPipe(
 export async function writeToFd(req: grackle.WriteToFdRequest): Promise<grackle.Empty> {
   const sub = streamRegistry.getSubscription(req.sessionId, req.fd);
   if (!sub) {
-    throw new ConnectError(
-      `No subscription found for session ${req.sessionId} fd ${req.fd}`,
-      Code.NotFound,
-    );
+    throw new NotFoundError(`No subscription found for session ${req.sessionId} fd ${req.fd}`);
   }
   if (sub.permission !== "w" && sub.permission !== "rw") {
-    throw new ConnectError(
+    throw new PreconditionError(
       `Subscription fd ${req.fd} does not have write permission (permission: ${sub.permission})`,
-      Code.FailedPrecondition,
     );
   }
 
   const stream = streamRegistry.getStream(sub.streamId);
   if (!stream) {
-    throw new ConnectError("Stream no longer exists", Code.FailedPrecondition);
+    throw new PreconditionError("Stream no longer exists");
   }
 
   // Publish to stream — delivery is handled by async listeners registered
@@ -95,9 +86,8 @@ export async function writeToFd(req: grackle.WriteToFdRequest): Promise<grackle.
       continue;
     }
     if (targetSub.deliveryMode === "async" && !msg.deliveredTo.has(targetSub.id)) {
-      throw new ConnectError(
+      throw new PreconditionError(
         "Message delivery failed — target environment may be disconnected",
-        Code.FailedPrecondition,
       );
     }
   }
@@ -109,15 +99,11 @@ export async function writeToFd(req: grackle.WriteToFdRequest): Promise<grackle.
 export async function closeFd(req: grackle.CloseFdRequest): Promise<grackle.CloseFdResponse> {
   const sub = streamRegistry.getSubscription(req.sessionId, req.fd);
   if (!sub) {
-    throw new ConnectError(
-      `No subscription found for session ${req.sessionId} fd ${req.fd}`,
-      Code.NotFound,
-    );
+    throw new NotFoundError(`No subscription found for session ${req.sessionId} fd ${req.fd}`);
   }
   if (streamRegistry.hasUndeliveredMessages(sub.id)) {
-    throw new ConnectError(
+    throw new PreconditionError(
       `Cannot close fd ${req.fd}: undelivered messages pending. Process or consume them first.`,
-      Code.FailedPrecondition,
     );
   }
 

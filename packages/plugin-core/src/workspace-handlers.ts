@@ -1,6 +1,5 @@
-import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
-import { grackle } from "@grackle-ai/common";
+import { grackle, ValidationError, NotFoundError, PreconditionError } from "@grackle-ai/common";
 import { workspaceStore, workspaceEnvironmentLinkStore, slugify } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { emit } from "@grackle-ai/core";
@@ -85,7 +84,7 @@ export async function updateWorkspace(
     requireNonEmpty(req.name, "name");
   }
   if (req.repoUrl !== undefined && req.repoUrl !== "" && !/^https?:\/\//i.test(req.repoUrl)) {
-    throw new ConnectError("Repository URL must use http or https scheme", Code.InvalidArgument);
+    throw new ValidationError("Repository URL must use http or https scheme");
   }
   requireNonNegativeBudget(req.tokenBudget, req.costBudgetMillicents);
   const row = workspaceStore.updateWorkspace(req.id, {
@@ -99,7 +98,7 @@ export async function updateWorkspace(
     costBudgetMillicents: req.costBudgetMillicents,
   });
   if (!row) {
-    throw new ConnectError(`Workspace not found after update: ${req.id}`, Code.NotFound);
+    throw new NotFoundError(`Workspace not found after update: ${req.id}`);
   }
   emit("workspace.updated", { workspaceId: req.id });
   return workspaceRowToProto(row);
@@ -112,9 +111,8 @@ export async function linkEnvironment(
   const workspace = requireWorkspace(req.workspaceId);
   requireEnvironment(req.environmentId);
   if (workspaceEnvironmentLinkStore.isLinked(req.workspaceId, req.environmentId)) {
-    throw new ConnectError(
+    throw new ValidationError(
       `Environment ${req.environmentId} is already linked to workspace ${req.workspaceId}`,
-      Code.InvalidArgument,
     );
   }
   try {
@@ -125,9 +123,8 @@ export async function linkEnvironment(
     // Narrow to UNIQUE/PRIMARYKEY violations only — FK failures should bubble as-is.
     const message = err instanceof Error ? err.message : "";
     if (/UNIQUE constraint failed|SQLITE_CONSTRAINT_PRIMARYKEY/i.test(message)) {
-      throw new ConnectError(
+      throw new ValidationError(
         `Environment ${req.environmentId} is already linked to workspace ${req.workspaceId}`,
-        Code.InvalidArgument,
       );
     }
     throw err;
@@ -146,9 +143,8 @@ export async function unlinkEnvironment(
 ): Promise<grackle.Workspace> {
   const workspace = requireWorkspace(req.workspaceId);
   if (!workspaceEnvironmentLinkStore.isLinked(req.workspaceId, req.environmentId)) {
-    throw new ConnectError(
+    throw new NotFoundError(
       `Environment ${req.environmentId} is not linked to workspace ${req.workspaceId}`,
-      Code.NotFound,
     );
   }
   try {
@@ -156,7 +152,7 @@ export async function unlinkEnvironment(
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "";
     if (message.includes("Cannot unlink the last environment")) {
-      throw new ConnectError(message, Code.FailedPrecondition);
+      throw new PreconditionError(message);
     }
     throw err;
   }
