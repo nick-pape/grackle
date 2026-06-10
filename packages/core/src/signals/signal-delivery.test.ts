@@ -1,13 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { setupTestDatabase } from "@grackle-ai/test-utils/db";
 
 // ── Mock dependencies ────────────────────────────────────────
 
-vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("@grackle-ai/test-utils");
-  const mock = createDatabaseMock();
-  mock.wire();
-  return mock;
-});
+// NOTE: @grackle-ai/database is NOT mocked — real stores run against
+// an in-memory SQLite database initialized by setupTestDatabase().
 
 vi.mock("../logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -37,7 +34,13 @@ vi.mock("../reanimate-agent.js", () => ({
   reanimateAgent: vi.fn(),
 }));
 
-import { sessionStore, persistSessionAction } from "@grackle-ai/database";
+import {
+  sessionStore,
+  querySessionActions,
+  envRegistry,
+  workspaceStore,
+  taskStore,
+} from "@grackle-ai/database";
 import * as adapterManager from "../adapter-manager.js";
 import * as streamHub from "../stream-hub.js";
 import { reanimateAgent } from "../reanimate-agent.js";
@@ -45,7 +48,39 @@ import { logger } from "../logger.js";
 import { grackle } from "@grackle-ai/common";
 import { deliverSignalToTask, sendInputToSession } from "./signal-delivery.js";
 
+// ── Test DB ───────────────────────────────────────────────────
+
+const testDb = setupTestDatabase();
+afterAll(() => testDb.cleanup());
+
 // ── Helpers ──────────────────────────────────────────────────
+
+function insertBaseEntities(): void {
+  envRegistry.addEnvironment("env-1", "Test Env", "local", "{}");
+  workspaceStore.createWorkspace("ws-1", "Test Workspace", "", "");
+}
+
+function insertTask(id: string): void {
+  taskStore.createTask(id, "ws-1", "Test Task", "", [], "ws-1");
+}
+
+function insertSession(
+  id: string,
+  taskId: string,
+  status: string,
+  opts?: { endReason?: string; runtimeSessionId?: string },
+): void {
+  sessionStore.createSession(id, "env-1", "stub", "", "claude", "/tmp/log", taskId);
+  if (status !== "pending") {
+    sessionStore.updateSession(
+      id,
+      status as never,
+      opts?.runtimeSessionId,
+      undefined,
+      opts?.endReason as never,
+    );
+  }
+}
 
 function makeMockConnection(dispatchInputMock = vi.fn().mockResolvedValue(undefined)) {
   return {
@@ -60,47 +95,15 @@ function makeMockConnection(dispatchInputMock = vi.fn().mockResolvedValue(undefi
 
 describe("deliverSignalToTask", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
+    testDb.truncateAll();
+    insertBaseEntities();
   });
 
   it("delivers to IDLE session via sendInput (bypassing IDLE guard)", async () => {
-    vi.spyOn(sessionStore, "getActiveSessionsForTask").mockReturnValue([
-      {
-        id: "sess-1",
-        environmentId: "env-1",
-        status: "idle",
-        runtime: "stub",
-        runtimeSessionId: "rt-1",
-        prompt: "",
-        model: "claude",
-        logPath: "/tmp/log",
-        turns: 0,
-        startedAt: new Date().toISOString(),
-        suspendedAt: null,
-        endedAt: null,
-        error: null,
-        taskId: "task-child",
-        personaId: null,
-      },
-    ]);
-
-    vi.spyOn(sessionStore, "getSession").mockReturnValue({
-      id: "sess-1",
-      environmentId: "env-1",
-      status: "idle",
-      runtime: "stub",
-      runtimeSessionId: "rt-1",
-      prompt: "",
-      model: "claude",
-      logPath: "/tmp/log",
-      turns: 0,
-      startedAt: new Date().toISOString(),
-      suspendedAt: null,
-      endedAt: null,
-      error: null,
-      taskId: "task-child",
-      personaId: null,
-    });
+    insertTask("task-child");
+    insertSession("sess-1", "task-child", "idle");
 
     const mockConn = makeMockConnection();
     vi.spyOn(adapterManager, "getConnection").mockReturnValue(
@@ -124,43 +127,8 @@ describe("deliverSignalToTask", () => {
   });
 
   it("delivers to RUNNING session via sendInput (bypassing IDLE guard)", async () => {
-    vi.spyOn(sessionStore, "getActiveSessionsForTask").mockReturnValue([
-      {
-        id: "sess-2",
-        environmentId: "env-1",
-        status: "running",
-        runtime: "stub",
-        runtimeSessionId: "rt-2",
-        prompt: "",
-        model: "claude",
-        logPath: "/tmp/log",
-        turns: 0,
-        startedAt: new Date().toISOString(),
-        suspendedAt: null,
-        endedAt: null,
-        error: null,
-        taskId: "task-parent",
-        personaId: null,
-      },
-    ]);
-
-    vi.spyOn(sessionStore, "getSession").mockReturnValue({
-      id: "sess-2",
-      environmentId: "env-1",
-      status: "running",
-      runtime: "stub",
-      runtimeSessionId: "rt-2",
-      prompt: "",
-      model: "claude",
-      logPath: "/tmp/log",
-      turns: 0,
-      startedAt: new Date().toISOString(),
-      suspendedAt: null,
-      endedAt: null,
-      error: null,
-      taskId: "task-parent",
-      personaId: null,
-    });
+    insertTask("task-parent");
+    insertSession("sess-2", "task-parent", "running");
 
     const mockConn = makeMockConnection();
     vi.spyOn(adapterManager, "getConnection").mockReturnValue(
@@ -175,32 +143,22 @@ describe("deliverSignalToTask", () => {
   });
 
   it("reanimates dead session, waits for IDLE, then delivers", async () => {
-    vi.spyOn(sessionStore, "getActiveSessionsForTask").mockReturnValue([]);
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue({
-      id: "sess-dead",
-      environmentId: "env-1",
-      status: "completed",
-      runtime: "stub",
+    insertTask("task-parent");
+    // Session must have runtimeSessionId set and endReason != "completed"/"terminated"
+    // for the reanimate path to be triggered
+    insertSession("sess-dead", "task-parent", "stopped", {
       runtimeSessionId: "rt-dead",
-      prompt: "",
-      model: "claude",
-      logPath: "/tmp/log",
-      turns: 3,
-      startedAt: new Date().toISOString(),
-      suspendedAt: null,
-      endedAt: new Date().toISOString(),
-      error: null,
-      taskId: "task-parent",
-      personaId: null,
+      endReason: "killed",
     });
 
-    // After reanimate, getSession returns IDLE
+    // After reanimate, getSession returns IDLE — use spy to simulate status change
+    // since reanimateAgent is mocked and doesn't actually update the DB
     vi.spyOn(sessionStore, "getSession").mockReturnValue({
       id: "sess-dead",
       environmentId: "env-1",
       status: "idle",
       runtime: "stub",
-      runtimeSessionId: "rt-dead",
+      runtimeSessionId: null,
       prompt: "",
       model: "claude",
       logPath: "/tmp/log",
@@ -210,8 +168,15 @@ describe("deliverSignalToTask", () => {
       endedAt: null,
       error: null,
       taskId: "task-parent",
-      personaId: null,
-    });
+      personaId: "",
+      endReason: null,
+      parentSessionId: "",
+      pipeMode: "",
+      inputTokens: 0,
+      outputTokens: 0,
+      costMillicents: 0,
+      sigtermSentAt: null,
+    } as never);
 
     const mockConn = makeMockConnection();
     vi.spyOn(adapterManager, "getConnection").mockReturnValue(
@@ -227,8 +192,7 @@ describe("deliverSignalToTask", () => {
   });
 
   it("returns false when no sessions exist (logs warning)", async () => {
-    vi.spyOn(sessionStore, "getActiveSessionsForTask").mockReturnValue([]);
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(undefined);
+    insertTask("task-orphan");
 
     const result = await deliverSignalToTask("task-orphan", "sigchld", "[SIGCHLD] test");
 
@@ -240,23 +204,10 @@ describe("deliverSignalToTask", () => {
   });
 
   it("returns false when reanimate fails (logs error)", async () => {
-    vi.spyOn(sessionStore, "getActiveSessionsForTask").mockReturnValue([]);
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue({
-      id: "sess-fail",
-      environmentId: "env-1",
-      status: "failed",
-      runtime: "stub",
+    insertTask("task-parent");
+    insertSession("sess-fail", "task-parent", "stopped", {
       runtimeSessionId: "rt-fail",
-      prompt: "",
-      model: "claude",
-      logPath: "/tmp/log",
-      turns: 1,
-      startedAt: new Date().toISOString(),
-      suspendedAt: null,
-      endedAt: new Date().toISOString(),
-      error: "boom",
-      taskId: "task-parent",
-      personaId: null,
+      endReason: "killed",
     });
 
     vi.mocked(reanimateAgent).mockImplementation(() => {
@@ -275,27 +226,14 @@ describe("deliverSignalToTask", () => {
 
 describe("sendInputToSession", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
+    testDb.truncateAll();
+    insertBaseEntities();
   });
 
   it("delivers signal to session via adapter connection", async () => {
-    vi.spyOn(sessionStore, "getSession").mockReturnValue({
-      id: "sess-1",
-      environmentId: "env-1",
-      status: "idle",
-      runtime: "stub",
-      runtimeSessionId: "rt-1",
-      prompt: "",
-      model: "claude",
-      logPath: "/tmp/log",
-      turns: 0,
-      startedAt: new Date().toISOString(),
-      suspendedAt: null,
-      endedAt: null,
-      error: null,
-      taskId: "",
-      personaId: null,
-    });
+    insertSession("sess-1", "", "idle");
 
     const mockConn = makeMockConnection();
     vi.spyOn(adapterManager, "getConnection").mockReturnValue(
@@ -314,8 +252,8 @@ describe("sendInputToSession", () => {
       }),
     );
     // The injected signal is also recorded to the durable session-action log
-    // (the "exhaustive log" contract — not just PowerLine-stream events).
-    expect(persistSessionAction).toHaveBeenCalledWith(
+    const actions = querySessionActions({ sessionId: "sess-1" });
+    expect(actions).toContainEqual(
       expect.objectContaining({ sessionId: "sess-1", type: "signal", content: "[SIGTERM] stop" }),
     );
   });
