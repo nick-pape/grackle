@@ -52,7 +52,12 @@ vi.mock("@grackle-ai/database", () => ({
     },
     updateAgent: (
       id: string,
-      fields: { name?: string; avatar?: string; primaryPersonaId?: string },
+      fields: {
+        name?: string;
+        avatar?: string;
+        primaryPersonaId?: string;
+        environmentId?: string;
+      },
     ): void => {
       const existing = mockDb.agents.get(id);
       if (existing) {
@@ -62,6 +67,8 @@ vi.mock("@grackle-ai/database", () => ({
           avatar: fields.avatar ?? (existing as { avatar: string }).avatar,
           primaryPersonaId:
             fields.primaryPersonaId ?? (existing as { primaryPersonaId: string }).primaryPersonaId,
+          environmentId:
+            fields.environmentId ?? (existing as { environmentId: string }).environmentId,
         });
       }
     },
@@ -365,6 +372,56 @@ describe("agent-handlers", () => {
         create(grackle.UpdateAgentRequestSchema, { id: other.id, name: "  Taken  " }),
       ),
     ).rejects.toThrow(/already exists/i);
+  });
+
+  // ── #1447 — updateAgent: environment re-homing ──────────────────────
+
+  it("updateAgent changes environmentId to a valid environment and emits agent.updated", async () => {
+    mockDb.environments.set("remote", { id: "remote", displayName: "Remote" });
+    const created = await agentHandlers.createAgent(
+      create(grackle.CreateAgentRequestSchema, {
+        environmentId: "local",
+        name: "Roaming Bot",
+      }),
+    );
+    expect(created.environmentId).toBe("local");
+
+    const updated = await agentHandlers.updateAgent(
+      create(grackle.UpdateAgentRequestSchema, { id: created.id, environmentId: "remote" }),
+    );
+    expect(updated.environmentId).toBe("remote");
+    // Other fields preserved.
+    expect(updated.name).toBe("Roaming Bot");
+    expect(emitMock).toHaveBeenCalledWith("agent.updated", expect.objectContaining({}));
+    mockDb.environments.delete("remote");
+  });
+
+  it("updateAgent rejects an unknown environmentId with NotFound", async () => {
+    const created = await agentHandlers.createAgent(
+      create(grackle.CreateAgentRequestSchema, { environmentId: "local", name: "Ghost Mover" }),
+    );
+    await expect(
+      agentHandlers.updateAgent(
+        create(grackle.UpdateAgentRequestSchema, {
+          id: created.id,
+          environmentId: "does-not-exist",
+        }),
+      ),
+    ).rejects.toThrow(/environment not found/i);
+    // Stored environment should be unchanged.
+    const row = mockDb.agents.get(created.id) as { environmentId: string };
+    expect(row.environmentId).toBe("local");
+  });
+
+  it("updateAgent rejects an empty environmentId (required field)", async () => {
+    const created = await agentHandlers.createAgent(
+      create(grackle.CreateAgentRequestSchema, { environmentId: "local", name: "No Empty Env" }),
+    );
+    await expect(
+      agentHandlers.updateAgent(
+        create(grackle.UpdateAgentRequestSchema, { id: created.id, environmentId: "" }),
+      ),
+    ).rejects.toThrow(/environment_id is required/i);
   });
 
   // ── #1418 — environment validation + cascade delete ─────────────────

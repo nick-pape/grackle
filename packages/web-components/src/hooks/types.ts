@@ -237,6 +237,8 @@ export interface UpdateAgentFields {
   name?: string;
   avatar?: string;
   primaryPersonaId?: string;
+  /** Re-home the agent to a different environment (#1447). */
+  environmentId?: string;
 }
 
 /** Provisioning progress state for a single environment. */
@@ -602,6 +604,11 @@ export interface UseAgentsResult {
   updateAgent: (id: string, updates: UpdateAgentFields) => Promise<AgentData>;
   /** Delete an agent by ID. */
   deleteAgent: (id: string) => Promise<void>;
+  /** Update the agent's heartbeat schedule. Presence-tracked: omit a field to leave it unchanged (#1447). */
+  setHeartbeat: (
+    agentId: string,
+    opts: { cadence?: string; rules?: string; enabled?: boolean },
+  ) => Promise<void>;
   /** Handle a domain event from the event bus. Returns `true` if handled. */
   handleEvent: (event: GrackleEvent) => boolean;
   /** Lifecycle hook for connect/disconnect/event routing. */

@@ -82,7 +82,12 @@ export async function getAgent(req: grackle.AgentId): Promise<grackle.Agent> {
 export async function updateAgent(req: grackle.UpdateAgentRequest): Promise<grackle.Agent> {
   const existing = requireAgent(req.id);
 
-  if (req.name === undefined && req.avatar === undefined && req.primaryPersonaId === undefined) {
+  if (
+    req.name === undefined &&
+    req.avatar === undefined &&
+    req.primaryPersonaId === undefined &&
+    req.environmentId === undefined
+  ) {
     throw new ValidationError("No updatable fields provided");
   }
 
@@ -97,12 +102,22 @@ export async function updateAgent(req: grackle.UpdateAgentRequest): Promise<grac
     }
   }
 
+  // Validate and resolve new environment when provided. environment_id is
+  // required on Agents (not clearable), so reject empty strings the same way
+  // createAgent does (#1447).
+  let trimmedEnvironmentId: string | undefined;
+  if (req.environmentId !== undefined) {
+    trimmedEnvironmentId = requireTrimmed(req.environmentId, "environment_id");
+    requireEnvironment(trimmedEnvironmentId);
+  }
+
   // Trim avatar / primaryPersonaId on the way through too (presence-tracked:
   // undefined = keep existing, "" or whitespace-only = clear).
   agentStore.updateAgent(req.id, {
     name: trimmedName,
     avatar: req.avatar === undefined ? undefined : req.avatar.trim(),
     primaryPersonaId: req.primaryPersonaId === undefined ? undefined : req.primaryPersonaId.trim(),
+    environmentId: trimmedEnvironmentId,
   });
   emit("agent.updated", { agentId: req.id });
   const row = agentStore.getAgent(req.id);
