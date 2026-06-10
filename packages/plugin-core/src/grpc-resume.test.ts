@@ -286,7 +286,7 @@ describe("gRPC resumeTask", () => {
 
     const err = (await handlers
       .resumeTask({ id: "task-1" })
-      .catch((e: unknown) => e)) as ConnectError;
+      .catch((e: unknown) => e)) as GrackleError;
     expect(err.code).toBe(Code.NotFound);
   });
 
@@ -296,7 +296,7 @@ describe("gRPC resumeTask", () => {
 
     const err = (await handlers
       .resumeTask({ id: "task-1" })
-      .catch((e: unknown) => e)) as ConnectError;
+      .catch((e: unknown) => e)) as GrackleError;
     expect(err.code).toBe(Code.FailedPrecondition);
   });
 
@@ -308,7 +308,7 @@ describe("gRPC resumeTask", () => {
 
     const err = (await handlers
       .resumeTask({ id: "task-1" })
-      .catch((e: unknown) => e)) as ConnectError;
+      .catch((e: unknown) => e)) as GrackleError;
     expect(err.code).toBe(Code.FailedPrecondition);
     expect(err.message).toContain("no runtime session ID");
   });
