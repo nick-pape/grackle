@@ -95,6 +95,7 @@ function makeMockConnection(dispatchInputMock = vi.fn().mockResolvedValue(undefi
 
 describe("deliverSignalToTask", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
     testDb.truncateAll();
     insertBaseEntities();
@@ -225,6 +226,7 @@ describe("deliverSignalToTask", () => {
 
 describe("sendInputToSession", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
     testDb.truncateAll();
     insertBaseEntities();
