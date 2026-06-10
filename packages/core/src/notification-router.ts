@@ -13,9 +13,7 @@ import type { EscalationModel } from "./domain/index.js";
 import { toEscalationModel } from "./domain/index.js";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
-
-/** Webhook request timeout in milliseconds. */
-const WEBHOOK_TIMEOUT_MS: number = 10_000;
+import { postWebhook } from "./webhook-publisher.js";
 
 /** Guard to prevent concurrent drain operations. */
 let drainInFlight: boolean = false;
@@ -23,7 +21,8 @@ let drainInFlight: boolean = false;
 /**
  * Route an escalation to all available notification channels.
  * Always emits a domain event (for browser notifications). Optionally
- * POSTs to a webhook if configured. Updates escalation status to "delivered".
+ * POSTs to a webhook if configured (with retry + backoff). Updates escalation
+ * status to "delivered".
  */
 export async function routeEscalation(escalation: EscalationModel): Promise<void> {
   const { escalationStore, settingsStore } = getDatabaseStores();
@@ -39,42 +38,23 @@ export async function routeEscalation(escalation: EscalationModel): Promise<void
     taskUrl: escalation.taskUrl,
   });
 
-  // Channel 2: Webhook POST (optional)
+  // Channel 2: Webhook POST (optional, retried with backoff)
   const webhookUrl = settingsStore.getSetting("webhook_url");
   if (webhookUrl) {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => {
-        controller.abort();
-      }, WEBHOOK_TIMEOUT_MS);
-      try {
-        const response = await fetch(webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            type: "awaiting_input",
-            timestamp: escalation.createdAt,
-            escalationId: escalation.id,
-            workspaceId: escalation.workspaceId,
-            task: {
-              taskId: escalation.taskId,
-              title: escalation.title,
-              message: escalation.message,
-              urgency: escalation.urgency,
-              url: escalation.taskUrl,
-            },
-          }),
-        });
-        if (!response.ok) {
-          logger.warn(
-            { escalationId: escalation.id, webhookUrl, status: response.status },
-            "Webhook returned non-OK status",
-          );
-        }
-      } finally {
-        clearTimeout(timeout);
-      }
+      await postWebhook(webhookUrl, {
+        type: "awaiting_input",
+        timestamp: escalation.createdAt,
+        escalationId: escalation.id,
+        workspaceId: escalation.workspaceId,
+        task: {
+          taskId: escalation.taskId,
+          title: escalation.title,
+          message: escalation.message,
+          urgency: escalation.urgency,
+          url: escalation.taskUrl,
+        },
+      });
     } catch (err) {
       logger.error({ err, escalationId: escalation.id, webhookUrl }, "Webhook delivery failed");
     }

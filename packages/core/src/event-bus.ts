@@ -81,8 +81,12 @@ export interface GrackleEvent {
   payload: Record<string, unknown>;
 }
 
-/** Callback signature for event subscribers. */
-export type Subscriber = (event: GrackleEvent) => void;
+/**
+ * Callback signature for event subscribers. May be sync or async; async rejections
+ * are caught and logged by the event bus — subscribers do not need to manage their
+ * own fire-and-forget error handling.
+ */
+export type Subscriber = (event: GrackleEvent) => void | Promise<void>;
 
 /**
  * Body of a domain event appended to the log. The `id` is omitted because the
@@ -136,8 +140,10 @@ const domainEventLog: SequencedLog<DomainEventBody> = new SequencedLog<DomainEve
 // ─── Public API ───────────────────────────────────────────
 
 /**
- * Emit a domain event. Persists to SQLite synchronously, then
- * fans out to all subscribers asynchronously via queueMicrotask.
+ * Emit a domain event. Persists to SQLite synchronously, then fans out to all
+ * subscribers asynchronously via queueMicrotask. Subscribers may be sync or async;
+ * any rejection is logged and does not propagate to the caller or block other
+ * subscribers.
  *
  * @param type - The dot-notation event type.
  * @param payload - Domain-specific data.
@@ -161,14 +167,16 @@ export function emit(type: GrackleEventType, payload: Record<string, unknown>): 
 
   const event: GrackleEvent = { id, type, timestamp, payload };
 
-  // Fan out asynchronously — subscriber errors never block the emitter
+  // Fan out asynchronously — subscriber errors (sync or async) are caught and
+  // logged, but never propagate to the emitter or block other subscribers.
+  // The .catch() at the end ensures no unhandled-rejection warning from async subscribers.
   queueMicrotask(() => {
     for (const subscriber of subscribers) {
-      try {
-        subscriber(event);
-      } catch (err) {
-        logger.error({ err, eventType: event.type }, "Subscriber error");
-      }
+      Promise.resolve()
+        .then(() => subscriber(event))
+        .catch((err: unknown) => {
+          logger.error({ err, eventType: event.type }, "Subscriber error");
+        });
     }
   });
 

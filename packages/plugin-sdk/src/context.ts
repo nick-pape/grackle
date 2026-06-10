@@ -104,8 +104,9 @@ export interface GrackleEvent {
  * minimal and avoids coupling plugins to a fat DI interface.
  */
 export interface PluginContext {
-  /** Subscribe to all domain events. Returns an unsubscribe function. */
-  subscribe: (cb: (event: GrackleEvent) => void) => () => void;
+  /** Subscribe to all domain events. Returns an unsubscribe function. The callback
+   *  may be sync or async; async rejections are caught and logged by the event bus. */
+  subscribe: (cb: (event: GrackleEvent) => void | Promise<void>) => () => void;
   /** Emit a domain event. */
   emit: (type: GrackleEventType, payload: Record<string, unknown>) => GrackleEvent;
   /** Structured logger (pino). */

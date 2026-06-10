@@ -136,6 +136,41 @@ describe("event-bus", () => {
       await new Promise((r) => setTimeout(r, 10));
       expect(received).toHaveLength(1);
     });
+
+    it("async subscriber receives events normally", async () => {
+      const received: GrackleEvent[] = [];
+      subscribe(async (e) => {
+        await Promise.resolve();
+        received.push(e);
+      });
+
+      emit("task.updated", { taskId: "t1", workspaceId: "p1" });
+
+      await new Promise((r) => setTimeout(r, 20));
+      expect(received).toHaveLength(1);
+      expect(received[0].type).toBe("task.updated");
+    });
+
+    it("async subscriber that rejects is logged and does not block other subscribers", async () => {
+      const { logger } = await import("./logger.js");
+      const received: GrackleEvent[] = [];
+
+      subscribe(async () => {
+        throw new Error("async boom");
+      });
+      subscribe((e) => {
+        received.push(e);
+      });
+
+      emit("task.created", { taskId: "t2", workspaceId: "p1" });
+
+      await new Promise((r) => setTimeout(r, 20));
+      expect(received).toHaveLength(1);
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: "task.created" }),
+        "Subscriber error",
+      );
+    });
   });
 
   describe("_resetForTesting()", () => {

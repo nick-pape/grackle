@@ -38,7 +38,7 @@ export function createOrphanReparentSubscriber(ctx: PluginContext): Disposable {
   /** Track processed parents to prevent duplicate reparenting: parentTaskId → timestamp. */
   const processed: Map<string, number> = new Map();
 
-  const unsubscribe = ctx.subscribe((event: GrackleEvent) => {
+  const unsubscribe = ctx.subscribe(async (event: GrackleEvent) => {
     if (event.type !== "task.completed" && event.type !== "task.updated") {
       return;
     }
@@ -53,16 +53,7 @@ export function createOrphanReparentSubscriber(ctx: PluginContext): Disposable {
       return;
     }
 
-    // Fire-and-forget async handler — errors are logged, never thrown
-    (async () => {
-      try {
-        await handleParentTerminal(ctx, processed, parentTaskId);
-      } catch (err) {
-        logger.error({ err, parentTaskId }, "Orphan reparenting failed for parent task");
-      }
-    })().catch(() => {
-      /* swallowed — logged above */
-    });
+    await handleParentTerminal(ctx, processed, parentTaskId);
   });
 
   return {

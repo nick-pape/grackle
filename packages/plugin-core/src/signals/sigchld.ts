@@ -49,7 +49,7 @@ export function createSigchldSubscriber(ctx: PluginContext): Disposable {
   /** Track delivered notifications to prevent duplicates: key → delivery timestamp. */
   const delivered: Map<string, number> = new Map();
 
-  const unsubscribe = ctx.subscribe((event: GrackleEvent) => {
+  const unsubscribe = ctx.subscribe(async (event: GrackleEvent) => {
     if (event.type !== "task.updated") {
       return;
     }
@@ -59,16 +59,7 @@ export function createSigchldSubscriber(ctx: PluginContext): Disposable {
       return;
     }
 
-    // Fire-and-forget async handler — errors are logged, never thrown
-    (async () => {
-      try {
-        await handleTaskUpdated(delivered, childTaskId);
-      } catch (err) {
-        logger.error({ err, childTaskId }, "SIGCHLD handler error");
-      }
-    })().catch(() => {
-      /* swallowed — logged above */
-    });
+    await handleTaskUpdated(delivered, childTaskId);
   });
 
   logger.info("SIGCHLD subscriber initialized");
