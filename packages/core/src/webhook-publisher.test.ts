@@ -23,9 +23,14 @@ vi.mock("@grackle-ai/adapter-sdk", async (importOriginal) => {
 import { postWebhook } from "./webhook-publisher.js";
 
 describe("webhook-publisher", () => {
+  /** Minimal fetch response stub with body draining support. */
+  function makeResponse(ok: boolean, status: number): object {
+    return { ok, status, arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(0)) };
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200 }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(makeResponse(true, 200)));
   });
 
   it("POSTs JSON to the given URL on success", async () => {
@@ -55,7 +60,7 @@ describe("webhook-publisher", () => {
       vi
         .fn()
         .mockRejectedValueOnce(new Error("Network error"))
-        .mockResolvedValue({ ok: true, status: 200 }),
+        .mockResolvedValue(makeResponse(true, 200)),
     );
 
     await postWebhook("https://hooks.example.com/test", {});
@@ -69,8 +74,8 @@ describe("webhook-publisher", () => {
       "fetch",
       vi
         .fn()
-        .mockResolvedValueOnce({ ok: false, status: 503 })
-        .mockResolvedValue({ ok: true, status: 200 }),
+        .mockResolvedValueOnce(makeResponse(false, 503))
+        .mockResolvedValue(makeResponse(true, 200)),
     );
 
     await postWebhook("https://hooks.example.com/test", {});
@@ -105,7 +110,7 @@ describe("webhook-publisher", () => {
   });
 
   it("treats non-2xx as a retriable failure (not just network errors)", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 429 }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(makeResponse(false, 429)));
 
     await expect(postWebhook("https://hooks.example.com/test", {})).rejects.toThrow("HTTP 429");
 

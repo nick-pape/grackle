@@ -33,6 +33,8 @@ const WEBHOOK_MAX_DELAY_MS: number = 5_000;
  * @throws The last error when all attempts are exhausted.
  */
 export async function postWebhook(url: string, payload: unknown): Promise<void> {
+  // Serialize once — a non-serializable payload can never succeed on retry.
+  const body: string = JSON.stringify(payload);
   await retryWithBackoff(
     async () => {
       const controller = new AbortController();
@@ -44,10 +46,15 @@ export async function postWebhook(url: string, payload: unknown): Promise<void> 
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
-          body: JSON.stringify(payload),
+          body,
         });
-        if (!response.ok) {
-          throw new Error(`Webhook returned HTTP ${response.status}`);
+        try {
+          if (!response.ok) {
+            throw new Error(`Webhook returned HTTP ${response.status}`);
+          }
+        } finally {
+          // Drain the body so the underlying connection is released.
+          await response.arrayBuffer().catch(() => undefined);
         }
       } finally {
         clearTimeout(timeout);
