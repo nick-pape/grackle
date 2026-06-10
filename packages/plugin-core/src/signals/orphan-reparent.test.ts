@@ -1,11 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, afterEach, vi } from "vitest";
+import { setupTestDatabase } from "@grackle-ai/test-utils/db";
 
 // ── Mock dependencies ────────────────────────────────────────
 
-vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("@grackle-ai/test-utils");
-  return createDatabaseMock();
-});
+// NOTE: @grackle-ai/database is NOT mocked — real stores run against
+// an in-memory SQLite database initialized by setupTestDatabase().
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -30,13 +29,18 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
 
 // ── Imports ──────────────────────────────────────────────────
 
-import { taskStore, sessionStore } from "@grackle-ai/database";
+import { taskStore, sessionStore, envRegistry, workspaceStore } from "@grackle-ai/database";
 import { deliverSignalToTask } from "@grackle-ai/core";
 import { streamRegistry, ensureAsyncDeliveryListener } from "@grackle-ai/core";
 import { createOrphanReparentSubscriber } from "./orphan-reparent.js";
 import type { GrackleEvent } from "@grackle-ai/core";
 import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
 import { createMockPluginContext } from "../test-utils/mock-plugin-context.js";
+
+// ── Test DB ───────────────────────────────────────────────────
+
+const testDb = setupTestDatabase();
+afterAll(() => testDb.cleanup());
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -45,42 +49,30 @@ async function flush(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 100));
 }
 
-const PARENT_TASK = {
-  id: "parent-1",
-  parentTaskId: "grandparent-1",
-  workspaceId: "ws-1",
-  title: "Parent Task",
-  status: "complete",
-  depth: 1,
-};
+function insertBaseEntities(): void {
+  envRegistry.addEnvironment("env-1", "Test Env", "local", "{}");
+  workspaceStore.createWorkspace("ws-1", "Test Workspace", "", "");
+}
 
-const GRANDPARENT_TASK = {
-  id: "grandparent-1",
-  parentTaskId: "",
-  workspaceId: "ws-1",
-  title: "Grandparent Task",
-  status: "working",
-  depth: 0,
-  canDecompose: true,
-};
+function insertTaskHierarchy(): void {
+  // grandparent (root-level, canDecompose=true)
+  taskStore.createTask("grandparent-1", "ws-1", "Grandparent Task", "", [], "ws-1", "", true);
+  // parent (child of grandparent, canDecompose=true)
+  taskStore.createTask("parent-1", "ws-1", "Parent Task", "", [], "ws-1", "grandparent-1", true);
+  // children of parent
+  taskStore.createTask("child-1", "ws-1", "Child One", "", [], "ws-1", "parent-1");
+  taskStore.createTask("child-2", "ws-1", "Child Two", "", [], "ws-1", "parent-1");
+}
 
-const CHILD_TASK_1 = {
-  id: "child-1",
-  parentTaskId: "parent-1",
-  workspaceId: "ws-1",
-  title: "Child One",
-  status: "not_started",
-  depth: 2,
-};
+/** Mark a task as complete so the subscriber treats it as terminal. */
+function completeTask(taskId: string): void {
+  taskStore.updateTaskStatus(taskId, "complete");
+}
 
-const CHILD_TASK_2 = {
-  id: "child-2",
-  parentTaskId: "parent-1",
-  workspaceId: "ws-1",
-  title: "Child Two",
-  status: "working",
-  depth: 2,
-};
+/** Mark a task as failed so the subscriber treats it as terminal. */
+function failTask(taskId: string): void {
+  taskStore.updateTaskStatus(taskId, "failed");
+}
 
 // ── Tests ────────────────────────────────────────────────────
 
@@ -97,6 +89,8 @@ describe("createOrphanReparentSubscriber", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    testDb.truncateAll();
+    insertBaseEntities();
 
     unsubscribeFn = vi.fn();
     ctx = createMockPluginContext({
@@ -124,10 +118,9 @@ describe("createOrphanReparentSubscriber", () => {
 
   describe("task.completed events", () => {
     it("reparents non-terminal children to grandparent when parent completes", async () => {
-      vi.mocked(taskStore.getTask)
-        .mockReturnValueOnce(PARENT_TASK as never) // lookup parent
-        .mockReturnValueOnce(PARENT_TASK as never); // second check
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([CHILD_TASK_1] as never);
+      insertTaskHierarchy();
+      completeTask("parent-1");
+      vi.spyOn(taskStore, "reparentTask");
 
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
@@ -136,10 +129,9 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("reparents multiple children", async () => {
-      vi.mocked(taskStore.getTask)
-        .mockReturnValueOnce(PARENT_TASK as never)
-        .mockReturnValueOnce(PARENT_TASK as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([CHILD_TASK_1, CHILD_TASK_2] as never);
+      insertTaskHierarchy();
+      completeTask("parent-1");
+      vi.spyOn(taskStore, "reparentTask");
 
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
@@ -150,20 +142,23 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("does nothing when parent has no children", async () => {
-      vi.mocked(taskStore.getTask).mockReturnValue(PARENT_TASK as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([]);
+      // Create parent without children
+      taskStore.createTask("lonely-parent", "ws-1", "Lonely", "", [], "ws-1", "", true);
+      completeTask("lonely-parent");
+      vi.spyOn(taskStore, "reparentTask");
 
-      fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
+      fireEvent({
+        type: "task.completed",
+        payload: { taskId: "lonely-parent", workspaceId: "ws-1" },
+      });
       await flush();
 
       expect(taskStore.reparentTask).not.toHaveBeenCalled();
     });
 
     it("emits task.reparented event via ctx.emit for each child", async () => {
-      vi.mocked(taskStore.getTask)
-        .mockReturnValueOnce(PARENT_TASK as never)
-        .mockReturnValueOnce(PARENT_TASK as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([CHILD_TASK_1] as never);
+      insertTaskHierarchy();
+      completeTask("parent-1");
 
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
@@ -179,10 +174,8 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("emits task.updated event via ctx.emit for each reparented child", async () => {
-      vi.mocked(taskStore.getTask)
-        .mockReturnValueOnce(PARENT_TASK as never)
-        .mockReturnValueOnce(PARENT_TASK as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([CHILD_TASK_1] as never);
+      insertTaskHierarchy();
+      completeTask("parent-1");
 
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
@@ -197,10 +190,8 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("delivers [ADOPTED] signal to grandparent", async () => {
-      vi.mocked(taskStore.getTask)
-        .mockReturnValueOnce(PARENT_TASK as never)
-        .mockReturnValueOnce(PARENT_TASK as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([CHILD_TASK_1] as never);
+      insertTaskHierarchy();
+      completeTask("parent-1");
 
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
@@ -215,11 +206,9 @@ describe("createOrphanReparentSubscriber", () => {
 
   describe("task.updated events", () => {
     it("reparents when task status is terminal (failed)", async () => {
-      const failedParent = { ...PARENT_TASK, status: "failed" };
-      vi.mocked(taskStore.getTask)
-        .mockReturnValueOnce(failedParent as never)
-        .mockReturnValueOnce(failedParent as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([CHILD_TASK_1] as never);
+      insertTaskHierarchy();
+      failTask("parent-1");
+      vi.spyOn(taskStore, "reparentTask");
 
       fireEvent({ type: "task.updated", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
@@ -228,11 +217,11 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("ignores non-terminal task.updated events", async () => {
-      const workingParent = { ...PARENT_TASK, status: "working" };
-      vi.mocked(taskStore.getTask).mockReturnValue(workingParent as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([]);
+      insertTaskHierarchy();
+      // parent-1 has default status "not_started" — not terminal
+      vi.spyOn(taskStore, "reparentTask");
 
-      fireEvent({ type: "task.updated", payload: { taskId: "parent-2", workspaceId: "ws-1" } });
+      fireEvent({ type: "task.updated", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
 
       expect(taskStore.reparentTask).not.toHaveBeenCalled();
@@ -241,6 +230,8 @@ describe("createOrphanReparentSubscriber", () => {
 
   describe("edge cases", () => {
     it("ignores non-task events", async () => {
+      vi.spyOn(taskStore, "getTask");
+
       fireEvent({ type: "workspace.created" as never, payload: { workspaceId: "ws-1" } });
       await flush();
 
@@ -248,37 +239,38 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("reparents to ROOT_TASK_ID when parent has no grandparent", async () => {
-      // Use fresh mocks and unique IDs to avoid async leakage from prior tests
-      vi.mocked(taskStore.getTask).mockReset();
-      vi.mocked(taskStore.getOrphanedTasks).mockReset();
-      vi.mocked(taskStore.reparentTask).mockReset();
+      // Create a root-level parent with children (no grandparent)
+      taskStore.createTask("root-parent", "ws-1", "Root Parent", "", [], "ws-1", "", true);
+      taskStore.createTask("orphan-child", "ws-1", "Orphan", "", [], "ws-1", "root-parent");
+      completeTask("root-parent");
+      vi.spyOn(taskStore, "reparentTask");
 
-      const parentId = "no-gp-parent-unique";
-      const rootChild = { ...PARENT_TASK, id: parentId, parentTaskId: "" };
-      const orphan = { ...CHILD_TASK_1, id: "orphan-root-unique", parentTaskId: parentId };
-      vi.mocked(taskStore.getTask).mockReturnValue(rootChild as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([orphan] as never);
-
-      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      fireEvent({
+        type: "task.completed",
+        payload: { taskId: "root-parent", workspaceId: "ws-1" },
+      });
       await flush();
 
-      expect(taskStore.reparentTask).toHaveBeenCalledWith("orphan-root-unique", "system");
+      expect(taskStore.reparentTask).toHaveBeenCalledWith("orphan-child", "system");
     });
 
     it("does not reparent twice for the same parent (deduplication)", async () => {
-      vi.mocked(taskStore.getTask).mockReturnValue(PARENT_TASK as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([CHILD_TASK_1] as never);
+      insertTaskHierarchy();
+      completeTask("parent-1");
+      vi.spyOn(taskStore, "reparentTask");
 
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
 
-      expect(taskStore.reparentTask).toHaveBeenCalledTimes(1);
+      // Children reparented once (2 children), not twice
+      expect(taskStore.reparentTask).toHaveBeenCalledTimes(2);
     });
 
     it("logs errors but does not throw", async () => {
-      vi.mocked(taskStore.getTask).mockReturnValue(PARENT_TASK as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockImplementation(() => {
+      insertTaskHierarchy();
+      completeTask("parent-1");
+      vi.spyOn(taskStore, "getOrphanedTasks").mockImplementationOnce(() => {
         throw new Error("DB error");
       });
 
@@ -290,9 +282,9 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("continues reparenting remaining children if one fails", async () => {
-      vi.mocked(taskStore.getTask).mockReturnValue(PARENT_TASK as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([CHILD_TASK_1, CHILD_TASK_2] as never);
-      vi.mocked(taskStore.reparentTask)
+      insertTaskHierarchy();
+      completeTask("parent-1");
+      vi.spyOn(taskStore, "reparentTask")
         .mockImplementationOnce(() => {
           throw new Error("fail first");
         })
@@ -306,6 +298,8 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("skips ROOT_TASK_ID as parent", async () => {
+      vi.spyOn(taskStore, "getOrphanedTasks");
+
       fireEvent({ type: "task.completed", payload: { taskId: "system", workspaceId: "ws-1" } });
       await flush();
 
@@ -315,26 +309,32 @@ describe("createOrphanReparentSubscriber", () => {
 
   describe("pipe fd transfer", () => {
     it("transfers pipe subscriptions from dead parent to grandparent session", async () => {
-      vi.mocked(taskStore.getTask).mockReset();
-      vi.mocked(taskStore.getOrphanedTasks).mockReset();
-      vi.mocked(taskStore.reparentTask).mockReset();
+      insertTaskHierarchy();
+      completeTask("parent-1");
 
-      const parentId = "pipe-parent";
-      const parent = { ...PARENT_TASK, id: parentId };
-      const orphan = { ...CHILD_TASK_1, id: "pipe-child", parentTaskId: parentId };
+      // Insert sessions for parent and grandparent
+      sessionStore.createSession(
+        "parent-sess",
+        "env-1",
+        "stub",
+        "",
+        "claude",
+        "/tmp/log",
+        "parent-1",
+      );
+      sessionStore.updateSession("parent-sess", "stopped" as never);
+      sessionStore.createSession(
+        "gp-sess",
+        "env-1",
+        "stub",
+        "",
+        "claude",
+        "/tmp/log",
+        "grandparent-1",
+      );
+      sessionStore.updateSession("gp-sess", "idle" as never);
 
-      vi.mocked(taskStore.getTask).mockReturnValue(parent as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([orphan] as never);
-
-      // Parent has a session with a pipe subscription
-      vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([
-        { id: "parent-sess", taskId: parentId, status: "stopped" },
-      ] as never);
-      vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([
-        { id: "gp-sess", taskId: "grandparent-1", status: "idle" },
-      ] as never);
-
-      // Parent session has a pipe subscription
+      // Parent session has a pipe subscription (streamRegistry is mocked from @grackle-ai/core)
       vi.mocked(streamRegistry.getSubscriptionsForSession).mockReturnValue([
         {
           id: "sub-1",
@@ -352,7 +352,7 @@ describe("createOrphanReparentSubscriber", () => {
         subscriptions: new Map(),
       } as never);
 
-      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
 
       // Should create subscription for grandparent
@@ -370,24 +370,39 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("transfers pipe subscriptions even when no orphaned tasks exist", async () => {
-      vi.mocked(taskStore.getTask).mockReset();
-      vi.mocked(taskStore.getOrphanedTasks).mockReset();
-      vi.mocked(taskStore.reparentTask).mockReset();
+      // Parent with no children — grandparent must exist first for FK
+      taskStore.createTask("grandparent-1", "ws-1", "GP", "", [], "ws-1", "", true);
+      taskStore.createTask(
+        "pipe-only-parent",
+        "ws-1",
+        "Pipe Parent",
+        "",
+        [],
+        "ws-1",
+        "grandparent-1",
+      );
+      completeTask("pipe-only-parent");
 
-      const parentId = "pipe-only-parent";
-      const parent = { ...PARENT_TASK, id: parentId };
-
-      vi.mocked(taskStore.getTask).mockReturnValue(parent as never);
-      // No orphaned tasks — child was spawned via ipc_spawn (session-only, no task)
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([]);
-
-      // Parent has a session with a pipe subscription
-      vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([
-        { id: "parent-sess-only", taskId: parentId, status: "idle" },
-      ] as never);
-      vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([
-        { id: "gp-sess-only", taskId: "grandparent-1", status: "idle" },
-      ] as never);
+      sessionStore.createSession(
+        "parent-sess-only",
+        "env-1",
+        "stub",
+        "",
+        "claude",
+        "/tmp/log",
+        "pipe-only-parent",
+      );
+      sessionStore.updateSession("parent-sess-only", "idle" as never);
+      sessionStore.createSession(
+        "gp-sess-only",
+        "env-1",
+        "stub",
+        "",
+        "claude",
+        "/tmp/log",
+        "grandparent-1",
+      );
+      sessionStore.updateSession("gp-sess-only", "idle" as never);
 
       vi.mocked(streamRegistry.getSubscriptionsForSession).mockReturnValue([
         {
@@ -406,7 +421,12 @@ describe("createOrphanReparentSubscriber", () => {
         subscriptions: new Map(),
       } as never);
 
-      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      vi.spyOn(taskStore, "reparentTask");
+
+      fireEvent({
+        type: "task.completed",
+        payload: { taskId: "pipe-only-parent", workspaceId: "ws-1" },
+      });
       await flush();
 
       // Pipe should be transferred even though no tasks were reparented
@@ -422,23 +442,38 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("skips non-pipe subscriptions (lifecycle streams)", async () => {
-      vi.mocked(taskStore.getTask).mockReset();
-      vi.mocked(taskStore.getOrphanedTasks).mockReset();
-      vi.mocked(streamRegistry.subscribe).mockReset();
-      vi.mocked(streamRegistry.unsubscribe).mockReset();
+      taskStore.createTask("grandparent-1", "ws-1", "GP", "", [], "ws-1", "", true);
+      taskStore.createTask(
+        "pipe-lifecycle-parent",
+        "ws-1",
+        "LC Parent",
+        "",
+        [],
+        "ws-1",
+        "grandparent-1",
+      );
+      completeTask("pipe-lifecycle-parent");
 
-      const parentId = "pipe-lifecycle-parent";
-      const parent = { ...PARENT_TASK, id: parentId };
-
-      vi.mocked(taskStore.getTask).mockReturnValue(parent as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([]);
-
-      vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([
-        { id: "lc-sess", taskId: parentId, status: "idle" },
-      ] as never);
-      vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([
-        { id: "gp-lc-sess", taskId: "grandparent-1", status: "idle" },
-      ] as never);
+      sessionStore.createSession(
+        "lc-sess",
+        "env-1",
+        "stub",
+        "",
+        "claude",
+        "/tmp/log",
+        "pipe-lifecycle-parent",
+      );
+      sessionStore.updateSession("lc-sess", "idle" as never);
+      sessionStore.createSession(
+        "gp-lc-sess",
+        "env-1",
+        "stub",
+        "",
+        "claude",
+        "/tmp/log",
+        "grandparent-1",
+      );
+      sessionStore.updateSession("gp-lc-sess", "idle" as never);
 
       // Parent session has ONLY a lifecycle subscription (no pipe:*)
       vi.mocked(streamRegistry.getSubscriptionsForSession).mockReturnValue([
@@ -458,7 +493,10 @@ describe("createOrphanReparentSubscriber", () => {
         subscriptions: new Map(),
       } as never);
 
-      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      fireEvent({
+        type: "task.completed",
+        payload: { taskId: "pipe-lifecycle-parent", workspaceId: "ws-1" },
+      });
       await flush();
 
       // Should NOT transfer lifecycle subscriptions
@@ -467,25 +505,49 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("transfers multiple pipe subs across multiple parent sessions", async () => {
-      vi.mocked(taskStore.getTask).mockReset();
-      vi.mocked(taskStore.getOrphanedTasks).mockReset();
-      vi.mocked(streamRegistry.subscribe).mockReset();
-      vi.mocked(streamRegistry.unsubscribe).mockReset();
-
-      const parentId = "multi-pipe-parent";
-      const parent = { ...PARENT_TASK, id: parentId };
-
-      vi.mocked(taskStore.getTask).mockReturnValue(parent as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([]);
+      taskStore.createTask("grandparent-1", "ws-1", "GP", "", [], "ws-1", "", true);
+      taskStore.createTask(
+        "multi-pipe-parent",
+        "ws-1",
+        "Multi Parent",
+        "",
+        [],
+        "ws-1",
+        "grandparent-1",
+      );
+      completeTask("multi-pipe-parent");
 
       // Parent has TWO sessions (e.g., restarted task)
-      vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([
-        { id: "sess-a", taskId: parentId, status: "stopped" },
-        { id: "sess-b", taskId: parentId, status: "idle" },
-      ] as never);
-      vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([
-        { id: "gp-multi-sess", taskId: "grandparent-1", status: "idle" },
-      ] as never);
+      sessionStore.createSession(
+        "sess-a",
+        "env-1",
+        "stub",
+        "",
+        "claude",
+        "/tmp/log",
+        "multi-pipe-parent",
+      );
+      sessionStore.updateSession("sess-a", "stopped" as never);
+      sessionStore.createSession(
+        "sess-b",
+        "env-1",
+        "stub",
+        "",
+        "claude",
+        "/tmp/log",
+        "multi-pipe-parent",
+      );
+      sessionStore.updateSession("sess-b", "idle" as never);
+      sessionStore.createSession(
+        "gp-multi-sess",
+        "env-1",
+        "stub",
+        "",
+        "claude",
+        "/tmp/log",
+        "grandparent-1",
+      );
+      sessionStore.updateSession("gp-multi-sess", "idle" as never);
 
       // Each session has a pipe subscription
       vi.mocked(streamRegistry.getSubscriptionsForSession)
@@ -523,7 +585,10 @@ describe("createOrphanReparentSubscriber", () => {
           subscriptions: new Map(),
         } as never);
 
-      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      fireEvent({
+        type: "task.completed",
+        payload: { taskId: "multi-pipe-parent", workspaceId: "ws-1" },
+      });
       await flush();
 
       // Both pipe subs should be transferred
@@ -547,23 +612,38 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("continues transferring remaining subs if one fails", async () => {
-      vi.mocked(taskStore.getTask).mockReset();
-      vi.mocked(taskStore.getOrphanedTasks).mockReset();
-      vi.mocked(streamRegistry.subscribe).mockReset();
-      vi.mocked(streamRegistry.unsubscribe).mockReset();
+      taskStore.createTask("grandparent-1", "ws-1", "GP", "", [], "ws-1", "", true);
+      taskStore.createTask(
+        "fail-pipe-parent",
+        "ws-1",
+        "Fail Parent",
+        "",
+        [],
+        "ws-1",
+        "grandparent-1",
+      );
+      completeTask("fail-pipe-parent");
 
-      const parentId = "fail-pipe-parent";
-      const parent = { ...PARENT_TASK, id: parentId };
-
-      vi.mocked(taskStore.getTask).mockReturnValue(parent as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([]);
-
-      vi.mocked(sessionStore.listSessionsForTask).mockReturnValue([
-        { id: "fail-sess", taskId: parentId, status: "idle" },
-      ] as never);
-      vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([
-        { id: "gp-fail-sess", taskId: "grandparent-1", status: "idle" },
-      ] as never);
+      sessionStore.createSession(
+        "fail-sess",
+        "env-1",
+        "stub",
+        "",
+        "claude",
+        "/tmp/log",
+        "fail-pipe-parent",
+      );
+      sessionStore.updateSession("fail-sess", "idle" as never);
+      sessionStore.createSession(
+        "gp-fail-sess",
+        "env-1",
+        "stub",
+        "",
+        "claude",
+        "/tmp/log",
+        "grandparent-1",
+      );
+      sessionStore.updateSession("gp-fail-sess", "idle" as never);
 
       // Two pipe subscriptions — first transfer will throw
       vi.mocked(streamRegistry.getSubscriptionsForSession).mockReturnValue([
@@ -605,7 +685,10 @@ describe("createOrphanReparentSubscriber", () => {
         })
         .mockReturnValueOnce({} as never);
 
-      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      fireEvent({
+        type: "task.completed",
+        payload: { taskId: "fail-pipe-parent", workspaceId: "ws-1" },
+      });
       await flush();
 
       // Second sub should still be attempted despite first failure
@@ -614,20 +697,13 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("skips transfer when no grandparent session is active", async () => {
-      vi.mocked(taskStore.getTask).mockReset();
-      vi.mocked(taskStore.getOrphanedTasks).mockReset();
-      vi.mocked(taskStore.reparentTask).mockReset();
+      insertTaskHierarchy();
+      completeTask("parent-1");
+      // No active sessions for grandparent
+
       vi.mocked(streamRegistry.subscribe).mockReset();
 
-      const parentId = "pipe-parent-no-gp";
-      const parent = { ...PARENT_TASK, id: parentId };
-      const orphan = { ...CHILD_TASK_1, id: "pipe-child-2", parentTaskId: parentId };
-
-      vi.mocked(taskStore.getTask).mockReturnValue(parent as never);
-      vi.mocked(taskStore.getOrphanedTasks).mockReturnValue([orphan] as never);
-      vi.mocked(sessionStore.getActiveSessionsForTask).mockReturnValue([] as never);
-
-      fireEvent({ type: "task.completed", payload: { taskId: parentId, workspaceId: "ws-1" } });
+      fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
 
       // Should NOT try to create subscriptions

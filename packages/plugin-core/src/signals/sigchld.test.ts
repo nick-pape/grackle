@@ -1,11 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, afterEach, vi } from "vitest";
+import { setupTestDatabase } from "@grackle-ai/test-utils/db";
 
 // ── Mock dependencies ────────────────────────────────────────
 
-vi.mock("@grackle-ai/database", async () => {
-  const { createDatabaseMock } = await import("@grackle-ai/test-utils");
-  return createDatabaseMock();
-});
+// NOTE: @grackle-ai/database is NOT mocked — real stores run against
+// an in-memory SQLite database initialized by setupTestDatabase().
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -35,57 +34,43 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
   };
 });
 
-import { taskStore, sessionStore } from "@grackle-ai/database";
+import { taskStore, sessionStore, envRegistry, workspaceStore } from "@grackle-ai/database";
 import { readLastTextEntry, deliverSignalToTask } from "@grackle-ai/core";
 import { createSigchldSubscriber } from "./sigchld.js";
 import type { GrackleEvent } from "@grackle-ai/core";
 import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
 import { createMockPluginContext } from "../test-utils/mock-plugin-context.js";
 
+// ── Test DB ───────────────────────────────────────────────────
+
+const testDb = setupTestDatabase();
+afterAll(() => testDb.cleanup());
+
 // ── Helpers ──────────────────────────────────────────────────
 
-function makeTask(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "task-child",
-    workspaceId: "proj-1",
-    title: "Design API",
-    description: "",
-    status: "working",
-    branch: null,
-    dependsOn: "[]",
-    parentTaskId: "task-parent",
-    depth: 1,
-    canDecompose: false,
-    defaultPersonaId: null,
-    sortOrder: 0,
-    startedAt: new Date().toISOString(),
-    completedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    ...overrides,
-  };
+function insertBaseEntities(): void {
+  envRegistry.addEnvironment("env-1", "Test Env", "local", "{}");
+  workspaceStore.createWorkspace("proj-1", "Test Project", "", "");
 }
 
-function makeSession(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "sess-child",
-    environmentId: "env-1",
-    status: "stopped",
-    runtime: "stub",
-    runtimeSessionId: "rt-1",
-    prompt: "",
-    model: "claude",
-    logPath: "/tmp/log-child",
-    turns: 5,
-    startedAt: new Date().toISOString(),
-    suspendedAt: null,
-    endedAt: new Date().toISOString(),
-    error: null,
-    taskId: "task-child",
-    personaId: null,
-    endReason: "completed",
-    ...overrides,
-  };
+function insertParentTask(): void {
+  taskStore.createTask("task-parent", "proj-1", "Parent Task", "", [], "proj-1", "", true);
+}
+
+function insertChildTask(
+  id: string = "task-child",
+  opts: { parentTaskId?: string | null; title?: string } = {},
+): void {
+  const parentTaskId = opts.parentTaskId === null ? "" : (opts.parentTaskId ?? "task-parent");
+  taskStore.createTask(id, "proj-1", opts.title ?? "Design API", "", [], "proj-1", parentTaskId);
+}
+
+function insertSession(taskId: string, status: string, id?: string): void {
+  const sessionId = id ?? `sess-${taskId}`;
+  sessionStore.createSession(sessionId, "env-1", "stub", "", "claude", "/tmp/log-child", taskId);
+  if (status !== "pending") {
+    sessionStore.updateSession(sessionId, status as never);
+  }
 }
 
 /** Wait for async event-bus microtask + fire-and-forget promise. */
@@ -113,6 +98,9 @@ describe("createSigchldSubscriber", () => {
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+    testDb.truncateAll();
+    insertBaseEntities();
+    insertParentTask();
 
     unsubscribeFn = vi.fn();
     ctx = createMockPluginContext({
@@ -139,14 +127,8 @@ describe("createSigchldSubscriber", () => {
   });
 
   it("calls deliverSignalToTask with correct args when child goes idle", async () => {
-    vi.spyOn(taskStore, "getTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeTask() as any,
-    );
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "idle" }) as any,
-    );
+    insertChildTask();
+    insertSession("task-child", "idle");
     vi.mocked(readLastTextEntry).mockReturnValue({
       session_id: "sess-child",
       type: "text",
@@ -170,14 +152,11 @@ describe("createSigchldSubscriber", () => {
   });
 
   it("calls deliverSignalToTask when child stopped with killed reason", async () => {
-    vi.spyOn(taskStore, "getTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeTask() as any,
-    );
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "stopped", endReason: "killed" }) as any,
-    );
+    insertChildTask();
+    // Create session and set status=stopped with endReason=killed via real DB
+    const sid = "sess-task-child";
+    sessionStore.createSession(sid, "env-1", "stub", "", "claude", "/tmp/log-child", "task-child");
+    sessionStore.updateSession(sid, "stopped" as never, undefined, undefined, "killed" as never);
     vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
     fireTaskUpdated("task-child");
@@ -191,13 +170,15 @@ describe("createSigchldSubscriber", () => {
   });
 
   it("calls deliverSignalToTask when child stopped with interrupted reason", async () => {
-    vi.spyOn(taskStore, "getTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeTask() as any,
-    );
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "stopped", endReason: "interrupted" }) as any,
+    insertChildTask();
+    const sid = "sess-task-child";
+    sessionStore.createSession(sid, "env-1", "stub", "", "claude", "/tmp/log-child", "task-child");
+    sessionStore.updateSession(
+      sid,
+      "stopped" as never,
+      undefined,
+      undefined,
+      "interrupted" as never,
     );
     vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
@@ -212,10 +193,8 @@ describe("createSigchldSubscriber", () => {
   });
 
   it("skips root tasks (no parentTaskId)", async () => {
-    vi.spyOn(taskStore, "getTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeTask({ parentTaskId: null }) as any,
-    );
+    insertChildTask("task-root", { parentTaskId: null });
+    insertSession("task-root", "idle");
 
     fireTaskUpdated("task-root");
     await flush();
@@ -224,29 +203,18 @@ describe("createSigchldSubscriber", () => {
   });
 
   it("skips non-triggering session statuses (running, pending)", async () => {
-    vi.spyOn(taskStore, "getTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeTask() as any,
-    );
+    insertChildTask();
+    insertSession("task-child", "running");
 
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "running" }) as any,
-    );
     fireTaskUpdated("task-child");
     await flush();
+
     expect(deliverSignalToTask).not.toHaveBeenCalled();
   });
 
   it("does not duplicate delivery for same child session terminal event", async () => {
-    vi.spyOn(taskStore, "getTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeTask() as any,
-    );
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "idle" }) as any,
-    );
+    insertChildTask();
+    insertSession("task-child", "idle");
     vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
     // Fire twice for the same child
@@ -259,14 +227,8 @@ describe("createSigchldSubscriber", () => {
   });
 
   it("notification text includes child ID, title, status, and last text message", async () => {
-    vi.spyOn(taskStore, "getTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeTask({ title: "Implement auth flow" }) as any,
-    );
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "idle" }) as any,
-    );
+    insertChildTask("task-child", { title: "Implement auth flow" });
+    insertSession("task-child", "idle");
     vi.mocked(readLastTextEntry).mockReturnValue({
       session_id: "sess-child",
       type: "text",
@@ -286,18 +248,8 @@ describe("createSigchldSubscriber", () => {
   });
 
   it("delivers SIGCHLD when child session has no parentSessionId (web-UI-started)", async () => {
-    vi.spyOn(taskStore, "getTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeTask({ parentTaskId: "task-parent" }) as any,
-    );
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({
-        status: "idle",
-        parentSessionId: "", // web UI starts sessions without parentSessionId
-        pipeMode: "", // no pipe — not started via orchestrator IPC
-      }) as any,
-    );
+    insertChildTask("task-child", { parentTaskId: "task-parent" });
+    insertSession("task-child", "idle");
     vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
     fireTaskUpdated("task-child");
@@ -314,14 +266,8 @@ describe("createSigchldSubscriber", () => {
 
   it("retries delivery when first attempt fails", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.spyOn(taskStore, "getTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeTask() as any,
-    );
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "idle" }) as any,
-    );
+    insertChildTask();
+    insertSession("task-child", "idle");
     vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
     // First delivery fails, retry should succeed
@@ -338,14 +284,8 @@ describe("createSigchldSubscriber", () => {
 
   it("does not lose signal when concurrent handlers race and first fails", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.spyOn(taskStore, "getTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeTask() as any,
-    );
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "idle" }) as any,
-    );
+    insertChildTask();
+    insertSession("task-child", "idle");
     vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
     // First attempt fails, retry succeeds
@@ -365,14 +305,8 @@ describe("createSigchldSubscriber", () => {
 
   it("deletes dedup key only after all retries are exhausted", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    vi.spyOn(taskStore, "getTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeTask() as any,
-    );
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "idle" }) as any,
-    );
+    insertChildTask();
+    insertSession("task-child", "idle");
     vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
     // All attempts fail
@@ -404,14 +338,8 @@ describe("createSigchldSubscriber", () => {
     });
     const disposable2 = createSigchldSubscriber(ctx2);
 
-    vi.spyOn(taskStore, "getTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeTask() as any,
-    );
-    vi.spyOn(sessionStore, "getLatestSessionForTask").mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      makeSession({ status: "idle" }) as any,
-    );
+    insertChildTask();
+    insertSession("task-child", "idle");
     vi.mocked(readLastTextEntry).mockReturnValue(undefined);
 
     // Fire via first subscriber

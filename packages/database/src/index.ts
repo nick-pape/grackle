@@ -8,6 +8,7 @@
 // ─── Database Lifecycle ────────────────────────────────────
 export {
   openDatabase,
+  closeDatabase,
   initDatabase,
   sqlite,
   CURRENT_VERSION,
