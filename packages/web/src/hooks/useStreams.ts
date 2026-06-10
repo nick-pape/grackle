@@ -38,9 +38,12 @@ export function useStreams(): UseStreamsResult {
   const { loading: streamsLoading, track: trackStreams } = useLoadingState();
   /** Incremented on disconnect so in-flight responses from the previous connection are discarded. */
   const epochRef = useRef(0);
+  /** Last includeInternal value passed to loadStreams; replayed on event- and reconnect-driven refreshes (#1537). */
+  const includeInternalRef = useRef<boolean>(false);
 
   const loadStreams = useCallback(
     async (includeInternal: boolean = false): Promise<void> => {
+      includeInternalRef.current = includeInternal;
       const myEpoch = epochRef.current;
       try {
         const resp = await trackStreams(grackleClient.listStreams({ includeInternal }));
@@ -127,7 +130,7 @@ export function useStreams(): UseStreamsResult {
         case "stream.attached":
         case "stream.detached":
         case "stream.closed":
-          loadStreams().catch(() => {}); // TODO(#1537): does not respect showInternals
+          loadStreams(includeInternalRef.current).catch(() => {});
           return true;
         default:
           return false;
@@ -138,7 +141,7 @@ export function useStreams(): UseStreamsResult {
 
   const domainHook: DomainHook = useMemo(
     () => ({
-      onConnect: loadStreams,
+      onConnect: () => loadStreams(includeInternalRef.current),
       onDisconnect: () => {
         epochRef.current += 1;
         setStreams([]);
