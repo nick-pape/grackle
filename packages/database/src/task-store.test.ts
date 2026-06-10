@@ -266,6 +266,20 @@ describe("task-store tree operations", () => {
       taskStore.markTaskComplete("a");
       expect(taskStore.areDependenciesMet("b")).toBe(true);
     });
+
+    it("returns false for a self-dependency", () => {
+      // A task that lists itself as a dependency can never become complete
+      // via its own dependency being met — it is permanently blocked.
+      taskStore.createTask("a", "test-proj", "Self-dep Task", "desc", ["a"], "proj");
+      expect(taskStore.areDependenciesMet("a")).toBe(false);
+    });
+
+    it("returns false for tasks in a circular dependency (A→B→A)", () => {
+      taskStore.createTask("a", "test-proj", "Task A", "desc", ["b"], "proj");
+      taskStore.createTask("b", "test-proj", "Task B", "desc", ["a"], "proj");
+      expect(taskStore.areDependenciesMet("a")).toBe(false);
+      expect(taskStore.areDependenciesMet("b")).toBe(false);
+    });
   });
 
   describe("getUnblockedTasks", () => {
@@ -325,6 +339,40 @@ describe("task-store tree operations", () => {
       const unblocked = taskStore.getUnblockedTasks("test-proj");
       expect(unblocked).toHaveLength(1);
       expect(unblocked[0].id).toBe("t1");
+    });
+
+    it("excludes tasks in a circular dependency (neither task surfaces)", () => {
+      // Cycles are inert: neither task in a mutual dependency can be unblocked.
+      // This documents the expected behavior and guards against accidental crash.
+      taskStore.createTask("a", "test-proj", "Task A", "desc", ["b"], "proj");
+      taskStore.createTask("b", "test-proj", "Task B", "desc", ["a"], "proj");
+
+      const unblocked = taskStore.getUnblockedTasks("test-proj");
+      expect(unblocked.find((t) => t.id === "a")).toBeUndefined();
+      expect(unblocked.find((t) => t.id === "b")).toBeUndefined();
+    });
+  });
+
+  describe("checkAndUnblock", () => {
+    it("returns the same set as getUnblockedTasks (alias contract)", () => {
+      taskStore.createTask("a", "test-proj", "Dep A", "desc", [], "proj");
+      taskStore.createTask("b", "test-proj", "Blocked", "desc", ["a"], "proj");
+      taskStore.markTaskComplete("a");
+
+      const viaAlias = taskStore.checkAndUnblock("test-proj");
+      const viaOriginal = taskStore.getUnblockedTasks("test-proj");
+
+      expect(viaAlias.map((t) => t.id)).toEqual(viaOriginal.map((t) => t.id));
+    });
+
+    it("returns no tasks when all pending tasks have incomplete deps", () => {
+      taskStore.createTask("a", "test-proj", "Dep A", "desc", [], "proj");
+      taskStore.createTask("b", "test-proj", "Blocked", "desc", ["a"], "proj");
+      // "a" is now in-progress (not not_started) and not complete, so "b"
+      // remains blocked and "a" itself is excluded from the unblocked set.
+      taskStore.updateTaskStatus("a", "working");
+
+      expect(taskStore.checkAndUnblock("test-proj")).toHaveLength(0);
     });
   });
 
