@@ -175,6 +175,34 @@ describe("useStreams.handleEvent", () => {
     };
     expect(result.current.handleEvent(event)).toBe(false);
   });
+
+  it("replays last includeInternal value when refetching on stream events (#1537)", async () => {
+    mockClient.listStreams.mockResolvedValue({ streams: [] });
+    const { result } = renderHook(() => useStreams());
+
+    // Caller sets showInternals = true
+    await act(async () => {
+      await result.current.loadStreams(true);
+    });
+
+    vi.clearAllMocks();
+    mockClient.listStreams.mockResolvedValue({ streams: [] });
+
+    // A stream lifecycle event must refetch with includeInternal: true
+    const event = {
+      id: "e1",
+      type: "stream.created",
+      timestamp: "2026-01-01T00:00:00Z",
+      payload: {},
+    };
+    await act(async () => {
+      result.current.handleEvent(event);
+    });
+
+    await waitFor(() => {
+      expect(mockClient.listStreams).toHaveBeenCalledWith({ includeInternal: true });
+    });
+  });
 });
 
 describe("useStreams.domainHook", () => {
@@ -225,5 +253,25 @@ describe("useStreams.domainHook", () => {
       payload: {},
     };
     expect(result.current.domainHook.handleEvent(event)).toBe(false);
+  });
+
+  it("onConnect replays last includeInternal value after showInternals was set (#1537)", async () => {
+    mockClient.listStreams.mockResolvedValue({ streams: [] });
+    const { result } = renderHook(() => useStreams());
+
+    // Caller sets showInternals = true
+    await act(async () => {
+      await result.current.loadStreams(true);
+    });
+
+    vi.clearAllMocks();
+    mockClient.listStreams.mockResolvedValue({ streams: [] });
+
+    // Reconnect must refetch with includeInternal: true
+    await act(async () => {
+      await result.current.domainHook.onConnect();
+    });
+
+    expect(mockClient.listStreams).toHaveBeenCalledWith({ includeInternal: true });
   });
 });
