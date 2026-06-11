@@ -139,7 +139,10 @@ function ScheduleForm({
     scheduleExpression.trim().length > 0 &&
     (!personaRequired || personaId.length > 0);
 
-  const personaOptions: SelectOption[] = personas.map((p) => ({ value: p.id, label: p.name }));
+  const personaOptions: SelectOption[] = [
+    ...(agentId ? [{ value: "", label: "Inherit from Agent" }] : []),
+    ...personas.map((p) => ({ value: p.id, label: p.name })),
+  ];
   const workspaceOptions: SelectOption[] = [
     { value: "", label: "System-level (no workspace)" },
     ...workspaces.map((w) => ({ value: w.id, label: w.name })),
