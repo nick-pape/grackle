@@ -50,13 +50,14 @@ export function createCoreReconciliationPhases(): ReconciliationPhase[] {
       const row = getDatabaseStores().taskStore.getTask(id);
       return row ? toTaskModel(row) : undefined;
     },
-    hasCapacity: (environmentId: string): boolean =>
-      hasCapacity(environmentId, {
-        countActiveForEnvironment: (envId) =>
-          getDatabaseStores().sessionStore.countActiveForEnvironment(envId),
-        getEnvironment: (id) => getDatabaseStores().envRegistry.getEnvironment(id),
-        getSetting: (key) => getDatabaseStores().settingsStore.getSetting(key),
-      }),
+    hasCapacity: (environmentId: string): boolean => {
+      const { sessionStore, envRegistry, settingsStore } = getDatabaseStores();
+      return hasCapacity(environmentId, {
+        countActiveForEnvironment: (envId) => sessionStore.countActiveForEnvironment(envId),
+        getEnvironment: (id) => envRegistry.getEnvironment(id),
+        getSetting: (key) => settingsStore.getSetting(key),
+      });
+    },
     environmentExists: (id: string): boolean =>
       getDatabaseStores().envRegistry.getEnvironment(id) !== undefined,
     isTaskEligible: (taskId: string): boolean => {
