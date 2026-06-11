@@ -71,34 +71,34 @@ export function createSchedulingPlugin(): GracklePlugin {
       },
     ],
 
-    reconciliationPhases: (ctx: PluginContext) => [
-      createCronPhase({
-        getDueSchedules: () => getDatabaseStores().scheduleStore.getDueSchedules(),
-        advanceSchedule: (id, lastRunAt, nextRunAt) =>
-          getDatabaseStores().scheduleStore.advanceSchedule(id, lastRunAt, nextRunAt),
-        createTask: taskService.createTask,
-        setTaskScheduleId: (taskId, scheduleId) =>
-          getDatabaseStores().taskStore.setTaskScheduleId(taskId, scheduleId),
-        enqueueForDispatch: (entry) => getDatabaseStores().dispatchQueueStore.enqueue(entry),
-        emit: ctx.emit,
-        getPersona: (id) => getDatabaseStores().personaStore.getPersona(id),
-        setScheduleEnabled: (id, enabled, nextRunAt) =>
-          getDatabaseStores().scheduleStore.setScheduleEnabled(id, enabled, nextRunAt),
-        // Heartbeat branch wiring (#1438). `reanimateAgent` is sync (returns
-        // SessionRow); the CronPhaseDep type accepts `unknown` so it can be
-        // passed directly without an async wrapper.
-        getTask: (id: string) => {
-          const row = getDatabaseStores().taskStore.getTask(id);
-          return row ? toTaskModel(row) : undefined;
-        },
-        getLatestSessionForTask: (taskId) =>
-          getDatabaseStores().sessionStore.getLatestSessionForTask(taskId),
-        reanimateAgent,
-        publishToStdin,
-        startTaskSession,
-        resolveEnvironment: resolveEnvironmentForHeartbeat,
-        logger: ctx.logger,
-      }),
-    ],
+    reconciliationPhases: (ctx: PluginContext) => {
+      const { scheduleStore, taskStore, personaStore, dispatchQueueStore, sessionStore } =
+        getDatabaseStores();
+      return [
+        createCronPhase({
+          getDueSchedules: scheduleStore.getDueSchedules,
+          advanceSchedule: scheduleStore.advanceSchedule,
+          createTask: taskService.createTask,
+          setTaskScheduleId: taskStore.setTaskScheduleId,
+          enqueueForDispatch: dispatchQueueStore.enqueue,
+          emit: ctx.emit,
+          getPersona: personaStore.getPersona,
+          setScheduleEnabled: scheduleStore.setScheduleEnabled,
+          // Heartbeat branch wiring (#1438). `reanimateAgent` is sync (returns
+          // SessionRow); the CronPhaseDep type accepts `unknown` so it can be
+          // passed directly without an async wrapper.
+          getTask: (id: string) => {
+            const row = taskStore.getTask(id);
+            return row ? toTaskModel(row) : undefined;
+          },
+          getLatestSessionForTask: sessionStore.getLatestSessionForTask,
+          reanimateAgent,
+          publishToStdin,
+          startTaskSession,
+          resolveEnvironment: resolveEnvironmentForHeartbeat,
+          logger: ctx.logger,
+        }),
+      ];
+    },
   };
 }
