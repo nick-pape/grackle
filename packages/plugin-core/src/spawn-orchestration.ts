@@ -9,8 +9,11 @@
 
 import type { PipeMode } from "@grackle-ai/common";
 import { DEFAULT_MCP_PORT, UnavailableError, PreconditionError } from "@grackle-ai/common";
-import type { ServerActionEnvelope, PowerLineConnection } from "@grackle-ai/adapter-sdk";
-import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
+import type {
+  ServerActionEnvelope,
+  PowerLineConnection,
+  ProvisionEvent,
+} from "@grackle-ai/adapter-sdk";
 import type { EnvironmentRow } from "@grackle-ai/database";
 import { getDatabaseStores } from "@grackle-ai/database";
 import {
@@ -22,7 +25,6 @@ import {
   isReconnecting,
   emit,
   logger,
-  recoverSuspendedSessions,
   parseAdapterConfig,
   resolveBootstrapRuntime,
   type EventStreamOptions,
@@ -30,6 +32,7 @@ import {
 import { toDialableHost } from "./grpc-shared.js";
 import { sessionRowToProto } from "./grpc-proto-converters.js";
 import type { grackle } from "@grackle-ai/common";
+import { runProvisionLoop } from "./provision-loop.js";
 
 /**
  * Return a live connection for the given environment, auto-provisioning it if
@@ -45,7 +48,6 @@ import type { grackle } from "@grackle-ai/common";
  */
 export async function ensureSpawnConnection(env: EnvironmentRow): Promise<PowerLineConnection> {
   const environmentId = env.id;
-  const { envRegistry } = getDatabaseStores();
   const existing = adapterManager.getConnection(environmentId);
   if (existing) {
     return existing;
@@ -72,61 +74,42 @@ export async function ensureSpawnConnection(env: EnvironmentRow): Promise<PowerL
   const powerlineToken = env.powerlineToken;
 
   logger.info({ environmentId }, "Auto-provisioning environment for SpawnAgent");
-  envRegistry.updateEnvironmentStatus(environmentId, "connecting");
-  emit("environment.changed", {});
 
+  // Drive the shared provision loop manually so we can both forward each
+  // progress event as an emit AND capture the returned PowerLineConnection.
+  // for...of discards the generator's TReturn value, so we use gen.next().
+  const gen = runProvisionLoop(environmentId, adapter, config, powerlineToken, !!env.bootstrapped);
+  // Definite-assignment assertion: always assigned before use or thrown in catch.
+  let step!: Awaited<ReturnType<typeof gen.next>>;
   try {
-    for await (const provEvent of reconnectOrProvision(
-      environmentId,
-      adapter,
-      config,
-      powerlineToken,
-      !!env.bootstrapped,
-    )) {
-      logger.info(
-        { environmentId, stage: provEvent.stage },
-        "Auto-provision progress (SpawnAgent)",
-      );
+    step = await gen.next();
+    while (!step.done) {
+      const ev = step.value as ProvisionEvent;
+      logger.info({ environmentId, stage: ev.stage }, "Auto-provision progress (SpawnAgent)");
       emit("environment.provision_progress", {
         environmentId,
-        stage: provEvent.stage,
-        message: provEvent.message,
-        progress: provEvent.progress,
+        stage: ev.stage,
+        message: ev.message,
+        progress: ev.progress,
       });
+      step = await gen.next();
     }
-
-    const conn = await adapter.connect(environmentId, config, powerlineToken);
-    adapterManager.setConnection(environmentId, conn);
-    // Credentials are supplied on demand at spawn (AHP HR6), not eagerly on connect.
-    envRegistry.updateEnvironmentStatus(environmentId, "connected");
-    envRegistry.markBootstrapped(environmentId);
-    emit("environment.changed", {});
-    // Auto-recover suspended sessions (fire-and-forget)
-    recoverSuspendedSessions(environmentId, conn).catch((err) => {
-      logger.error({ environmentId, err }, "Session recovery failed");
-    });
-    logger.info({ environmentId }, "Auto-provision complete (SpawnAgent)");
-    emit("environment.provision_progress", {
-      environmentId,
-      stage: "ready",
-      message: "Environment connected",
-      progress: 1,
-    });
-    return conn;
   } catch (err) {
     logger.error({ environmentId, err }, "Auto-provision failed (SpawnAgent)");
-    // Guard against clobbering a concurrent successful provision: if another
-    // caller connected the environment while this attempt was failing, keep
-    // the "connected" status rather than reverting it to "error".
-    const currentEnv = envRegistry.getEnvironment(environmentId);
-    if (currentEnv?.status !== "connected") {
-      envRegistry.updateEnvironmentStatus(environmentId, "error");
-      emit("environment.changed", {});
-    }
     throw new PreconditionError(
       `Failed to auto-connect environment ${environmentId}: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
+  // step.done === true; step.value is the live PowerLineConnection
+  const conn = step.value as PowerLineConnection;
+  emit("environment.provision_progress", {
+    environmentId,
+    stage: "ready",
+    message: "Environment connected",
+    progress: 1,
+  });
+  logger.info({ environmentId }, "Auto-provision complete (SpawnAgent)");
+  return conn;
 }
 
 /** Build the MCP endpoint URL from environment variables or defaults. */

@@ -1,17 +1,16 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, ValidationError, PreconditionError } from "@grackle-ai/common";
 import { getDatabaseStores, sqlite } from "@grackle-ai/database";
-import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { adapterManager } from "@grackle-ai/core";
 import { parseAdapterConfig } from "@grackle-ai/core";
 import { emit } from "@grackle-ai/core";
-import { recoverSuspendedSessions } from "@grackle-ai/core";
 import { clearReconnectState } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { envRowToProto } from "./grpc-proto-converters.js";
 import { killSessionAndCleanup, suspendSessionAndPublish } from "./grpc-shared.js";
 import { resolveBootstrapRuntime } from "@grackle-ai/core";
 import { requireEnvironment, requireField, requireNonEmpty } from "./require-helpers.js";
+import { runProvisionLoop, ProvisionLoopError } from "./provision-loop.js";
 
 /** List all registered environments. */
 export async function listEnvironments(): Promise<grackle.EnvironmentList> {
@@ -188,15 +187,14 @@ export async function* provisionEnvironment(
     adapterManager.removeConnection(req.id);
   }
 
-  envRegistry.updateEnvironmentStatus(req.id, "connecting");
-  emit("environment.changed", {});
-
+  // Parse config before runProvisionLoop flips status to "connecting" —
+  // a parse error here does not leave the environment stuck in "connecting".
   const config = parseAdapterConfig(env.adapterConfig);
   config.defaultRuntime = resolveBootstrapRuntime(env);
   const powerlineToken = env.powerlineToken;
 
   try {
-    for await (const event of reconnectOrProvision(
+    for await (const event of runProvisionLoop(
       req.id,
       adapter,
       config,
@@ -212,37 +210,15 @@ export async function* provisionEnvironment(
     }
   } catch (err) {
     logger.error({ environmentId: req.id, err }, "Provision/bootstrap failed");
-    const currentEnv = envRegistry.getEnvironment(req.id);
-    if (currentEnv?.status !== "connected") {
-      envRegistry.updateEnvironmentStatus(req.id, "error");
-      emit("environment.changed", {});
-    }
+    // Use the phase tag from ProvisionLoopError to match the message the
+    // client and existing tests expect.
+    const label =
+      err instanceof ProvisionLoopError && err.phase === "connect"
+        ? "Connection failed"
+        : "Provision failed";
     yield create(grackle.ProvisionEventSchema, {
       stage: "error",
-      message: `Provision failed: ${err instanceof Error ? err.message : String(err)}`,
-      progress: 0,
-    });
-    return;
-  }
-
-  try {
-    const conn = await adapter.connect(req.id, config, powerlineToken);
-    adapterManager.setConnection(req.id, conn);
-    // Credentials are supplied on demand at spawn (AHP HR6), not eagerly on connect.
-    envRegistry.updateEnvironmentStatus(req.id, "connected");
-    envRegistry.markBootstrapped(req.id);
-    emit("environment.changed", {});
-    // Auto-recover suspended sessions (fire-and-forget)
-    recoverSuspendedSessions(req.id, conn).catch((err) => {
-      logger.error({ environmentId: req.id, err }, "Session recovery failed");
-    });
-  } catch (err) {
-    // adapter.connect() actually failed
-    envRegistry.updateEnvironmentStatus(req.id, "error");
-    emit("environment.changed", {});
-    yield create(grackle.ProvisionEventSchema, {
-      stage: "error",
-      message: `Connection failed: ${err instanceof Error ? err.message : String(err)}`,
+      message: `${label}: ${err instanceof Error ? err.message : String(err)}`,
       progress: 0,
     });
     return;
