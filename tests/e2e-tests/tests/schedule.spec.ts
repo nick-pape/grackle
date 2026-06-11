@@ -224,11 +224,10 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     await nav.getByText("Detach Test Schedule").click();
     await page.waitForURL(new RegExp(`/schedules/${schedule.id}$`), { timeout: 5_000 });
 
-    // In edit mode the agent field is an EditableSelect. Clear it by selecting empty option.
-    const agentSelect = page.getByTestId("schedule-detail-agent");
-    await agentSelect.click();
-    await page.getByTestId("schedule-detail-agent-edit").selectOption({ value: "" });
-    await page.getByTestId("schedule-detail-agent-save").click();
+    // The agent field is an EditableSelect: click the button to enter edit mode, then
+    // pick the empty option. EditableSelect saves immediately on change — no save button.
+    await page.getByTestId("schedule-detail-agent-button").click();
+    await page.getByTestId("schedule-detail-agent-select").selectOption({ value: "" });
 
     // The update should succeed and the stored schedule should have no agentId.
     const updated = await client.scheduling.getSchedule({ id: schedule.id });

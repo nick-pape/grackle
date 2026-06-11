@@ -430,6 +430,57 @@ describe("createScheduleHandlers", () => {
         expect.objectContaining({ agentId: null }),
       );
     });
+
+    it("clears persona override (reverts to agent inheritance) when personaId='' on agent-owned schedule", async () => {
+      vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+        makeRow({ agentId: "a-1", personaId: "p-1" }) as ReturnType<
+          typeof scheduleStore.getSchedule
+        >,
+      );
+      const req = { id: "sched-1", personaId: "" } as grackle.UpdateScheduleRequest;
+      await handlers.updateSchedule(req);
+      expect(scheduleStore.updateSchedule).toHaveBeenCalledWith(
+        "sched-1",
+        expect.objectContaining({ personaId: "" }),
+      );
+    });
+
+    it("ignores personaId='' when schedule is not agent-owned (no-op, already unresolvable)", async () => {
+      vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+        makeRow({ agentId: null, personaId: "p-1" }) as ReturnType<
+          typeof scheduleStore.getSchedule
+        >,
+      );
+      const req = { id: "sched-1", personaId: "" } as grackle.UpdateScheduleRequest;
+      await handlers.updateSchedule(req);
+      const call = vi.mocked(scheduleStore.updateSchedule).mock.calls[0]![1] as Record<
+        string,
+        unknown
+      >;
+      expect(call.personaId).toBeUndefined();
+    });
+
+    it("ignores personaId='' when also detaching agent (guard: would leave schedule persona-less)", async () => {
+      vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+        makeRow({ agentId: "a-1", personaId: "p-1" }) as ReturnType<
+          typeof scheduleStore.getSchedule
+        >,
+      );
+      const req = {
+        id: "sched-1",
+        personaId: "",
+        agentId: "",
+      } as grackle.UpdateScheduleRequest;
+      // personaId="" + agentId="" would leave schedule with no persona — the clear is
+      // silently ignored; the detach guard then uses existing.personaId and allows detach.
+      await handlers.updateSchedule(req);
+      const call = vi.mocked(scheduleStore.updateSchedule).mock.calls[0]![1] as Record<
+        string,
+        unknown
+      >;
+      expect(call.personaId).toBeUndefined();
+      expect(call.agentId).toBeNull();
+    });
   });
 
   // ── deleteSchedule ──────────────────────────────────────

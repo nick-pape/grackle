@@ -142,13 +142,22 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
     if (req.description !== undefined) {
       update.description = req.description;
     }
-    if (req.personaId !== undefined && req.personaId.trim() !== "") {
+    if (req.personaId !== undefined) {
       const trimmedPersonaId = req.personaId.trim();
-      const persona = personaStore.getPersona(trimmedPersonaId);
-      if (!persona) {
-        throw new ConnectError(`Persona not found: ${trimmedPersonaId}`, Code.NotFound);
+      if (trimmedPersonaId) {
+        const persona = personaStore.getPersona(trimmedPersonaId);
+        if (!persona) {
+          throw new ConnectError(`Persona not found: ${trimmedPersonaId}`, Code.NotFound);
+        }
+        update.personaId = trimmedPersonaId;
+      } else if (existing.agentId && req.agentId !== "") {
+        // Clear the explicit persona override on an agent-owned schedule so it reverts to
+        // inheriting from agent.primaryPersonaId at fire time. Guard: the schedule must
+        // remain agent-owned after this update (reject if the same request also detaches
+        // the agent, which would leave the schedule with no resolvable persona).
+        update.personaId = "";
       }
-      update.personaId = trimmedPersonaId;
+      // Empty personaId on an unowned schedule or paired with agent detach: silently ignored.
     }
     // Handle agent attach/detach (#1439). proto3 optional: present = intent to change.
     if (req.agentId !== undefined) {
