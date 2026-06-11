@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PluginContext } from "@grackle-ai/plugin-sdk";
 import type { Logger } from "pino";
 
@@ -12,6 +12,7 @@ vi.mock("@grackle-ai/database", () => ({
   taskStore: {
     setTaskScheduleId: vi.fn(),
     getTask: vi.fn(),
+    getRootTaskForAgent: vi.fn(),
   },
   personaStore: {
     getPersona: vi.fn(),
@@ -43,6 +44,9 @@ vi.mock("@grackle-ai/core", () => ({
 vi.mock("@grackle-ai/common", () => ({
   grackle: { GrackleScheduling: { typeName: "grackle.GrackleScheduling" } },
   SESSION_STATUS: { PENDING: "pending", RUNNING: "running", IDLE: "idle", STOPPED: "stopped" },
+  ROOT_TASK_ID: "ROOT",
+  serverTimestamp: vi.fn(() => "2026-01-01T00:00:00Z"),
+  computeNextRunAt: vi.fn(() => "2026-01-01T00:00:30Z"),
   createPinoLogger: vi.fn(() => ({
     fatal: vi.fn(),
     error: vi.fn(),
@@ -57,10 +61,10 @@ vi.mock("@grackle-ai/common", () => ({
   })),
 }));
 
-import { agentStore } from "@grackle-ai/database";
+import { agentStore, scheduleStore, taskStore, personaStore } from "@grackle-ai/database";
 import { findFirstConnectedEnvironment } from "@grackle-ai/core";
 import { createSchedulingPlugin, resolveEnvironmentForHeartbeat } from "./scheduling-plugin.js";
-import type { TaskRow } from "@grackle-ai/database";
+import type { TaskRow, ScheduleRow } from "@grackle-ai/database";
 
 /** Create a minimal mock PluginContext for testing. */
 function createMockContext(): PluginContext {
@@ -178,5 +182,75 @@ describe("resolveEnvironmentForHeartbeat (#1438)", () => {
   it("returns undefined when no environment is connected and no agent is set", () => {
     vi.mocked(findFirstConnectedEnvironment).mockReturnValue(undefined);
     expect(resolveEnvironmentForHeartbeat(taskNoAgent)).toBeUndefined();
+  });
+});
+
+describe("cron phase inline dep arrows (#1439)", () => {
+  /** Minimal valid schedule row with no heartbeat target and no agent. */
+  function makeScheduleRow(overrides: Partial<ScheduleRow> = {}): ScheduleRow {
+    return {
+      id: "sched-1",
+      title: "Test",
+      description: "desc",
+      scheduleExpression: "30s",
+      personaId: "",
+      agentId: null,
+      taskId: null,
+      workspaceId: "",
+      parentTaskId: "",
+      enabled: 1 as unknown as boolean,
+      lastRunAt: null,
+      nextRunAt: "2026-01-01T00:00:00Z",
+      runCount: 0,
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: "2026-01-01T00:00:00Z",
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(scheduleStore.getDueSchedules).mockReturnValue([]);
+  });
+
+  it("getRootTaskForAgent arrow delegates to taskStore for agent-owned schedule fire", async () => {
+    vi.mocked(scheduleStore.getDueSchedules).mockReturnValue([
+      makeScheduleRow({ agentId: "agent-1", personaId: "" }),
+    ]);
+    vi.mocked(agentStore.getAgent).mockReturnValue({
+      id: "agent-1",
+      primaryPersonaId: "p-1",
+    } as ReturnType<typeof agentStore.getAgent>);
+    vi.mocked(personaStore.getPersona).mockReturnValue({
+      id: "p-1",
+      name: "Alice",
+      runtime: "stub",
+    } as ReturnType<typeof personaStore.getPersona>);
+    // Returning undefined simulates a missing agent root → schedule gets disabled.
+    vi.mocked(taskStore.getRootTaskForAgent).mockReturnValue(undefined);
+
+    const plugin = createSchedulingPlugin();
+    const ctx = createMockContext();
+    const phases = plugin.reconciliationPhases!(ctx);
+    await phases[0]!.execute();
+
+    expect(taskStore.getRootTaskForAgent).toHaveBeenCalledWith("agent-1");
+    expect(scheduleStore.setScheduleEnabled).toHaveBeenCalledWith("sched-1", false, null);
+  });
+
+  it("getTask arrow delegates to taskStore for heartbeat schedule fire", async () => {
+    vi.mocked(scheduleStore.getDueSchedules).mockReturnValue([
+      makeScheduleRow({ taskId: "task-1", personaId: "p-1" }),
+    ]);
+    // Returning undefined simulates a missing heartbeat target → schedule gets disabled.
+    vi.mocked(taskStore.getTask).mockReturnValue(undefined);
+
+    const plugin = createSchedulingPlugin();
+    const ctx = createMockContext();
+    const phases = plugin.reconciliationPhases!(ctx);
+    await phases[0]!.execute();
+
+    expect(taskStore.getTask).toHaveBeenCalledWith("task-1");
+    expect(scheduleStore.setScheduleEnabled).toHaveBeenCalledWith("sched-1", false, null);
   });
 });
