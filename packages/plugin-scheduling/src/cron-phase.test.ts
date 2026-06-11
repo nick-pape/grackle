@@ -216,6 +216,16 @@ describe("createCronPhase", () => {
     expect(params.kind).toBe("schedule_fire");
     expect(params.parentTaskId).toBe("root-task-1");
     expect(params.defaultPersonaId).toBe("agent-persona-1");
+    // Dispatch entry must also carry the resolved persona.
+    expect(deps.enqueueForDispatch).toHaveBeenCalledTimes(1);
+    const dispatch = vi.mocked(deps.enqueueForDispatch).mock.calls[0]![0] as Record<
+      string,
+      unknown
+    >;
+    expect(dispatch.personaId).toBe("agent-persona-1");
+    // setTaskScheduleId must be called on the fire-task.
+    const fireTaskId = params.id as string;
+    expect(deps.setTaskScheduleId).toHaveBeenCalledWith(fireTaskId, "sched-1");
   });
 
   it("agent-owned: explicit personaId overrides agent's primary persona", async () => {
@@ -237,6 +247,26 @@ describe("createCronPhase", () => {
     expect(params.defaultPersonaId).toBe("override-persona");
     // getAgent should NOT have been called — explicit personaId takes precedence
     expect(deps.getAgent).not.toHaveBeenCalled();
+    // Dispatch entry must carry the override persona too.
+    const dispatch = vi.mocked(deps.enqueueForDispatch).mock.calls[0]![0] as Record<
+      string,
+      unknown
+    >;
+    expect(dispatch.personaId).toBe("override-persona");
+  });
+
+  it("agent-owned: skips fire and advances when getAgent returns undefined (agent record missing)", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.getDueSchedules).mockReturnValue([
+      makeSchedule({ agentId: "ghost-agent", personaId: "" }),
+    ]);
+    vi.mocked(deps.getAgent).mockReturnValue(undefined);
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    expect(deps.createTask).not.toHaveBeenCalled();
+    expect(deps.advanceSchedule).toHaveBeenCalledTimes(1);
   });
 
   it("agent-owned: emits schedule.fired with agentId", async () => {
