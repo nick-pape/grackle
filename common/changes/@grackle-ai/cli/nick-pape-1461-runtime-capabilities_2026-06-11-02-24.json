@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Introduce RuntimeCapabilities interface on AgentRuntime to express runtime-specific quirks (hook support, resume support, non-empty resume prompt) through types instead of doc comments; add applyMcpConfig() template-method seam on BaseAgentSession for per-SDK MCP config transforms",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
