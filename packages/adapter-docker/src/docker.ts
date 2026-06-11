@@ -26,8 +26,9 @@ import {
   CONNECT_RETRY_DELAY_MS,
   CONNECT_MAX_RETRIES,
 } from "@grackle-ai/adapter-sdk";
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, writeFileSync, mkdtempSync, unlinkSync, rmdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve, join } from "node:path";
 
 const DOCKER_PULL_TIMEOUT_MS: number = 120_000;
 /** Timeout for `docker build` when building the base image. */
@@ -338,6 +339,25 @@ async function ensureRepoInContainer(
   const cloneUrl = repo.startsWith("https://") ? repo : `https://github.com/${repo}.git`;
 
   if (ghToken) {
+    // Write the credential helper via docker cp (local temp file → container path).
+    // The token must not appear in docker exec argv: execFile rejection embeds the full
+    // argv in err.message, which the outer provision handler logs (CWE-532/CWE-214).
+    const containerHelperPath = "/tmp/.grackle-git-cred.sh";
+    const helperContent = `#!/bin/sh\ntest "$1" = get || exit 0\necho "username=x-access-token"\necho "password=${ghToken}"\n`;
+    const tmpDir = mkdtempSync(join(tmpdir(), "grackle-cred-"));
+    const localHelper = join(tmpDir, "git-cred.sh");
+    try {
+      writeFileSync(localHelper, helperContent, { mode: 0o600 });
+      await execFn("docker", ["cp", localHelper, `${containerName}:${containerHelperPath}`]);
+    } finally {
+      try {
+        unlinkSync(localHelper);
+      } catch {}
+      try {
+        rmdirSync(tmpDir);
+      } catch {}
+    }
+    await execFn("docker", ["exec", containerName, "chmod", "700", containerHelperPath]);
     await execFn("docker", [
       "exec",
       containerName,
@@ -345,7 +365,7 @@ async function ensureRepoInContainer(
       "config",
       "--global",
       "credential.helper",
-      `!f() { echo "username=x-access-token"; echo "password=${ghToken}"; }; f`,
+      containerHelperPath,
     ]);
     await execFn("docker", ["exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH], {
       timeout: GIT_CLONE_TIMEOUT_MS,
@@ -361,6 +381,10 @@ async function ensureRepoInContainer(
     ]).catch((err) => {
       logger.warn({ err }, "Failed to unset credential helper");
     });
+    // Remove the helper script from the container — token at rest after unset
+    await execFn("docker", ["exec", containerName, "rm", "-f", containerHelperPath]).catch(
+      () => {},
+    );
   } else {
     await execFn("docker", ["exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH], {
       timeout: GIT_CLONE_TIMEOUT_MS,

@@ -281,10 +281,14 @@ export async function startRemotePowerLine(
     logger.info({ port: DEFAULT_POWERLINE_PORT }, "Remote PowerLine is listening");
     return { alreadyRunning: false };
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
-    logger.info({ detail }, "Failed to start remote PowerLine");
+    // Never use err.message here — execFile rejection embeds the full command argv
+    // (including the base64-encoded PowerLine token) in that string.
+    const exitCode = (err as { code?: unknown }).code;
+    const stderr = ((err as { stderr?: unknown }).stderr as string | undefined)?.trim();
+    logger.info({ exitCode }, "Failed to start remote PowerLine");
+    const hint = stderr ? ` Last stderr: ${stderr}` : "";
     throw new Error(
-      `PowerLine process died immediately after starting. Check ~/.grackle/powerline.log on the remote host. Cause: ${detail}`,
+      `PowerLine process died immediately after starting. Check ~/.grackle/powerline.log on the remote host.${hint}`,
     );
   }
 }
