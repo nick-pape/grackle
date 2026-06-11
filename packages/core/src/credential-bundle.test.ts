@@ -1102,6 +1102,6 @@ describe("formatRuntimeProviderDisabledError()", () => {
 
   it("includes grackle persona command hint for alternative runtime", () => {
     const msg = formatRuntimeProviderDisabledError("claude-code", "claude");
-    expect(msg).toContain("grackle persona set");
+    expect(msg).toContain("grackle persona edit");
   });
 });

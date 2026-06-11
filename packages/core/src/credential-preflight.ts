@@ -103,6 +103,6 @@ export function formatRuntimeProviderDisabledError(runtime: string, provider: st
   return (
     `Cannot start runtime "${runtime}": the required "${provider}" credential provider is not configured.\n` +
     (hint ? `${hint}\n` : `  grackle credential-provider set ${provider} on\n`) +
-    `Or choose a different runtime with \`grackle persona set <persona-id> --runtime <runtime>\`.`
+    `Or choose a different runtime with \`grackle persona edit <persona-id> --runtime <runtime>\`.`
   );
 }
