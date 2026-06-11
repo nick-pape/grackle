@@ -137,15 +137,7 @@ describe("useSchedules createSchedule", () => {
     const { result } = setup();
 
     await act(async () => {
-      await result.current.createSchedule(
-        "Agent Scan",
-        "",
-        "30s",
-        "",
-        "",
-        "",
-        "agent-1",
-      );
+      await result.current.createSchedule("Agent Scan", "", "30s", "", "", "", "agent-1");
     });
 
     expect(mockClient.createSchedule).toHaveBeenCalledWith(
