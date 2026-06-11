@@ -7,12 +7,6 @@ import { join, resolve } from "node:path";
 /** Remote directory where PowerLine artifacts are installed. Uses $HOME (not ~) so it expands inside double-quoted shell strings. */
 export const REMOTE_POWERLINE_DIRECTORY: string = "$HOME/.grackle/powerline";
 
-/** Timeout for the initial SSH connectivity test. */
-export const SSH_CONNECTIVITY_TIMEOUT_MS: number = 15_000;
-
-/** Default timeout for remote command execution. */
-export const REMOTE_EXEC_DEFAULT_TIMEOUT_MS: number = 60_000;
-
 // ─── Utilities ──────────────────────────────────────────────
 
 /** Return a promise that resolves after the specified number of milliseconds. */

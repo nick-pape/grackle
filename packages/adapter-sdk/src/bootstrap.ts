@@ -5,13 +5,12 @@ import type { AdapterLogger } from "./logger.js";
 import { defaultLogger } from "./logger.js";
 import {
   REMOTE_POWERLINE_DIRECTORY,
-  REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
-  SSH_CONNECTIVITY_TIMEOUT_MS,
   sleep,
   isDevMode,
   getPackageVersion,
   shellEscape,
 } from "./utils.js";
+import { REMOTE_EXEC_DEFAULT_TIMEOUT_MS, SSH_CONNECTIVITY_TIMEOUT_MS } from "./constants.js";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 

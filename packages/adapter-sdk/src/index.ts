@@ -27,7 +27,7 @@ export type { RemoteExecutor } from "./remote-executor.js";
 
 // ─── Tunnels ────────────────────────────────────────────────
 export type { RemoteTunnel, TunnelProcessFactory, TunnelPortProbe } from "./tunnel.js";
-export { ProcessTunnel, ProcessReverseTunnel, REVERSE_TUNNEL_SETTLE_MS } from "./tunnel.js";
+export { ProcessTunnel, ProcessReverseTunnel } from "./tunnel.js";
 export type { TunnelState } from "./tunnel-registry.js";
 export { TunnelRegistry } from "./tunnel-registry.js";
 
@@ -75,9 +75,20 @@ export {
   getPackageVersion,
   shellEscape,
   REMOTE_POWERLINE_DIRECTORY,
+} from "./utils.js";
+
+// ─── Constants ──────────────────────────────────────────────
+export {
   SSH_CONNECTIVITY_TIMEOUT_MS,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
-} from "./utils.js";
+  REMOTE_COPY_TIMEOUT_MS,
+  CONNECT_RETRY_DELAY_MS,
+  CONNECT_MAX_RETRIES,
+  TUNNEL_PORT_POLL_DELAY_MS,
+  TUNNEL_PORT_POLL_MAX_ATTEMPTS,
+  TUNNEL_KILL_GRACE_MS,
+  REVERSE_TUNNEL_SETTLE_MS,
+} from "./constants.js";
 
 // ─── Host Transport (AHP HR8c/HR8d) ─────────────────────────
 // Re-export AgentEventFields from common so consumers of `ServerActionEnvelope`

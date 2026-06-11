@@ -14,10 +14,9 @@ import {
   ProcessReverseTunnel,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
   SSH_CONNECTIVITY_TIMEOUT_MS,
+  REMOTE_COPY_TIMEOUT_MS,
 } from "@grackle-ai/adapter-sdk";
 import { DEFAULT_POWERLINE_PORT } from "@grackle-ai/common";
-
-const REMOTE_COPY_TIMEOUT_MS: number = 120_000;
 
 /**
  * Thrown when the codespace no longer exists on GitHub.

@@ -8,21 +8,13 @@
 
 import { retryWithBackoff } from "@grackle-ai/adapter-sdk";
 import { logger } from "./logger.js";
-
-/** Webhook request timeout per attempt (milliseconds). */
-const WEBHOOK_TIMEOUT_MS: number = 10_000;
-
-/** Total attempts (1 initial + 2 retries). */
-const WEBHOOK_MAX_ATTEMPTS: number = 3;
-
-/** Delay before the first retry (milliseconds). */
-const WEBHOOK_RETRY_DELAY_MS: number = 500;
-
-/** Backoff multiplier applied after each retry. */
-const WEBHOOK_BACKOFF_MULTIPLIER: number = 2;
-
-/** Upper bound on computed delay (milliseconds). */
-const WEBHOOK_MAX_DELAY_MS: number = 5_000;
+import {
+  WEBHOOK_TIMEOUT_MS,
+  WEBHOOK_MAX_ATTEMPTS,
+  WEBHOOK_RETRY_DELAY_MS,
+  WEBHOOK_BACKOFF_MULTIPLIER,
+  WEBHOOK_MAX_DELAY_MS,
+} from "./constants.js";
 
 /**
  * POST a JSON payload to `url` with retry and exponential backoff.

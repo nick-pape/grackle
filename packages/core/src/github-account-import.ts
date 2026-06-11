@@ -9,12 +9,7 @@
 import { getDatabaseStores } from "@grackle-ai/database";
 import { exec } from "./utils/exec.js";
 import { logger } from "./logger.js";
-
-/** Timeout for `gh auth status` in milliseconds. */
-const GH_AUTH_STATUS_TIMEOUT_MS: number = 10_000;
-
-/** Timeout for `gh auth token` per account in milliseconds. */
-const GH_AUTH_TOKEN_TIMEOUT_MS: number = 5_000;
+import { GH_AUTH_STATUS_TIMEOUT_MS, GH_AUTH_TOKEN_TIMEOUT_MS } from "./constants.js";
 
 /** Shape of a single account entry from `gh auth status --json hosts`. */
 interface GhAuthAccount {

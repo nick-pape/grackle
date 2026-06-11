@@ -12,7 +12,8 @@ import { bootstrapPowerLine, startRemotePowerLine } from "./bootstrap.js";
 import { connectThroughTunnel } from "./connect.js";
 import { TunnelRegistry } from "./tunnel-registry.js";
 import { remoteStop, remoteDestroy, remoteHealthCheck } from "./shared-operations.js";
-import { sleep as defaultSleep, withFreePort, SSH_CONNECTIVITY_TIMEOUT_MS } from "./utils.js";
+import { sleep as defaultSleep, withFreePort } from "./utils.js";
+import { SSH_CONNECTIVITY_TIMEOUT_MS } from "./constants.js";
 import { exec as defaultExec } from "./exec.js";
 
 /** Parse `GRACKLE_MCP_PORT` env var, falling back to {@link DEFAULT_MCP_PORT} on missing or non-numeric values. */

@@ -17,6 +17,7 @@ import {
   type DatabaseInstance,
 } from "@grackle-ai/database";
 import { exec } from "./utils/exec.js";
+import { GH_AUTH_TOKEN_TIMEOUT_MS } from "./constants.js";
 
 /**
  * A single credential token, structurally compatible with both the legacy
@@ -406,9 +407,6 @@ export function formatPreflightCredentialError(
     `Configure or disable the provider with \`grackle credential-provider set <provider> <value>\`, then retry.`
   );
 }
-
-/** Timeout for the `gh auth token` subprocess call. */
-const GH_AUTH_TOKEN_TIMEOUT_MS: number = 5_000;
 
 /**
  * Resolve a GitHub token from the `gh` CLI's credential store.

@@ -8,9 +8,8 @@ import {
   ProcessTunnel,
   ProcessReverseTunnel,
   REMOTE_EXEC_DEFAULT_TIMEOUT_MS,
+  REMOTE_COPY_TIMEOUT_MS,
 } from "@grackle-ai/adapter-sdk";
-
-const REMOTE_COPY_TIMEOUT_MS: number = 120_000;
 
 // ─── Config ─────────────────────────────────────────────────
 

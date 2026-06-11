@@ -3,9 +3,7 @@ import type { AdapterLogger } from "./logger.js";
 import { defaultLogger } from "./logger.js";
 import { sleep } from "./utils.js";
 import { waitForLocalPort } from "./connect.js";
-
-/** Grace period before sending SIGKILL to a tunnel process. */
-const TUNNEL_KILL_GRACE_MS: number = 1_000;
+import { TUNNEL_KILL_GRACE_MS, REVERSE_TUNNEL_SETTLE_MS } from "./constants.js";
 
 /** Abstraction over child-process spawning used by {@link ProcessTunnel}. */
 export interface TunnelProcessFactory {
@@ -145,9 +143,6 @@ export abstract class ProcessTunnel implements RemoteTunnel {
 }
 
 // ─── Reverse Tunnel ──────────────────────────────────────────
-
-/** Delay for reverse tunnels to settle before checking readiness. */
-export const REVERSE_TUNNEL_SETTLE_MS: number = 3_000;
 
 /**
  * Base class for reverse tunnels that bind a remote port to a local port.
