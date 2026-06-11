@@ -36,14 +36,12 @@ async function run(program: Command, args: string[]): Promise<void> {
 // ── Suite ─────────────────────────────────────────────────────────────────────
 
 describe("registerScheduleCommands", () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
-  let exitSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
-    consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
+    vi.spyOn(process, "exit").mockImplementation((() => {
       throw new Error("process.exit called");
     }) as (code?: string | number | null) => never);
     vi.clearAllMocks();
