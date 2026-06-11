@@ -3,21 +3,24 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { grackle } from "@grackle-ai/common";
 
 // Mock database stores
-vi.mock("@grackle-ai/database", () => ({
-  personaStore: {
-    getPersona: vi.fn(),
-  },
-  scheduleStore: {
+vi.mock("@grackle-ai/database", () => {
+  const personaStore = { getPersona: vi.fn() };
+  const scheduleStore = {
     createSchedule: vi.fn(),
     getSchedule: vi.fn(),
     listSchedules: vi.fn(),
     updateSchedule: vi.fn(),
     deleteSchedule: vi.fn(),
-  },
-  agentStore: {
-    getAgent: vi.fn(),
-  },
-}));
+  };
+  const agentStore = { getAgent: vi.fn() };
+  const stores = { personaStore, scheduleStore, agentStore };
+  return {
+    personaStore,
+    scheduleStore,
+    agentStore,
+    getDatabaseStores: () => stores,
+  };
+});
 
 import { personaStore, scheduleStore, agentStore } from "@grackle-ai/database";
 import { createScheduleHandlers } from "./schedule-handlers.js";

@@ -23,6 +23,8 @@ import {
   sleep as defaultSleep,
   defaultLogger,
   type RemoteExecutor,
+  CONNECT_RETRY_DELAY_MS,
+  CONNECT_MAX_RETRIES,
 } from "@grackle-ai/adapter-sdk";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -34,8 +36,6 @@ const GIT_CLONE_TIMEOUT_MS: number = 120_000;
 const GIT_PULL_TIMEOUT_MS: number = 60_000;
 const CONTAINER_POLL_DELAY_MS: number = 1_000;
 const CONTAINER_POLL_MAX_ATTEMPTS: number = 30;
-const CONNECT_RETRY_DELAY_MS: number = 1_500;
-const CONNECT_MAX_RETRIES: number = 10;
 const WORKSPACE_PATH: string = "/workspace";
 /** Default image name used when no custom image is specified. */
 const DEFAULT_IMAGE: string = "grackle-powerline:latest";

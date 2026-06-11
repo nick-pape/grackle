@@ -9,13 +9,7 @@
  * @module
  */
 
-import {
-  taskStore,
-  sessionStore,
-  workspaceStore,
-  personaStore,
-  envRegistry,
-} from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import {
   REFERENCE_SOURCE,
   listReferenceSourceIds,
@@ -54,6 +48,8 @@ export interface RebuildResult {
  *   backfilled off the write path by the reconciliation phase).
  */
 export async function rebuild(embedder: Embedder): Promise<RebuildResult> {
+  const { taskStore, sessionStore, workspaceStore, personaStore, envRegistry } =
+    getDatabaseStores();
   const environments = envRegistry.listEnvironments();
   const personas = personaStore.listPersonas();
   const workspaces = workspaceStore.listWorkspaces();

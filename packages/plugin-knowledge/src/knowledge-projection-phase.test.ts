@@ -3,14 +3,31 @@ import type { Embedder } from "@grackle-ai/knowledge";
 
 // ── Mocks (all module-load deps of the phase) ───────────────
 
-vi.mock("@grackle-ai/database", () => ({
-  sessionStore: { listSessions: vi.fn(() => []) },
-  taskStore: { listTasks: vi.fn(() => []), getTask: vi.fn() },
-  workspaceStore: { listWorkspaces: vi.fn(() => []) },
-  personaStore: { listPersonas: vi.fn(() => []) },
-  envRegistry: { listEnvironments: vi.fn(() => []) },
-  workspaceEnvironmentLinkStore: { getLinkedEnvironmentIds: vi.fn(() => []) },
-}));
+vi.mock("@grackle-ai/database", () => {
+  const sessionStore = { listSessions: vi.fn(() => []) };
+  const taskStore = { listTasks: vi.fn(() => []), getTask: vi.fn() };
+  const workspaceStore = { listWorkspaces: vi.fn(() => []) };
+  const personaStore = { listPersonas: vi.fn(() => []) };
+  const envRegistry = { listEnvironments: vi.fn(() => []) };
+  const workspaceEnvironmentLinkStore = { getLinkedEnvironmentIds: vi.fn(() => []) };
+  const registry = {
+    sessionStore,
+    taskStore,
+    workspaceStore,
+    personaStore,
+    envRegistry,
+    workspaceEnvironmentLinkStore,
+  };
+  return {
+    sessionStore,
+    taskStore,
+    workspaceStore,
+    personaStore,
+    envRegistry,
+    workspaceEnvironmentLinkStore,
+    getDatabaseStores: () => registry,
+  };
+});
 
 const kg = vi.hoisted(() => ({
   getReferenceNodeProps: vi.fn(),

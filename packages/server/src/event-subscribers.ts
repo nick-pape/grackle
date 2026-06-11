@@ -11,7 +11,7 @@ import {
   createRootTaskBootSubscriber,
   createAgentRootTaskSubscriber,
 } from "@grackle-ai/plugin-core";
-import { agentStore, taskStore, sessionStore, settingsStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { randomUUID } from "node:crypto";
 
 /**
@@ -31,16 +31,19 @@ export function createEventSubscribers(ctx: PluginContext): Disposable[] {
     factories.push((pluginCtx) =>
       createRootTaskBootSubscriber(pluginCtx, {
         getTask: (id: string) => {
-          const row = taskStore.getTask(id);
+          const row = getDatabaseStores().taskStore.getTask(id);
           return row ? toTaskModel(row) : undefined;
         },
-        listSessionsForTask: sessionStore.listSessionsForTask,
-        getLatestSessionForTask: sessionStore.getLatestSessionForTask,
+        listSessionsForTask: (taskId) =>
+          getDatabaseStores().sessionStore.listSessionsForTask(taskId),
+        getLatestSessionForTask: (taskId) =>
+          getDatabaseStores().sessionStore.getLatestSessionForTask(taskId),
         computeTaskStatus,
         findFirstConnectedEnvironment,
         startTaskSession,
         reanimateAgent,
-        isOnboarded: () => settingsStore.getSetting("onboarding_completed") === "true",
+        isOnboarded: () =>
+          getDatabaseStores().settingsStore.getSetting("onboarding_completed") === "true",
       }),
     );
   }
@@ -49,9 +52,9 @@ export function createEventSubscribers(ctx: PluginContext): Disposable[] {
   // root-task autostart flag above (which gates the *system* root task).
   factories.push((pluginCtx) =>
     createAgentRootTaskSubscriber(pluginCtx, {
-      getAgent: agentStore.getAgent,
-      getRootTaskForAgent: taskStore.getRootTaskForAgent,
-      insertTask: taskStore.insertTask,
+      getAgent: (id) => getDatabaseStores().agentStore.getAgent(id),
+      getRootTaskForAgent: (agentId) => getDatabaseStores().taskStore.getRootTaskForAgent(agentId),
+      insertTask: (task) => getDatabaseStores().taskStore.insertTask(task),
       newId: () => randomUUID(),
     }),
   );

@@ -6,20 +6,12 @@ import type { TunnelRegistry } from "./tunnel-registry.js";
 import { retryWithBackoff } from "./retry.js";
 import type { AdapterLogger } from "./logger.js";
 import { defaultLogger } from "./logger.js";
-
-// ─── Constants ──────────────────────────────────────────────
-
-/** Delay between connect-with-retry attempts. */
-const CONNECT_RETRY_DELAY_MS: number = 1_500;
-
-/** Maximum number of connect-with-retry attempts. */
-const CONNECT_MAX_RETRIES: number = 10;
-
-/** Delay between port availability polls. */
-const TUNNEL_PORT_POLL_DELAY_MS: number = 500;
-
-/** Maximum number of port availability polls. */
-const TUNNEL_PORT_POLL_MAX_ATTEMPTS: number = 20;
+import {
+  CONNECT_RETRY_DELAY_MS,
+  CONNECT_MAX_RETRIES,
+  TUNNEL_PORT_POLL_DELAY_MS,
+  TUNNEL_PORT_POLL_MAX_ATTEMPTS,
+} from "./constants.js";
 
 // ─── AHP Host Transport Helper ──────────────────────────────
 

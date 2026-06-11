@@ -25,14 +25,7 @@
  */
 
 import type { ReconciliationPhase } from "@grackle-ai/plugin-sdk";
-import {
-  sessionStore,
-  taskStore,
-  workspaceStore,
-  personaStore,
-  envRegistry,
-  workspaceEnvironmentLinkStore,
-} from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import {
   getReferenceNodeProps,
   listReferenceSourceIds,
@@ -93,10 +86,11 @@ function resolveSessionWorkspaceId(taskId: string): string {
   if (!taskId) {
     return "";
   }
-  return taskStore.getTask(taskId)?.workspaceId ?? "";
+  return getDatabaseStores().taskStore.getTask(taskId)?.workspaceId ?? "";
 }
 
 async function syncSessions(embedder: Embedder): Promise<void> {
+  const { sessionStore } = getDatabaseStores();
   const sessions = sessionStore.listSessions();
   const liveSessionIds = new Set<string>();
 
@@ -198,6 +192,13 @@ export function createKnowledgeProjectionPhase(
       if (!embedder || !deps.isHealthy()) {
         return;
       }
+      const {
+        taskStore,
+        workspaceStore,
+        personaStore,
+        envRegistry,
+        workspaceEnvironmentLinkStore,
+      } = getDatabaseStores();
       // Entity backbone (hash-gated): converges the mirror even if the
       // low-latency event subscriber missed events (e.g. while Neo4j was down).
       // Endpoints (env/persona/workspace) before tasks/sessions so edges resolve.
