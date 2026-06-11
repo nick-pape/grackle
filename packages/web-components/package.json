@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/web-components",
-  "version": "0.191.0",
+  "version": "0.192.0",
   "description": "Presentational React component library for the Grackle web UI",
   "license": "MIT",
   "sideEffects": [
@@ -71,7 +71,7 @@
     "rehype-prism-plus": "^2.0.0",
     "remark-gfm": "^4.0.0",
     "lucide-react": "~0.474.0",
-    "react-router": "^7.0.0"
+    "react-router": "^7.15.0"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",

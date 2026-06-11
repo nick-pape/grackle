@@ -1,6 +1,6 @@
 {
   "name": "@grackle-ai/web",
-  "version": "0.191.0",
+  "version": "0.192.0",
   "description": "React web UI for the Grackle multi-agent coordination platform",
   "license": "MIT",
   "repository": {
@@ -51,7 +51,7 @@
     "react-markdown": "^9.0.3",
     "rehype-prism-plus": "^2.0.0",
     "remark-gfm": "^4.0.0",
-    "react-router": "^7.0.0"
+    "react-router": "^7.15.0"
   },
   "devDependencies": {
     "@grackle-ai/heft-rig": "workspace:*",
