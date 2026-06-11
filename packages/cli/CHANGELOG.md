@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 11 Jun 2026 04:27:07 GMT and should not be manually modified.
+This log was last generated on Thu, 11 Jun 2026 04:57:45 GMT and should not be manually modified.
+
+## 0.187.0
+Thu, 11 Jun 2026 04:57:45 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+- Move AHP orphan-event rescue into the mapper (withTurn helper); document status _meta tunnel as temporary HR8d artifact; delete hardcoded ORPHAN_RESCUABLE_TYPES and STATUS_RESCUE_CONTENTS from PowerLine forwarder
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
 
 ## 0.186.0
 Thu, 11 Jun 2026 04:27:07 GMT
