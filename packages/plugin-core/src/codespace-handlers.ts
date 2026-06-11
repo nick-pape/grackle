@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, UnavailableError } from "@grackle-ai/common";
 import { exec } from "@grackle-ai/core";
-import { githubAccountStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { formatGhError } from "./utils/format-gh-error.js";
 import { logger } from "@grackle-ai/core";
 import { requireTrimmed } from "./require-helpers.js";
@@ -19,6 +19,7 @@ const GH_CODESPACE_LIST_LIMIT: number = 50;
 export async function listCodespaces(
   req: grackle.ListCodespacesRequest,
 ): Promise<grackle.CodespaceList> {
+  const { githubAccountStore } = getDatabaseStores();
   const ghToken = githubAccountStore.resolveStoredGitHubToken(req.githubAccountId || undefined);
   const execEnv: NodeJS.ProcessEnv | undefined = ghToken
     ? { ...process.env, GH_TOKEN: ghToken }

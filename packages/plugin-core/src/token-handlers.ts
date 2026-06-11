@@ -1,12 +1,18 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, ValidationError } from "@grackle-ai/common";
 import { claudeProviderModeToEnum, providerToggleToEnum } from "@grackle-ai/common";
-import { tokenStore, credentialProviders } from "@grackle-ai/database";
+import {
+  getDatabaseStores,
+  VALID_PROVIDERS,
+  VALID_CLAUDE_VALUES,
+  VALID_TOGGLE_VALUES,
+} from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
 import { requireField } from "./require-helpers.js";
 
 /** Store or update a token. */
 export async function setToken(req: grackle.TokenEntry): Promise<grackle.Empty> {
+  const { tokenStore } = getDatabaseStores();
   requireField(req.name, "name");
   requireField(req.value, "value");
   tokenStore.setToken({
@@ -24,6 +30,7 @@ export async function setToken(req: grackle.TokenEntry): Promise<grackle.Empty> 
 
 /** List all stored tokens (without values). */
 export async function listTokens(): Promise<grackle.TokenList> {
+  const { tokenStore } = getDatabaseStores();
   const items = tokenStore.listTokens();
   return create(grackle.TokenListSchema, {
     tokens: items.map((t) =>
@@ -40,6 +47,7 @@ export async function listTokens(): Promise<grackle.TokenList> {
 
 /** Delete a token by name. */
 export async function deleteToken(req: grackle.TokenName): Promise<grackle.Empty> {
+  const { tokenStore } = getDatabaseStores();
   requireField(req.name, "name");
   tokenStore.deleteToken(req.name);
   emit("token.changed", {});
@@ -48,6 +56,7 @@ export async function deleteToken(req: grackle.TokenName): Promise<grackle.Empty
 
 /** Get the current credential provider configuration. */
 export async function getCredentialProviders(): Promise<grackle.CredentialProviderConfig> {
+  const { credentialProviders } = getDatabaseStores();
   const config = credentialProviders.getCredentialProviders();
   return create(grackle.CredentialProviderConfigSchema, {
     claude: claudeProviderModeToEnum(config.claude),
@@ -62,16 +71,14 @@ export async function getCredentialProviders(): Promise<grackle.CredentialProvid
 export async function setCredentialProvider(
   req: grackle.SetCredentialProviderRequest,
 ): Promise<grackle.CredentialProviderConfig> {
-  if (!credentialProviders.VALID_PROVIDERS.includes(req.provider)) {
+  const { credentialProviders } = getDatabaseStores();
+  if (!VALID_PROVIDERS.includes(req.provider)) {
     throw new ValidationError(
-      `Invalid provider: ${req.provider}. Must be one of: ${credentialProviders.VALID_PROVIDERS.join(", ")}`,
+      `Invalid provider: ${req.provider}. Must be one of: ${VALID_PROVIDERS.join(", ")}`,
     );
   }
 
-  const allowed =
-    req.provider === "claude"
-      ? credentialProviders.VALID_CLAUDE_VALUES
-      : credentialProviders.VALID_TOGGLE_VALUES;
+  const allowed = req.provider === "claude" ? VALID_CLAUDE_VALUES : VALID_TOGGLE_VALUES;
 
   if (!allowed.has(req.value)) {
     throw new ValidationError(

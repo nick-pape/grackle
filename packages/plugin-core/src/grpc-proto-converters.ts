@@ -3,16 +3,15 @@ import { grackle, scheduleRowToProto } from "@grackle-ai/common";
 import { workspaceStatusToEnum, taskStatusToEnum } from "@grackle-ai/common";
 import type { EnvironmentRow, SessionRow } from "@grackle-ai/database";
 import type { SessionModel } from "@grackle-ai/core";
-import {
-  workspaceStore,
-  taskStore,
-  personaStore,
-  agentStore,
-  componentStore,
-  escalationStore,
-  scheduleStore,
-  workspaceEnvironmentLinkStore,
-  safeParseJsonArray,
+import { getDatabaseStores, safeParseJsonArray } from "@grackle-ai/database";
+import type {
+  WorkspaceRow,
+  TaskRow,
+  ComponentRow,
+  EscalationRow,
+  AgentRow,
+  ScheduleRow,
+  PersonaRow,
 } from "@grackle-ai/database";
 
 /** Convert an environment database row to its proto representation. */
@@ -63,12 +62,12 @@ export function sessionRowToProto(row: SessionRow | SessionModel): grackle.Sessi
  * linkedEnvMap to avoid N+1 queries. When omitted, falls back to a per-row query.
  */
 export function workspaceRowToProto(
-  row: workspaceStore.WorkspaceRow,
+  row: WorkspaceRow,
   linkedEnvMap?: Map<string, string[]>,
 ): grackle.Workspace {
   const linkedIds = linkedEnvMap
     ? (linkedEnvMap.get(row.id) ?? [])
-    : workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(row.id);
+    : getDatabaseStores().workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(row.id);
   return create(grackle.WorkspaceSchema, {
     id: row.id,
     name: row.name,
@@ -88,7 +87,7 @@ export function workspaceRowToProto(
 
 /** Convert a task database row to its proto representation. */
 export function taskRowToProto(
-  row: taskStore.TaskRow,
+  row: TaskRow,
   childIds?: string[],
   computedStatus?: string,
   latestSessionId?: string,
@@ -109,7 +108,11 @@ export function taskRowToProto(
     sortOrder: row.sortOrder,
     parentTaskId: row.parentTaskId,
     depth: row.depth,
-    childTaskIds: childIds ?? taskStore.getChildren(row.id).map((c) => c.id),
+    childTaskIds:
+      childIds ??
+      getDatabaseStores()
+        .taskStore.getChildren(row.id)
+        .map((c) => c.id),
     canDecompose: row.canDecompose,
     injectKnowledge: row.injectKnowledge,
     defaultPersonaId: row.defaultPersonaId,
@@ -123,12 +126,12 @@ export function taskRowToProto(
 }
 
 /** Convert a component database row to its proto representation. */
-export function componentRowToProto(row: componentStore.ComponentRow): grackle.Component {
+export function componentRowToProto(row: ComponentRow): grackle.Component {
   return create(grackle.ComponentSchema, { ...row });
 }
 
 /** Convert an escalation database row to its proto representation. */
-export function escalationRowToProto(row: escalationStore.EscalationRow): grackle.Escalation {
+export function escalationRowToProto(row: EscalationRow): grackle.Escalation {
   return create(grackle.EscalationSchema, {
     id: row.id,
     workspaceId: row.workspaceId,
@@ -164,10 +167,7 @@ export function safeParseJson<T>(value: string | undefined, fallback: T): T {
  * for resolving the agent's root task and looking up the schedule. Pass it
  * via the second arg to embed it on the returned proto.
  */
-export function agentRowToProto(
-  row: agentStore.AgentRow,
-  heartbeat?: scheduleStore.ScheduleRow,
-): grackle.Agent {
+export function agentRowToProto(row: AgentRow, heartbeat?: ScheduleRow): grackle.Agent {
   return create(grackle.AgentSchema, {
     id: row.id,
     name: row.name,
@@ -181,7 +181,7 @@ export function agentRowToProto(
 }
 
 /** Convert a persona database row to a Persona proto message. */
-export function personaRowToProto(row: personaStore.PersonaRow): grackle.Persona {
+export function personaRowToProto(row: PersonaRow): grackle.Persona {
   const toolConfig = safeParseJson<{
     allowedTools?: string[];
     disallowedTools?: string[];

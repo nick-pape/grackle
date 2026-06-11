@@ -9,7 +9,7 @@
  */
 import { create } from "@bufbuild/protobuf";
 import { grackle, RUNTIME_CATALOG } from "@grackle-ai/common";
-import { credentialProviders } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { deriveCredentialNeeds } from "@grackle-ai/core";
 
 /**
@@ -17,6 +17,7 @@ import { deriveCredentialNeeds } from "@grackle-ai/core";
  * the current credential-provider config (AHP `RootState.agents`).
  */
 export async function listRuntimes(): Promise<grackle.ListRuntimesResponse> {
+  const { credentialProviders } = getDatabaseStores();
   const config = credentialProviders.getCredentialProviders();
   const runtimes = Object.entries(RUNTIME_CATALOG).map(([provider, entry]) =>
     create(grackle.RuntimeInfoSchema, {

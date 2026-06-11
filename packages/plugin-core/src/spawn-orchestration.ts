@@ -10,7 +10,7 @@
 import type { PipeMode } from "@grackle-ai/common";
 import { DEFAULT_MCP_PORT } from "@grackle-ai/common";
 import type { ServerActionEnvelope } from "@grackle-ai/adapter-sdk";
-import { sessionStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import {
   streamRegistry,
   pipeDelivery,
@@ -44,6 +44,7 @@ export interface SpawnTailParams {
  * `startTask` call this after creating the session row and transport stream.
  */
 export function executeSpawnTail(params: SpawnTailParams): grackle.Session {
+  const { sessionStore } = getDatabaseStores();
   const { sessionId, parentSessionId, pipeMode, transportStream, eventContext } = params;
 
   const lifecycleStream = streamRegistry.createStream(`lifecycle:${sessionId}`);

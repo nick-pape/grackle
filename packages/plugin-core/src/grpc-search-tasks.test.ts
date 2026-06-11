@@ -11,8 +11,7 @@ vi.mock("@grackle-ai/database", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@grackle-ai/database")>();
   actual.openDatabase(":memory:");
   actual.initDatabase();
-  return {
-    ...actual,
+  const overrides = {
     tokenStore: {
       listTokens: vi.fn(() => []),
       setToken: vi.fn(),
@@ -47,6 +46,38 @@ vi.mock("@grackle-ai/database", async (importOriginal) => {
       updatePersona: vi.fn(),
       deletePersona: vi.fn(),
     },
+  };
+  actual.setDatabaseStores({
+    sessionStore: overrides.sessionStore,
+    taskStore: actual.taskStore,
+    envRegistry: overrides.envRegistry,
+    workspaceStore: actual.workspaceStore,
+    personaStore: overrides.personaStore,
+    agentStore: actual.agentStore,
+    componentStore: actual.componentStore,
+    settingsStore: actual.settingsStore,
+    tokenStore: overrides.tokenStore,
+    credentialProviders: actual.credentialProviders,
+    scheduleStore: actual.scheduleStore,
+    escalationStore: actual.escalationStore,
+    workspaceEnvironmentLinkStore: actual.workspaceEnvironmentLinkStore,
+    dispatchQueueStore: actual.dispatchQueueStore,
+    pluginStore: actual.pluginStore,
+    githubAccountStore: actual.githubAccountStore,
+    channelGrantStore: actual.channelGrantStore,
+    eventStore: { persistEvent: actual.persistEvent, queryDomainEvents: actual.queryDomainEvents },
+    streamMessageStore: {
+      persistStreamMessage: actual.persistStreamMessage,
+      queryStreamMessages: actual.queryStreamMessages,
+    },
+    sessionActionStore: {
+      persistSessionAction: actual.persistSessionAction,
+      querySessionActions: actual.querySessionActions,
+    },
+  });
+  return {
+    ...actual,
+    ...overrides,
   };
 });
 

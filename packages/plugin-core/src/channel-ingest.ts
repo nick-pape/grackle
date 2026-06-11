@@ -10,7 +10,7 @@
 import { createHash } from "node:crypto";
 import { create } from "@bufbuild/protobuf";
 import { grackle, GrackleError, Code } from "@grackle-ai/common";
-import { channelGrantStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { verifyChannelToken } from "@grackle-ai/auth";
 import { getChannelConfig } from "./channel-config.js";
 import { sendInput } from "./session-handlers.js";
@@ -71,6 +71,7 @@ function alreadySeen(key: string): boolean {
  * @returns An {@link IngestResult} the web server maps to an HTTP status.
  */
 export async function ingestChannelMessage(token: string, body: IngestBody): Promise<IngestResult> {
+  const { channelGrantStore } = getDatabaseStores();
   const { signingSecret } = getChannelConfig();
 
   const claims = verifyChannelToken(token, signingSecret);

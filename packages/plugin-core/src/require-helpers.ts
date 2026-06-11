@@ -26,18 +26,7 @@ import type {
   WorkspaceRow,
 } from "@grackle-ai/database";
 import type { GitHubAccountInfo } from "@grackle-ai/database";
-import {
-  agentStore,
-  componentStore,
-  envRegistry,
-  escalationStore,
-  githubAccountStore,
-  channelGrantStore,
-  personaStore,
-  sessionStore,
-  taskStore,
-  workspaceStore,
-} from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 
 // ── Required Field Helpers ──────────────────────────────────────
 
@@ -104,6 +93,7 @@ export function requireOneOf<T extends Record<string, unknown>>(fields: T): keyo
 
 /** Look up a workspace by ID; throw `NotFoundError` if missing. */
 export function requireWorkspace(id: string, context?: Record<string, unknown>): WorkspaceRow {
+  const { workspaceStore } = getDatabaseStores();
   requireField(id, "workspaceId");
   const row = workspaceStore.getWorkspace(id);
   if (!row) {
@@ -114,6 +104,7 @@ export function requireWorkspace(id: string, context?: Record<string, unknown>):
 
 /** Look up an environment by ID; throw `NotFoundError` if missing. */
 export function requireEnvironment(id: string, context?: Record<string, unknown>): EnvironmentRow {
+  const { envRegistry } = getDatabaseStores();
   requireField(id, "environmentId");
   const row = envRegistry.getEnvironment(id);
   if (!row) {
@@ -124,6 +115,7 @@ export function requireEnvironment(id: string, context?: Record<string, unknown>
 
 /** Look up a session by ID; throw `NotFoundError` if missing. */
 export function requireSession(id: string, context?: Record<string, unknown>): SessionRow {
+  const { sessionStore } = getDatabaseStores();
   requireField(id, "sessionId");
   const row = sessionStore.getSession(id);
   if (!row) {
@@ -134,6 +126,7 @@ export function requireSession(id: string, context?: Record<string, unknown>): S
 
 /** Look up a task by ID; throw `NotFoundError` if missing. */
 export function requireTask(id: string, context?: Record<string, unknown>): TaskRow {
+  const { taskStore } = getDatabaseStores();
   requireField(id, "taskId");
   const row = taskStore.getTask(id);
   if (!row) {
@@ -144,6 +137,7 @@ export function requireTask(id: string, context?: Record<string, unknown>): Task
 
 /** Look up an agent by ID; throw `NotFoundError` if missing. */
 export function requireAgent(id: string, context?: Record<string, unknown>): AgentRow {
+  const { agentStore } = getDatabaseStores();
   requireField(id, "agentId");
   const row = agentStore.getAgent(id);
   if (!row) {
@@ -154,6 +148,7 @@ export function requireAgent(id: string, context?: Record<string, unknown>): Age
 
 /** Look up a persona by ID; throw `NotFoundError` if missing. */
 export function requirePersona(id: string, context?: Record<string, unknown>): PersonaRow {
+  const { personaStore } = getDatabaseStores();
   requireField(id, "personaId");
   const row = personaStore.getPersona(id);
   if (!row) {
@@ -164,6 +159,7 @@ export function requirePersona(id: string, context?: Record<string, unknown>): P
 
 /** Look up a component by ID; throw `NotFoundError` if missing. */
 export function requireComponent(id: string, context?: Record<string, unknown>): ComponentRow {
+  const { componentStore } = getDatabaseStores();
   requireField(id, "componentId");
   const row = componentStore.getComponent(id);
   if (!row) {
@@ -174,6 +170,7 @@ export function requireComponent(id: string, context?: Record<string, unknown>):
 
 /** Look up an escalation by ID; throw `NotFoundError` if missing. */
 export function requireEscalation(id: string, context?: Record<string, unknown>): EscalationRow {
+  const { escalationStore } = getDatabaseStores();
   requireField(id, "escalationId");
   const row = escalationStore.getEscalation(id);
   if (!row) {
@@ -187,6 +184,7 @@ export function requireGitHubAccount(
   id: string,
   context?: Record<string, unknown>,
 ): GitHubAccountInfo {
+  const { githubAccountStore } = getDatabaseStores();
   requireField(id, "id");
   const row = githubAccountStore.getGitHubAccount(id);
   if (!row) {
@@ -200,6 +198,7 @@ export function requireChannelGrant(
   id: string,
   context?: Record<string, unknown>,
 ): ChannelGrantRow {
+  const { channelGrantStore } = getDatabaseStores();
   requireField(id, "grantId");
   const row = channelGrantStore.getGrant(id);
   if (!row) {

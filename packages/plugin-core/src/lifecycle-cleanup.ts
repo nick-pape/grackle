@@ -8,7 +8,7 @@
  * @module
  */
 
-import { sessionStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import type { ReconciliationPhase } from "@grackle-ai/core";
 import { streamRegistry } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
@@ -20,6 +20,7 @@ const LIFECYCLE_PREFIX: string = "lifecycle:";
 export const lifecycleCleanupPhase: ReconciliationPhase = {
   name: "lifecycle-cleanup",
   execute: async (): Promise<void> => {
+    const { sessionStore } = getDatabaseStores();
     let cleaned: number = 0;
     for (const stream of streamRegistry.listStreams()) {
       if (!stream.name.startsWith(LIFECYCLE_PREFIX)) {

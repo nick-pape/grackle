@@ -14,7 +14,7 @@ import {
   NotFoundError,
   PreconditionError,
 } from "@grackle-ai/common";
-import { sessionStore, taskStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import {
   streamRegistry,
   pipeDelivery,
@@ -32,6 +32,7 @@ import { requireField, requireTask } from "./require-helpers.js";
  * task is unknown. Shared by the operator attach/detach/list handlers.
  */
 function resolveLiveSessionForTask(taskId: string): string {
+  const { sessionStore } = getDatabaseStores();
   requireTask(taskId);
   return getLatestLiveSessionId(sessionStore.listSessionsForTask(taskId));
 }

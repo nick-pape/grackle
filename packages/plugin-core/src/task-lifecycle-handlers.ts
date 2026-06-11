@@ -18,7 +18,7 @@ import {
   ROOT_TASK_ID,
   LOGS_DIR,
 } from "@grackle-ai/common";
-import { sessionStore, taskStore, grackleHome } from "@grackle-ai/database";
+import { getDatabaseStores, grackleHome } from "@grackle-ai/database";
 import { join } from "node:path";
 import { adapterManager } from "@grackle-ai/core";
 import { streamHub } from "@grackle-ai/core";
@@ -36,6 +36,7 @@ import { requireTask } from "./require-helpers.js";
 
 /** Mark a task as complete and clean up active sessions. */
 export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
+  const { sessionStore, taskStore } = getDatabaseStores();
   if (req.id === ROOT_TASK_ID) {
     throw new AuthError("Cannot complete the system task");
   }
@@ -94,6 +95,7 @@ export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
 
 /** Set the workpad JSON for a task. */
 export async function setWorkpad(req: grackle.SetWorkpadRequest): Promise<grackle.Task> {
+  const { sessionStore, taskStore } = getDatabaseStores();
   const task = requireTask(req.taskId);
   // Validate workpad is a valid JSON object
   try {
@@ -121,6 +123,7 @@ export async function setWorkpad(req: grackle.SetWorkpadRequest): Promise<grackl
 
 /** Resume the latest session for a task. */
 export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> {
+  const { sessionStore, taskStore } = getDatabaseStores();
   const task = requireTask(req.id);
 
   const latestSession = sessionStore.getLatestSessionForTask(req.id);
@@ -183,6 +186,7 @@ export async function resumeTask(req: grackle.TaskId): Promise<grackle.Session> 
 
 /** Stop a task by terminating all its active sessions. */
 export async function stopTask(req: grackle.TaskId): Promise<grackle.Task> {
+  const { sessionStore, taskStore } = getDatabaseStores();
   const task = requireTask(req.id);
 
   // Terminate all active sessions for this task using the fd-closure pattern
@@ -234,6 +238,7 @@ export async function stopTask(req: grackle.TaskId): Promise<grackle.Task> {
 
 /** Delete a task and all its sessions. */
 export async function deleteTask(req: grackle.TaskId): Promise<grackle.Empty> {
+  const { sessionStore, taskStore } = getDatabaseStores();
   if (req.id === ROOT_TASK_ID) {
     throw new AuthError("Cannot delete the system task");
   }

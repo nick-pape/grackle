@@ -7,17 +7,7 @@ import {
 } from "@grackle-ai/common";
 import type { PipeMode } from "@grackle-ai/common";
 import { TASK_STATUS, ROOT_TASK_ID, ROOT_TASK_INITIAL_PROMPT, LOGS_DIR } from "@grackle-ai/common";
-import {
-  envRegistry,
-  sessionStore,
-  taskStore,
-  workspaceStore,
-  personaStore,
-  settingsStore,
-  dispatchQueueStore,
-  grackleHome,
-  workspaceEnvironmentLinkStore,
-} from "@grackle-ai/database";
+import { getDatabaseStores, grackleHome } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import { adapterManager } from "@grackle-ai/core";
@@ -50,6 +40,16 @@ import { buildMcpUrl, executeSpawnTail } from "./spawn-orchestration.js";
 
 /** Start a task by spawning a new agent session. */
 export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.Session> {
+  const {
+    envRegistry,
+    sessionStore,
+    taskStore,
+    workspaceStore,
+    personaStore,
+    settingsStore,
+    dispatchQueueStore,
+    workspaceEnvironmentLinkStore,
+  } = getDatabaseStores();
   const task = taskStore.getTask(req.taskId);
   if (!task) {
     throw new NotFoundError(`Task not found: ${req.taskId}`);

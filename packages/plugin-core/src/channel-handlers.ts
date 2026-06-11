@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, ValidationError } from "@grackle-ai/common";
-import { channelGrantStore, sessionStore, type ChannelGrantRow } from "@grackle-ai/database";
+import { getDatabaseStores, type ChannelGrantRow } from "@grackle-ai/database";
 import { createChannelToken, verifyChannelToken } from "@grackle-ai/auth";
 import { ulid } from "ulid";
 import { getChannelConfig } from "./channel-config.js";
@@ -34,6 +34,7 @@ function grantRowToProto(row: ChannelGrantRow): grackle.ChannelGrant {
 export async function exposeChannel(
   req: grackle.ExposeChannelRequest,
 ): Promise<grackle.ExposeChannelResponse> {
+  const { channelGrantStore } = getDatabaseStores();
   if (req.target.case !== "sessionId" || !req.target.value) {
     throw new ValidationError("sessionId target is required");
   }
@@ -72,6 +73,7 @@ export async function exposeChannel(
 export async function listChannelGrants(
   _req: grackle.ListChannelGrantsRequest,
 ): Promise<grackle.ChannelGrantList> {
+  const { channelGrantStore } = getDatabaseStores();
   const rows = channelGrantStore.listGrants();
   return create(grackle.ChannelGrantListSchema, { grants: rows.map(grantRowToProto) });
 }
@@ -80,6 +82,7 @@ export async function listChannelGrants(
 export async function revokeChannelGrant(
   req: grackle.RevokeChannelGrantRequest,
 ): Promise<grackle.Empty> {
+  const { channelGrantStore } = getDatabaseStores();
   requireChannelGrant(req.grantId);
   channelGrantStore.revokeGrant(req.grantId);
   return create(grackle.EmptySchema, {});
