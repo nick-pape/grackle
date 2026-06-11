@@ -1,5 +1,5 @@
 import { create } from "@bufbuild/protobuf";
-import { grackle, UnavailableError, PreconditionError, ValidationError } from "@grackle-ai/common";
+import { grackle, PreconditionError, ValidationError } from "@grackle-ai/common";
 import type { PipeMode } from "@grackle-ai/common";
 import {
   SESSION_STATUS,
@@ -10,12 +10,8 @@ import {
 import { getDatabaseStores, grackleHome } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
-import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { adapterManager } from "@grackle-ai/core";
 import { tokenPush } from "@grackle-ai/core";
-import { parseAdapterConfig } from "@grackle-ai/core";
-import { emit } from "@grackle-ai/core";
-import { recoverSuspendedSessions } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { reanimateAgent } from "@grackle-ai/core";
 import { createScopedToken, loadOrCreateApiKey } from "@grackle-ai/auth";
@@ -26,7 +22,7 @@ import { sessionRowToProto } from "./grpc-proto-converters.js";
 import { validatePipeInputs, killSessionAndCleanup } from "./grpc-shared.js";
 import { requireEnvironment, requireField, requireSession } from "./require-helpers.js";
 import { buildCreateSessionParams } from "./spawn-request.js";
-import { buildMcpUrl, executeSpawnTail } from "./spawn-orchestration.js";
+import { buildMcpUrl, executeSpawnTail, ensureSpawnConnection } from "./spawn-orchestration.js";
 import {
   resolveSpawnSpec,
   personaToLayer,
@@ -35,89 +31,13 @@ import {
 } from "@grackle-ai/core";
 import { buildMcpServersJson, toPersonaModel } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
-import { resolveBootstrapRuntime } from "@grackle-ai/core";
 import { publishToStdin } from "@grackle-ai/core";
-import { isReconnecting } from "@grackle-ai/core";
 
 /** Spawn a new agent session in the given environment. */
 export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Session> {
-  const { envRegistry, sessionStore, taskStore, personaStore, settingsStore } = getDatabaseStores();
+  const { sessionStore, taskStore, personaStore, settingsStore } = getDatabaseStores();
   const env = requireEnvironment(req.environmentId);
-
-  let conn = adapterManager.getConnection(req.environmentId);
-  if (!conn) {
-    // If auto-reconnect is already in-flight for this environment, fail fast
-    // rather than racing with a duplicate provision attempt that could overwrite
-    // the connection, collide on session recovery, or open duplicate tunnels.
-    if (isReconnecting(req.environmentId)) {
-      throw new UnavailableError(
-        `Environment ${req.environmentId} is reconnecting — retry shortly`,
-      );
-    }
-
-    // Auto-provision: attempt to reconnect/provision a disconnected environment
-    const adapter = adapterManager.getAdapter(env.adapterType);
-    if (!adapter) {
-      throw new PreconditionError(`No adapter for type: ${env.adapterType}`);
-    }
-
-    logger.info(
-      { environmentId: req.environmentId },
-      "Auto-provisioning environment for SpawnAgent",
-    );
-    envRegistry.updateEnvironmentStatus(req.environmentId, "connecting");
-    emit("environment.changed", {});
-
-    const config = parseAdapterConfig(env.adapterConfig);
-    config.defaultRuntime = resolveBootstrapRuntime(env);
-    const powerlineToken = env.powerlineToken;
-
-    try {
-      for await (const provEvent of reconnectOrProvision(
-        req.environmentId,
-        adapter,
-        config,
-        powerlineToken,
-        !!env.bootstrapped,
-      )) {
-        logger.info(
-          { environmentId: req.environmentId, stage: provEvent.stage },
-          "Auto-provision progress (SpawnAgent)",
-        );
-        emit("environment.provision_progress", {
-          environmentId: req.environmentId,
-          stage: provEvent.stage,
-          message: provEvent.message,
-          progress: provEvent.progress,
-        });
-      }
-
-      conn = await adapter.connect(req.environmentId, config, powerlineToken);
-      adapterManager.setConnection(req.environmentId, conn);
-      // Credentials are supplied on demand at spawn (AHP HR6), not eagerly on connect.
-      envRegistry.updateEnvironmentStatus(req.environmentId, "connected");
-      envRegistry.markBootstrapped(req.environmentId);
-      emit("environment.changed", {});
-      // Auto-recover suspended sessions (fire-and-forget)
-      recoverSuspendedSessions(req.environmentId, conn).catch((err) => {
-        logger.error({ environmentId: req.environmentId, err }, "Session recovery failed");
-      });
-      logger.info({ environmentId: req.environmentId }, "Auto-provision complete (SpawnAgent)");
-      emit("environment.provision_progress", {
-        environmentId: req.environmentId,
-        stage: "ready",
-        message: "Environment connected",
-        progress: 1,
-      });
-    } catch (err) {
-      logger.error({ environmentId: req.environmentId, err }, "Auto-provision failed (SpawnAgent)");
-      envRegistry.updateEnvironmentStatus(req.environmentId, "error");
-      emit("environment.changed", {});
-      throw new PreconditionError(
-        `Failed to auto-connect environment ${req.environmentId}: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-  }
+  const conn = await ensureSpawnConnection(env);
 
   // Resolve persona via cascade (request → app default)
   let resolved: ReturnType<typeof resolvePersona>;
