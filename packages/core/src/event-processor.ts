@@ -1,3 +1,13 @@
+/**
+ * Agent event stream processor.
+ *
+ * Handles the main `processEventStream` loop. Widget/document broker events
+ * have been extracted to {@link ./session-broker-events.ts}; subagent
+ * delegation tracking to {@link ./delegation-tracker.ts}.
+ *
+ * Re-exports broker-event symbols so existing consumers and `index.ts` don't
+ * need to change their import paths.
+ */
 import { create } from "@bufbuild/protobuf";
 import {
   grackle,
@@ -5,10 +15,6 @@ import {
   SESSION_STATUS,
   TERMINAL_SESSION_STATUSES,
   END_REASON,
-  detectDelegation,
-  delegationIdentityKey,
-  deriveChildSessionId,
-  readAgentResultStatus,
   serverTimestamp,
 } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
@@ -24,17 +30,21 @@ import { logger } from "./logger.js";
 import { runWithTrace } from "./trace-context.js";
 import { emitDiagnostic } from "./telemetry.js";
 import { publishChildCompletion } from "./pipe-delivery.js";
-import {
-  ensureChildSession,
-  closeChildSession,
-  appendChildActivity,
-  interruptChildSession,
-  unwrapResultContent,
-} from "./subagent-session.js";
 import { cleanupLifecycleStream } from "./lifecycle-streams.js";
 import { sendInputToSession } from "./signals/signal-delivery.js";
 import { checkBudget } from "./budget-checker.js";
 import type { ProcessorContext } from "./processor-registry.js";
+import { DelegationTracker } from "./delegation-tracker.js";
+
+// Re-export broker events so existing consumers (index.ts, mcp-server.ts) don't change paths.
+export {
+  publishWidgetEvent,
+  publishDocumentShow,
+  type WidgetEventPayload,
+  type PublishWidgetEvent,
+  type DocumentShowPayload,
+  type PublishDocumentShow,
+} from "./session-broker-events.js";
 
 /** Options for processing an agent event stream. */
 export interface EventStreamOptions {
@@ -48,115 +58,6 @@ export interface EventStreamOptions {
   prompt?: string;
   /** Trace ID for correlating logs across the request lifecycle. */
   traceId?: string;
-}
-
-/** Payload for an MCP Apps widget render event pushed into a session stream. */
-export interface WidgetEventPayload {
-  /** The `ui://` resource the widget renders (may be empty for one-off renders). */
-  resourceUri: string;
-  /** Name of the tool that produced the widget. */
-  toolName: string;
-  /** Widget HTML (`text/html;profile=mcp-app`). */
-  html: string;
-  /**
-   * Renderer the frontend should dispatch to. `"mcp-app-html"` (default when
-   * omitted) renders `html` in the sandbox; future kinds (e.g. declarative) add
-   * cases without changing this contract.
-   */
-  rendererKind?: string;
-  /** CSP for the sandbox (`resourceDomains`/`connectDomains` + `allowInlineScripts`). */
-  csp?: unknown;
-  /** Tool input arguments / render-time props. */
-  toolInput?: Record<string, unknown>;
-  /** Tool result (an MCP `CallToolResult`). */
-  toolResult?: unknown;
-  /** Registry id when rendering a registered widget (#1239). */
-  widgetId?: string;
-  /** Registry version, when known. */
-  version?: number;
-  /**
-   * Resolved registry components this render composes from, in eval order
-   * (deepest first). The grackle-react runtime evaluates each into scope before
-   * the main body so it can reference them as JSX tags (#1270 composition).
-   */
-  components?: Array<{ name: string; body: string }>;
-}
-
-/** Callback that pushes a widget event into a session's stream (injected into the MCP server). */
-export type PublishWidgetEvent = (sessionId: string, payload: WidgetEventPayload) => void;
-
-/**
- * Publish an MCP Apps widget render event into a session's event stream.
- *
- * Called by Grackle's MCP server (the broker) when an agent invokes a widget
- * tool. The event is self-contained (resource HTML + tool input/result) so the
- * web chat renders it without contacting the MCP server. Persisted to the
- * session log (replays on reload) and broadcast live. Non-fatal on error.
- */
-export function publishWidgetEvent(sessionId: string, payload: WidgetEventPayload): void {
-  const { sessionStore } = getDatabaseStores();
-  try {
-    const event = create(grackle.SessionEventSchema, {
-      sessionId,
-      type: grackle.EventType.WIDGET,
-      timestamp: serverTimestamp(),
-      content: JSON.stringify(payload),
-      raw: JSON.stringify({ widget: true, toolName: payload.toolName }),
-    });
-    event.serverSeq = recordSessionAction(event) ?? "";
-    const session = sessionStore.getSession(sessionId);
-    if (session?.logPath) {
-      logWriter.ensureLogInitialized(session.logPath);
-      logWriter.writeEvent(session.logPath, event).catch((err: unknown) => {
-        logger.error({ err, sessionId }, "Failed to persist widget event");
-      });
-    }
-    streamHub.publish(event);
-  } catch (err) {
-    logger.error({ err, sessionId }, "Failed to publish widget event");
-  }
-}
-
-/** Payload for a `document.show` domain event (live docs v0, #1396). */
-export interface DocumentShowPayload {
-  /** The `file://` resource URI the UI should open a read-only live view of. */
-  uri: string;
-}
-
-/**
- * Callback that emits a `document.show` domain event for a session (injected
- * into the MCP server, mirroring {@link PublishWidgetEvent}).
- */
-export type PublishDocumentShow = (sessionId: string, payload: DocumentShowPayload) => void;
-
-/**
- * Emit a `document.show` domain event so the web `useDocuments` hook opens a
- * read-only live view of a file (#1396 live docs v0).
- *
- * Called by Grackle's MCP server (the broker) when an agent invokes `show_file`.
- * Unlike the widget broker — which bakes HTML into a persisted session event —
- * this carries only the URI **reference** and rides the domain-event bus (like
- * `resource.changed`), so the doc stays live for multiple viewers and the tab is
- * client UI state rather than chat-stream content. The `environmentId` is
- * resolved from the session here (so the caller only supplies the URI).
- * Non-fatal on error / unknown session.
- */
-export function publishDocumentShow(sessionId: string, payload: DocumentShowPayload): void {
-  const { sessionStore } = getDatabaseStores();
-  try {
-    const session = sessionStore.getSession(sessionId);
-    if (!session) {
-      logger.warn({ sessionId }, "Cannot publish document.show: unknown session");
-      return;
-    }
-    emit("document.show", {
-      environmentId: session.environmentId,
-      uri: payload.uri,
-      sessionId,
-    });
-  } catch (err) {
-    logger.error({ err, sessionId }, "Failed to publish document.show event");
-  }
 }
 
 /**
@@ -186,14 +87,7 @@ export function processEventStream(
 
   processorRegistry.register(ctx);
 
-  // #1075: maps a delegation tool_use call id → the child session it
-  // materialized, so the paired tool_result can append/close that child, and so
-  // the finally block can interrupt any child still open when the stream ends.
-  // Scoped to this stream (per parent session), so no cross-session leakage.
-  const delegationByToolCall = new Map<
-    string,
-    { childId: string; isPoll: boolean; isBackground: boolean }
-  >();
+  const delegation = new DelegationTracker(sessionId);
 
   /** Inner processing logic, extracted so it can be wrapped in runWithTrace. */
   const processEvents = async (): Promise<void> => {
@@ -281,68 +175,11 @@ export function processEventStream(
           emitDiagnostic(sessionEvent);
         }
 
-        // #1075: materialize/link subagent child sessions from delegation tool
-        // calls (Claude Code `Agent`, Copilot `task`/`read_agent`). The child is
-        // a first-class session so the existing activity view can render it.
+        // #1075: materialize/link subagent child sessions from delegation tool calls.
         if (event.type === "tool_use" && eventToolCallId) {
-          try {
-            const parsed = JSON.parse(eventContent || "{}") as Record<string, unknown>;
-            const toolName = String(parsed.tool ?? parsed.tool_name ?? parsed.name ?? "");
-            const toolArgs = parsed.args ?? parsed.input ?? parsed.arguments;
-            const info = toolName ? detectDelegation(toolName, toolArgs) : undefined;
-            if (info) {
-              const identityKey = delegationIdentityKey(info, eventToolCallId);
-              const childId = deriveChildSessionId(sessionId, identityKey);
-              ensureChildSession({
-                childSessionId: childId,
-                parentSessionId: sessionId,
-                info,
-              });
-              delegationByToolCall.set(eventToolCallId, {
-                childId,
-                isPoll: info.isPoll === true,
-                isBackground: info.isBackground === true,
-              });
-            }
-          } catch (err) {
-            logger.warn({ err, sessionId }, "Failed to process delegation tool_use");
-          }
+          delegation.onToolUse(eventToolCallId, eventContent);
         } else if (event.type === "tool_result" && eventToolCallId) {
-          const link = delegationByToolCall.get(eventToolCallId);
-          if (link) {
-            // Every tool_result pairs (and consumes) its tool_use entry, so only
-            // genuinely-unpaired synchronous spawns remain in the map for the
-            // finally block to interrupt. A background/polled child whose work
-            // outlives the parent stream is independent and must NOT be interrupted.
-            delegationByToolCall.delete(eventToolCallId);
-            if (link.isPoll) {
-              // A read_agent poll surfaces partial output. On a terminal status,
-              // closeChildSession records the result and stops the child; otherwise
-              // append the partial output. Recording happens in exactly one path so
-              // the terminal poll output isn't duplicated in the child log.
-              // Unwrap first: the result may be a JSON envelope
-              // ({"is_ok":true,"content":"Agent completed. agent_id: …"}), and the
-              // status prefix lives in `content`, not the envelope.
-              const status = readAgentResultStatus(unwrapResultContent(eventContent));
-              if (
-                status === "completed" ||
-                status === "failed" ||
-                status === "error" ||
-                status === "cancelled"
-              ) {
-                closeChildSession(link.childId, eventContent, status !== "completed");
-              } else {
-                appendChildActivity(link.childId, eventContent);
-              }
-            } else if (link.isBackground) {
-              // A background spawn's result is just a handle, not completion —
-              // keep the child running; its output arrives via read_agent polls.
-              appendChildActivity(link.childId, eventContent);
-            } else {
-              // Synchronous spawn (e.g. Claude `Agent`): the result IS the summary.
-              closeChildSession(link.childId, eventContent, eventToolError);
-            }
-          }
+          delegation.onToolResult(eventToolCallId, eventContent, eventToolError);
         }
 
         // Intercept usage events and accumulate token counts on the session record
@@ -576,23 +413,8 @@ export function processEventStream(
       // emitted — skip the duplicate to avoid interfering with SIGCHLD delivery.
     } finally {
       processorRegistry.unregister(sessionId);
-      // #1075: the stream ended (normally, killed, or crashed) — interrupt any
-      // SYNCHRONOUS-spawn child whose tool_result never arrived so it isn't
-      // stranded RUNNING with no environment to reconnect to. Background spawns
-      // and polled children run independently of the parent stream, so they must
-      // NOT be interrupted here even if their handle/result never arrived (e.g.
-      // the stream ended right after the spawn tool_use).
-      //
-      // A background/polled child whose parent stream ends before a terminal poll
-      // would otherwise stay RUNNING here. That case is reaped out-of-band by the
-      // `subagent-reconciliation` phase (#1386), which interrupts any RUNNING
-      // subagent child once its parent session reaches a terminal state.
-      for (const link of delegationByToolCall.values()) {
-        if (!link.isBackground && !link.isPoll) {
-          interruptChildSession(link.childId);
-        }
-      }
-      delegationByToolCall.clear();
+      // Interrupt synchronous-spawn children still open when the stream ended.
+      delegation.onStreamEnd();
       logWriter.endSession(logPath);
       try {
         writeTranscript(logPath);
