@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Bump transitive overrides (axios, hono, qs, shell-quote, joi) and react-router direct dep to clear all 19 open Dependabot security alerts",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
