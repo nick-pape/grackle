@@ -4,7 +4,7 @@ vi.mock("./logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-import { isDevMode } from "./runtime-installer.js";
+import { isDevMode, isTransientInstallError } from "./runtime-installer.js";
 
 describe("isDevMode", () => {
   it("returns true when rush.json exists (monorepo context)", () => {
@@ -74,4 +74,42 @@ describe("getRuntimeBinDirectory", () => {
     expect(binDir).toContain("node_modules");
     expect(binDir).toContain(".bin");
   });
+});
+
+// ── isTransientInstallError ───────────────────────────────────────────────
+describe("isTransientInstallError", () => {
+  it("returns false for non-Error values", () => {
+    expect(isTransientInstallError("string")).toBe(false);
+    expect(isTransientInstallError(null)).toBe(false);
+    expect(isTransientInstallError(42)).toBe(false);
+  });
+
+  it("returns false for non-network errors", () => {
+    expect(isTransientInstallError(new Error("ENOSPC: no space left on device"))).toBe(false);
+    expect(isTransientInstallError(new Error("npm ERR! 404 Not Found"))).toBe(false);
+    expect(isTransientInstallError(new Error("Permission denied"))).toBe(false);
+  });
+
+  const transientCases = [
+    ["ENOTFOUND", "getaddrinfo ENOTFOUND registry.npmjs.org"],
+    ["EAI_AGAIN", "getaddrinfo EAI_AGAIN registry.npmjs.org"],
+    ["ETIMEDOUT", "connect ETIMEDOUT 104.16.1.35:443"],
+    ["ECONNREFUSED", "connect ECONNREFUSED 127.0.0.1:443"],
+    ["ECONNRESET", "read ECONNRESET"],
+    ["ENETUNREACH", "connect ENETUNREACH"],
+    ["getaddrinfo", "getaddrinfo failed"],
+    ["socket hang up", "socket hang up"],
+  ];
+
+  for (const [label, msg] of transientCases) {
+    it(`returns true for ${label}`, () => {
+      expect(
+        isTransientInstallError(
+          new Error(
+            `Failed to install copilot runtime packages. ...\nCause: Command failed: npm install\nStderr: npm error code ${label}\n${msg}`,
+          ),
+        ),
+      ).toBe(true);
+    });
+  }
 });

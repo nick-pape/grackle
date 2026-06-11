@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix system task failures on fresh Docker install: retry transient npm install network errors (ENOTFOUND/EAI_AGAIN/ETIMEDOUT) with exponential backoff; surface actionable pre-flight error when a runtime's required credential provider is disabled rather than letting the SDK throw an opaque createSession error.",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}

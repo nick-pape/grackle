@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { execFile } from "node:child_process";
 import { createRequire, register } from "node:module";
 import { pathToFileURL } from "node:url";
-import { RUNTIME_CATALOG } from "@grackle-ai/common";
+import { RUNTIME_CATALOG, retryWithBackoff } from "@grackle-ai/common";
 import type { RuntimePackageManifest } from "@grackle-ai/common";
 import { logger } from "./logger.js";
 
@@ -15,6 +15,15 @@ const RUNTIMES_BASE_DIR: string = join(homedir(), ".grackle", "runtimes");
 
 /** Filename for the version/staleness marker in each runtime directory. */
 const MANIFEST_FILENAME: string = "manifest.json";
+
+/** Number of npm install attempts before giving up. */
+const INSTALL_RETRY_ATTEMPTS: number = 4;
+/** Initial backoff delay (ms) between install retries. */
+const INSTALL_RETRY_DELAY_MS: number = 1_000;
+/** Exponential backoff multiplier between retries. */
+const INSTALL_RETRY_BACKOFF_MULTIPLIER: number = 2;
+/** Maximum delay (ms) between install retries. */
+const INSTALL_RETRY_MAX_DELAY_MS: number = 15_000;
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -303,6 +312,24 @@ function isManifestCurrent(runtimeDir: string, manifest: RuntimePackageManifest)
   }
 }
 
+/**
+ * Return true when an npm install error is likely due to a transient network
+ * failure (DNS not yet ready, connection reset, timeout, etc.) and is worth
+ * retrying. The error message produced by {@link doInstall} already embeds the
+ * npm stderr snippet, so a single regex over `err.message` is sufficient.
+ *
+ * Exported for unit testing only.
+ * @internal
+ */
+export function isTransientInstallError(err: unknown): boolean {
+  if (!(err instanceof Error)) {
+    return false;
+  }
+  return /ENOTFOUND|EAI_AGAIN|ETIMEDOUT|ECONNREFUSED|ECONNRESET|ENETUNREACH|getaddrinfo|socket hang up/i.test(
+    err.message,
+  );
+}
+
 /** Perform the actual npm install and write the manifest. */
 async function doInstall(
   runtimeName: string,
@@ -332,35 +359,59 @@ async function doInstall(
   };
   writeFileSync(join(runtimeDir, "package.json"), JSON.stringify(packageJson, null, 2));
 
-  // Run npm install asynchronously to avoid blocking the event loop.
+  // Run npm install with retry for transient network failures (e.g. DNS not yet
+  // ready during container startup). Non-network errors fail fast on attempt 1.
   // shell:true is needed on Windows where npm is a .cmd batch file.
-  await new Promise<void>((resolve, reject) => {
-    execFile(
-      "npm",
-      ["install", "--omit=dev", "--registry=https://registry.npmjs.org"],
-      { cwd: runtimeDir, timeout: 120_000, shell: true, maxBuffer: 10 * 1024 * 1024 },
-      (err, _stdout, stderr) => {
-        if (err) {
-          const detail = err.message || String(err);
-          const stderrSnippet = stderr ? stderr.slice(0, 500) : "";
-          logger.error(
-            { runtimeName, runtimeDir, err, stderrSnippet },
-            "npm install failed for runtime packages",
+  const runNpmInstall = (): Promise<void> =>
+    new Promise<void>((resolve, reject) => {
+      execFile(
+        "npm",
+        ["install", "--omit=dev", "--registry=https://registry.npmjs.org"],
+        { cwd: runtimeDir, timeout: 120_000, shell: true, maxBuffer: 10 * 1024 * 1024 },
+        (err, _stdout, stderr) => {
+          if (err) {
+            const detail = err.message || String(err);
+            // Embed the stderr snippet in the error message so
+            // isTransientInstallError can detect network error codes in it.
+            const stderrSnippet = stderr ? stderr.slice(0, 500) : "";
+            reject(
+              new Error(
+                `Failed to install ${runtimeName} runtime packages. Run manually:\n` +
+                  `  cd ${runtimeDir} && npm install\n` +
+                  `Cause: ${detail}` +
+                  (stderrSnippet ? `\nStderr: ${stderrSnippet}` : ""),
+              ),
+            );
+          } else {
+            resolve();
+          }
+        },
+      );
+    });
+
+  try {
+    await retryWithBackoff(runNpmInstall, {
+      maxAttempts: INSTALL_RETRY_ATTEMPTS,
+      delayMs: INSTALL_RETRY_DELAY_MS,
+      backoffMultiplier: INSTALL_RETRY_BACKOFF_MULTIPLIER,
+      maxDelayMs: INSTALL_RETRY_MAX_DELAY_MS,
+      shouldRetry: isTransientInstallError,
+      onRetry: (attempt, _err) => {
+        logger.warn(
+          { runtimeName, runtimeDir, attempt },
+          "npm install failed (transient network error), retrying",
+        );
+        if (eventCallback) {
+          eventCallback(
+            `Retrying ${runtimeName} install (attempt ${attempt + 1} of ${INSTALL_RETRY_ATTEMPTS})...`,
           );
-          reject(
-            new Error(
-              `Failed to install ${runtimeName} runtime packages. Run manually:\n` +
-                `  cd ${runtimeDir} && npm install\n` +
-                `Cause: ${detail}` +
-                (stderrSnippet ? `\nStderr: ${stderrSnippet}` : ""),
-            ),
-          );
-        } else {
-          resolve();
         }
       },
-    );
-  });
+    });
+  } catch (err) {
+    logger.error({ runtimeName, runtimeDir, err }, "npm install failed for runtime packages");
+    throw err;
+  }
 
   // Write manifest for staleness checking
   const persistedManifest: PersistedManifest = {

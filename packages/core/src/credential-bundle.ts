@@ -13,7 +13,9 @@
 export type { TokenItem, ProviderTokenBundle } from "./credential-types.js";
 export {
   RUNTIME_PROVIDERS,
+  RUNTIME_REQUIRED_PROVIDER,
   deriveCredentialNeeds,
+  findDisabledRequiredProvider,
   type CredentialKind,
   type ProtectedResourceDescriptor,
 } from "./credential-needs.js";
@@ -21,6 +23,7 @@ export { inspectFileCredentialExpiry, type CredentialExpiryState } from "./crede
 export {
   findUnsatisfiedNeeds,
   formatPreflightCredentialError,
+  formatRuntimeProviderDisabledError,
   type UnsatisfiedNeed,
 } from "./credential-preflight.js";
 export { buildProviderTokenBundle, resolveGitHubTokenFromCli } from "./credential-materializer.js";
