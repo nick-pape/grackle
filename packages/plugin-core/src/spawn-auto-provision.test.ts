@@ -93,7 +93,12 @@ vi.mock("./utils/format-gh-error.js", () => ({
 
 import { ensureSpawnConnection } from "./spawn-orchestration.js";
 import { envRegistry } from "@grackle-ai/database";
-import { adapterManager, emit, recoverSuspendedSessions } from "@grackle-ai/core";
+import {
+  adapterManager,
+  emit,
+  recoverSuspendedSessions,
+  parseAdapterConfig,
+} from "@grackle-ai/core";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import type { EnvironmentRow } from "@grackle-ai/database";
 import type { PowerLineConnection } from "@grackle-ai/adapter-sdk";
@@ -131,6 +136,8 @@ function makeFakeConn(): PowerLineConnection {
 describe("ensureSpawnConnection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // vi.clearAllMocks does not reset implementations — restore defaults here.
+    vi.mocked(parseAdapterConfig).mockReturnValue({} as never);
   });
 
   it("returns existing connection immediately without provisioning", async () => {
@@ -177,6 +184,23 @@ describe("ensureSpawnConnection", () => {
     await expect(ensureSpawnConnection("test-env", FAKE_ENV)).rejects.toBeInstanceOf(
       PreconditionError,
     );
+    expect(envRegistry.updateEnvironmentStatus).not.toHaveBeenCalledWith("test-env", "connecting");
+  });
+
+  it("does not set status to connecting when parseAdapterConfig throws", async () => {
+    vi.mocked(adapterManager.getConnection).mockReturnValue(undefined);
+    vi.mocked(adapterManager.getAdapter).mockReturnValue({
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      stop: vi.fn(),
+      destroy: vi.fn(),
+    } as never);
+    vi.mocked(parseAdapterConfig).mockImplementation(() => {
+      throw new Error("invalid JSON");
+    });
+
+    await expect(ensureSpawnConnection("test-env", FAKE_ENV)).rejects.toThrow("invalid JSON");
+    // Config parsing happens before the status flip — status must never be set
     expect(envRegistry.updateEnvironmentStatus).not.toHaveBeenCalledWith("test-env", "connecting");
   });
 
