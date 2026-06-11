@@ -125,7 +125,7 @@ export function registerScheduleCommands(program: Command): void {
     .option("--schedule <expression>", "New interval or cron expression")
     .option("--persona <id>", "New persona ID")
     .option("--agent <id>", "Attach an owning Agent by ID (#1439)")
-    .option("--no-agent", "Detach the owning Agent (fire as unowned schedule)")
+    .option("--detach-agent", "Detach the owning Agent (fire as unowned schedule)")
     .action(
       async (
         id: string,
@@ -134,13 +134,18 @@ export function registerScheduleCommands(program: Command): void {
           desc?: string;
           schedule?: string;
           persona?: string;
-          agent?: string | boolean;
+          agent?: string;
+          detachAgent?: boolean;
         },
       ) => {
+        if (opts.agent && opts.detachAgent) {
+          console.error("Error: --agent and --detach-agent are mutually exclusive");
+          process.exit(1);
+        }
+
         const { scheduling: client } = createGrackleClients();
 
         // Build the partial update request — only include fields the user provided.
-        // Commander sets --no-agent as `agent: false`, --agent <id> as the string.
         const req: Parameters<typeof client.updateSchedule>[0] = { id };
         if (opts.title) {
           req.title = opts.title;
@@ -154,10 +159,10 @@ export function registerScheduleCommands(program: Command): void {
         if (opts.persona) {
           req.personaId = opts.persona;
         }
-        if (opts.agent === false) {
-          // --no-agent: detach (send empty string, which the handler maps to null)
+        if (opts.detachAgent) {
+          // --detach-agent: detach (send empty string, which the handler maps to null)
           req.agentId = "";
-        } else if (typeof opts.agent === "string" && opts.agent) {
+        } else if (opts.agent) {
           req.agentId = opts.agent;
         }
 

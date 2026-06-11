@@ -281,7 +281,7 @@ function fireScheduleAsTask(deps: CronPhaseDeps, schedule: ScheduleRow): void {
     if (!effectivePersonaId) {
       deps.logger.warn(
         { scheduleId: schedule.id, agentId: schedule.agentId },
-        "Schedule fire skipped: no persona resolved (schedule.personaId empty and no owning agent)",
+        "Schedule fire skipped: no persona resolved (schedule has no explicit personaId and agent primary persona is unavailable or agent record is missing)",
       );
       deps.advanceSchedule(schedule.id, now, nextRunAt);
       return;

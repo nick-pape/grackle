@@ -150,7 +150,17 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
         }
         update.agentId = trimmedAgentId;
       } else {
-        // Detach — empty string = clear.
+        // Detach — empty string = clear. Guard: the schedule must have a personaId either
+        // already set or provided in this same request, otherwise it would be left with no
+        // way to resolve a persona at fire time.
+        const existingPersonaId = existing.personaId;
+        const incomingPersonaId = (req.personaId ?? "").trim();
+        if (!existingPersonaId && !incomingPersonaId) {
+          throw new ConnectError(
+            "Cannot detach agent: schedule has no personaId set. Provide --persona in the same request or set a personaId first.",
+            Code.InvalidArgument,
+          );
+        }
         update.agentId = null;
       }
     }
