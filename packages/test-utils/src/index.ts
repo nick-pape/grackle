@@ -4,4 +4,8 @@
 // in `@grackle-ai/database`, vitest re-enters the in-flight mock factory and
 // deadlocks the worker forever (CI hangs). Database-touching helpers live
 // behind the separate `@grackle-ai/test-utils/db` entry point instead.
-export { createDatabaseMock } from "./mock-database.js";
+export {
+  createDatabaseMock,
+  createTaskServiceMock,
+  type TaskServiceMock,
+} from "./mock-database.js";

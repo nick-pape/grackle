@@ -11,6 +11,7 @@ import {
   findFirstConnectedEnvironment,
   interruptChildSession,
   toTaskModel,
+  taskService,
 } from "@grackle-ai/core";
 import type { ReconciliationPhase } from "@grackle-ai/core";
 import {
@@ -63,7 +64,7 @@ export function createCoreReconciliationPhases(): ReconciliationPhase[] {
       }),
     environmentExists: (id: string): boolean => envRegistry.getEnvironment(id) !== undefined,
     isTaskEligible: (taskId: string): boolean => {
-      if (!taskStore.areDependenciesMet(taskId)) {
+      if (!taskService.areDependenciesMet(taskId)) {
         return false;
       }
       const task = taskStore.getTask(taskId);

@@ -102,10 +102,16 @@ vi.mock("./utils/network.js", () => ({
   detectLanIp: vi.fn(() => "127.0.0.1"),
 }));
 
+// getAncestors moved from taskStore → taskService (#1471); mock the service module
+vi.mock("./services/task-service.js", () => ({
+  getAncestors: vi.fn(),
+}));
+
 // ── Import AFTER mocks ──────────────────────────────────────────
 
 import { resolveAncestorEnvironmentId } from "./grpc-shared-utils.js";
-import { sessionStore, taskStore } from "@grackle-ai/database";
+import { sessionStore } from "@grackle-ai/database";
+import * as taskService from "./services/task-service.js";
 import type { SessionRow, TaskRow } from "@grackle-ai/database";
 
 /** Helper to build a minimal SessionRow with an environmentId. */
@@ -157,7 +163,7 @@ describe("resolveAncestorEnvironmentId", () => {
   });
 
   it("returns environmentId when the parent has a session", () => {
-    vi.mocked(taskStore.getAncestors).mockReturnValue([]);
+    vi.mocked(taskService.getAncestors).mockReturnValue([]);
     vi.mocked(sessionStore.getLatestSessionsByTaskIds).mockReturnValue(
       new Map([["parent-1", makeSession("env-1")]]),
     );
@@ -169,7 +175,7 @@ describe("resolveAncestorEnvironmentId", () => {
   it("walks up multiple levels to find an ancestor with a session", () => {
     // getAncestors returns root-first: [grandparent, parent-of-parentTaskId]
     // but parentTaskId="parent-1" so ancestors are OF parent-1
-    vi.mocked(taskStore.getAncestors).mockReturnValue([makeTask("grandparent-1", "")]);
+    vi.mocked(taskService.getAncestors).mockReturnValue([makeTask("grandparent-1", "")]);
     // Only grandparent has a session
     vi.mocked(sessionStore.getLatestSessionsByTaskIds).mockReturnValue(
       new Map([["grandparent-1", makeSession("env-gp")]]),
@@ -179,7 +185,7 @@ describe("resolveAncestorEnvironmentId", () => {
   });
 
   it("returns empty string when no ancestor has a session", () => {
-    vi.mocked(taskStore.getAncestors).mockReturnValue([
+    vi.mocked(taskService.getAncestors).mockReturnValue([
       makeTask("task-3", ""),
       makeTask("task-2", "task-3"),
     ]);
@@ -194,7 +200,7 @@ describe("resolveAncestorEnvironmentId", () => {
   });
 
   it("prefers nearest ancestor when multiple have sessions", () => {
-    vi.mocked(taskStore.getAncestors).mockReturnValue([
+    vi.mocked(taskService.getAncestors).mockReturnValue([
       makeTask("root", ""),
       makeTask("mid", "root"),
     ]);
@@ -209,14 +215,14 @@ describe("resolveAncestorEnvironmentId", () => {
   });
 
   it("returns empty string when getAncestors returns empty and parent has no session", () => {
-    vi.mocked(taskStore.getAncestors).mockReturnValue([]);
+    vi.mocked(taskService.getAncestors).mockReturnValue([]);
     vi.mocked(sessionStore.getLatestSessionsByTaskIds).mockReturnValue(new Map());
 
     expect(resolveAncestorEnvironmentId("orphan-task")).toBe("");
   });
 
   it("skips sessions without environmentId", () => {
-    vi.mocked(taskStore.getAncestors).mockReturnValue([makeTask("grandparent", "")]);
+    vi.mocked(taskService.getAncestors).mockReturnValue([makeTask("grandparent", "")]);
     vi.mocked(sessionStore.getLatestSessionsByTaskIds).mockReturnValue(
       new Map([
         ["parent-1", makeSession("")],

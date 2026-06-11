@@ -61,7 +61,21 @@ function insertBaseEntities(): void {
 }
 
 function insertTask(id: string): void {
-  taskStore.createTask(id, "ws-1", "Test Task", "", [], "ws-1");
+  taskStore.insertTask({
+    id,
+    workspaceId: "ws-1",
+    title: "Test Task",
+    description: "",
+    branch: "ws-1/test-task",
+    dependsOn: [],
+    parentTaskId: "",
+    depth: 0,
+    canDecompose: true,
+    injectKnowledge: true,
+    defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+  });
 }
 
 function insertSession(

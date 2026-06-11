@@ -88,9 +88,10 @@ describe("createCronPhase", () => {
     const phase = createCronPhase(deps);
     await phase.execute();
 
-    // Task created
+    // Task created — createTask now takes a CreateTaskParams object (#1471)
     expect(deps.createTask).toHaveBeenCalledTimes(1);
-    const taskId = vi.mocked(deps.createTask).mock.calls[0]![0];
+    const taskParams = vi.mocked(deps.createTask).mock.calls[0]![0] as { id: string };
+    const taskId = taskParams.id;
     expect(taskId).toBeTruthy();
 
     // scheduleId FK set

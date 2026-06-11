@@ -170,30 +170,51 @@ describe("gRPC listTasks handler", () => {
 
     // Seed workspace and tasks using real stores
     workspaceStore.createWorkspace(WORKSPACE_ID, "Test Project", "desc", "", "");
-    taskStore.createTask(
-      "t1",
-      WORKSPACE_ID,
-      "Fix login bug",
-      "User cannot login with SSO",
-      [],
-      "test-workspace",
-    );
-    taskStore.createTask(
-      "t2",
-      WORKSPACE_ID,
-      "Add dashboard",
-      "Create analytics dashboard",
-      [],
-      "test-workspace",
-    );
-    taskStore.createTask(
-      "t3",
-      WORKSPACE_ID,
-      "Update auth middleware",
-      "Refactor authentication layer",
-      [],
-      "test-workspace",
-    );
+    taskStore.insertTask({
+      id: "t1",
+      workspaceId: WORKSPACE_ID,
+      title: "Fix login bug",
+      description: "User cannot login with SSO",
+      branch: "test-workspace",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
+    taskStore.insertTask({
+      id: "t2",
+      workspaceId: WORKSPACE_ID,
+      title: "Add dashboard",
+      description: "Create analytics dashboard",
+      branch: "test-workspace",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
+    taskStore.insertTask({
+      id: "t3",
+      workspaceId: WORKSPACE_ID,
+      title: "Update auth middleware",
+      description: "Refactor authentication layer",
+      branch: "test-workspace",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     taskStore.updateTaskStatus("t2", "working");
     taskStore.updateTaskStatus("t3", "complete");
 
@@ -253,9 +274,51 @@ describe("gRPC listTasks handler", () => {
 
   it("returns tasks with computed status, childTaskIds, and latestSessionId", async () => {
     // Create a parent with children
-    taskStore.createTask("tp", WORKSPACE_ID, "Parent task", "desc", [], "test-workspace", "", true);
-    taskStore.createTask("tc1", WORKSPACE_ID, "Child 1", "desc", [], "test-workspace", "tp");
-    taskStore.createTask("tc2", WORKSPACE_ID, "Child 2", "desc", [], "test-workspace", "tp");
+    taskStore.insertTask({
+      id: "tp",
+      workspaceId: WORKSPACE_ID,
+      title: "Parent task",
+      description: "desc",
+      branch: "test-workspace",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: true,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
+    taskStore.insertTask({
+      id: "tc1",
+      workspaceId: WORKSPACE_ID,
+      title: "Child 1",
+      description: "desc",
+      branch: "test-workspace",
+      dependsOn: [],
+      parentTaskId: "tp",
+      depth: 1,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
+    taskStore.insertTask({
+      id: "tc2",
+      workspaceId: WORKSPACE_ID,
+      title: "Child 2",
+      description: "desc",
+      branch: "test-workspace",
+      dependsOn: [],
+      parentTaskId: "tp",
+      depth: 1,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
 
     // Mock sessions for the parent task
     vi.mocked(sessionStore.listSessionsByTaskIds).mockReturnValue([

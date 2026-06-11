@@ -128,7 +128,21 @@ describe("gRPC stopEnvironment session cleanup (#1485)", () => {
 
   it("suspends the active session before calling adapter.stop", async () => {
     // Insert a workspace and an active session
-    taskStore.createTask("task-a", undefined, "Task A", "", [], "ws-1");
+    taskStore.insertTask({
+      id: "task-a",
+      workspaceId: undefined,
+      title: "Task A",
+      description: "",
+      branch: "ws-1/task-a",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     sessionStore.createSession("session-a", "test-env", "stub", "", "claude", "/tmp/log", "task-a");
     sessionStore.updateSession("session-a", "running" as never);
     // Clear the spy call counts from setup inserts
@@ -154,10 +168,38 @@ describe("gRPC stopEnvironment session cleanup (#1485)", () => {
   });
 
   it("suspends every active session when more than one exists", async () => {
-    taskStore.createTask("task-a", undefined, "Task A", "", [], "ws-1");
+    taskStore.insertTask({
+      id: "task-a",
+      workspaceId: undefined,
+      title: "Task A",
+      description: "",
+      branch: "ws-1/task-a",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     sessionStore.createSession("session-a", "test-env", "stub", "", "claude", "/tmp/log", "task-a");
     sessionStore.updateSession("session-a", "running" as never);
-    taskStore.createTask("task-b", undefined, "Task B", "", [], "ws-1");
+    taskStore.insertTask({
+      id: "task-b",
+      workspaceId: undefined,
+      title: "Task B",
+      description: "",
+      branch: "ws-1/task-b",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     sessionStore.createSession("session-b", "test-env", "stub", "", "claude", "/tmp/log", "task-b");
     sessionStore.updateSession("session-b", "idle" as never);
 
@@ -175,7 +217,21 @@ describe("gRPC stopEnvironment session cleanup (#1485)", () => {
   });
 
   it("does NOT clean up lifecycle streams (session is recoverable on re-provision)", async () => {
-    taskStore.createTask("task-a", undefined, "Task A", "", [], "ws-1");
+    taskStore.insertTask({
+      id: "task-a",
+      workspaceId: undefined,
+      title: "Task A",
+      description: "",
+      branch: "ws-1/task-a",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     sessionStore.createSession("session-a", "test-env", "stub", "", "claude", "/tmp/log", "task-a");
     sessionStore.updateSession("session-a", "running" as never);
 
@@ -233,7 +289,21 @@ describe("gRPC destroyEnvironment session cleanup (#1485)", () => {
   });
 
   it("kills the active session before calling adapter.destroy", async () => {
-    taskStore.createTask("task-a", undefined, "Task A", "", [], "ws-1");
+    taskStore.insertTask({
+      id: "task-a",
+      workspaceId: undefined,
+      title: "Task A",
+      description: "",
+      branch: "ws-1/task-a",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     sessionStore.createSession("session-a", "test-env", "stub", "", "claude", "/tmp/log", "task-a");
     sessionStore.updateSession("session-a", "running" as never);
     // Clear the spy call counts from the setup updateSession call
@@ -263,10 +333,38 @@ describe("gRPC destroyEnvironment session cleanup (#1485)", () => {
   });
 
   it("kills every active session when more than one exists", async () => {
-    taskStore.createTask("task-a", undefined, "Task A", "", [], "ws-1");
+    taskStore.insertTask({
+      id: "task-a",
+      workspaceId: undefined,
+      title: "Task A",
+      description: "",
+      branch: "ws-1/task-a",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     sessionStore.createSession("session-a", "test-env", "stub", "", "claude", "/tmp/log", "task-a");
     sessionStore.updateSession("session-a", "running" as never);
-    taskStore.createTask("task-b", undefined, "Task B", "", [], "ws-1");
+    taskStore.insertTask({
+      id: "task-b",
+      workspaceId: undefined,
+      title: "Task B",
+      description: "",
+      branch: "ws-1/task-b",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     sessionStore.createSession("session-b", "test-env", "stub", "", "claude", "/tmp/log", "task-b");
     sessionStore.updateSession("session-b", "idle" as never);
     // Clear the spy call counts from the setup updateSession calls

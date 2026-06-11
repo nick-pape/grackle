@@ -24,6 +24,7 @@ import {
   publishToStdin,
   startTaskSession,
   toTaskModel,
+  taskService,
   type TaskModel,
 } from "@grackle-ai/core";
 import { createScheduleHandlers } from "./schedule-handlers.js";
@@ -80,7 +81,7 @@ export function createSchedulingPlugin(): GracklePlugin {
       createCronPhase({
         getDueSchedules: scheduleStore.getDueSchedules,
         advanceSchedule: scheduleStore.advanceSchedule,
-        createTask: taskStore.createTask,
+        createTask: taskService.createTask,
         setTaskScheduleId: taskStore.setTaskScheduleId,
         enqueueForDispatch: dispatchQueueStore.enqueue,
         emit: ctx.emit,

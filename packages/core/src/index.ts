@@ -41,6 +41,10 @@ export type { GrackleEvent, GrackleEventType, Subscriber } from "./event-bus.js"
 // ─── Subscriber Types ────────────────────────────────────────
 export type { Disposable, PluginContext, SubscriberFactory } from "./subscriber-types.js";
 
+// ─── Task Service (#1471) ────────────────────────────────────
+export * as taskService from "./services/task-service.js";
+export type { CreateTaskParams, TaskService } from "./services/task-service.js";
+
 // ─── Task Session ────────────────────────────────────────────
 export { startTaskSession } from "./task-session.js";
 export { reanimateAgent } from "./reanimate-agent.js";

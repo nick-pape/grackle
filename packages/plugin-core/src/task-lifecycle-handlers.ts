@@ -28,6 +28,7 @@ import { processEventStream } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
 import { computeTaskStatus } from "@grackle-ai/core";
+import { taskService } from "@grackle-ai/core";
 import { revokeTask } from "@grackle-ai/auth";
 import { cleanupLifecycleStream, ensureLifecycleStream } from "./lifecycle.js";
 import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
@@ -63,7 +64,7 @@ export async function completeTask(req: grackle.TaskId): Promise<grackle.Task> {
 
   // Check for newly unblocked tasks
   if (task.workspaceId) {
-    const unblocked = taskStore.checkAndUnblock(task.workspaceId);
+    const unblocked = taskService.checkAndUnblock(task.workspaceId);
     for (const t of unblocked) {
       streamHub.publish(
         create(grackle.SessionEventSchema, {
@@ -223,7 +224,7 @@ export async function stopTask(req: grackle.TaskId): Promise<grackle.Task> {
 
   // Check for newly unblocked tasks
   if (task.workspaceId) {
-    taskStore.checkAndUnblock(task.workspaceId);
+    taskService.checkAndUnblock(task.workspaceId);
   }
 
   // NB: stop is resumable and resume reuses the original scoped token, so we do

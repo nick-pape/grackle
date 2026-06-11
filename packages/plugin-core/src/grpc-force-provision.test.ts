@@ -129,7 +129,21 @@ function insertBaseEntities(): void {
 }
 
 function insertActiveSession(): void {
-  taskStore.createTask("task-1", undefined, "Task 1", "", [], "ws-1");
+  taskStore.insertTask({
+    id: "task-1",
+    workspaceId: undefined,
+    title: "Task 1",
+    description: "",
+    branch: "ws-1/task-1",
+    dependsOn: [],
+    parentTaskId: "",
+    depth: 0,
+    canDecompose: false,
+    injectKnowledge: true,
+    defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+  });
   sessionStore.createSession("session-1", "test-env", "stub", "", "claude", "/tmp/log", "task-1");
   sessionStore.updateSession("session-1", "running" as never);
 }

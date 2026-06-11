@@ -14,6 +14,7 @@ import { streamRegistry } from "@grackle-ai/core";
 import { ensureAsyncDeliveryListener } from "@grackle-ai/core";
 import { deliverSignalToTask } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
+import { taskService } from "@grackle-ai/core";
 import type { Disposable, PluginContext } from "@grackle-ai/plugin-sdk";
 
 /** Terminal task statuses that trigger orphan reparenting. */
@@ -74,6 +75,7 @@ async function handleParentTerminal(
 ): Promise<void> {
   const { taskStore } = getDatabaseStores();
   const parentTask = taskStore.getTask(parentTaskId);
+  // NOTE: taskStore.getTask stays here (read-only lookup); reparenting operations use taskService
   if (!parentTask) {
     return;
   }
@@ -102,7 +104,7 @@ async function handleParentTerminal(
   transferAllPipeSubscriptions(parentTaskId, grandparentId);
 
   // Get non-terminal children for reparenting
-  const orphans = taskStore.getOrphanedTasks(parentTaskId);
+  const orphans = taskService.getOrphanedTasks(parentTaskId);
   if (orphans.length === 0) {
     // Evict stale dedup entries even when no reparenting needed
     for (const [key, ts] of processed) {
@@ -121,7 +123,7 @@ async function handleParentTerminal(
   // Reparent each orphan
   for (const orphan of orphans) {
     try {
-      taskStore.reparentTask(orphan.id, grandparentId);
+      taskService.reparentTask(orphan.id, grandparentId);
 
       ctx.emit("task.reparented", {
         taskId: orphan.id,

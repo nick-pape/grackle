@@ -35,12 +35,9 @@ vi.mock("@grackle-ai/database", async (importOriginal) => {
     },
     taskStore: {
       listTasks: vi.fn(() => []),
-      buildChildIdsMap: vi.fn(() => new Map()),
       getTask: vi.fn(() => undefined),
-      createTask: vi.fn(),
+      insertTask: vi.fn(),
       markTaskComplete: vi.fn(),
-      checkAndUnblock: vi.fn(() => []),
-      areDependenciesMet: vi.fn(() => true),
       updateTask: vi.fn(),
       deleteTask: vi.fn(),
       getChildren: vi.fn(() => []),
@@ -300,7 +297,8 @@ describe("task-start token push", () => {
       vi.mocked(taskStore.getTask).mockReturnValue(
         makeMockTask() as ReturnType<typeof taskStore.getTask>,
       );
-      vi.mocked(taskStore.areDependenciesMet).mockReturnValue(true);
+      // areDependenciesMet moved to taskService (#1471); makeMockTask() has no
+      // dependsOn, so the real taskService.areDependenciesMet returns true naturally.
 
       const handlers = new Map<string, Function>();
       const fakeRouter = {
