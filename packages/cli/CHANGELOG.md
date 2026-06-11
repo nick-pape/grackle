@@ -1,6 +1,22 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 11 Jun 2026 05:36:53 GMT and should not be manually modified.
+This log was last generated on Thu, 11 Jun 2026 07:23:52 GMT and should not be manually modified.
+
+## 0.189.0
+Thu, 11 Jun 2026 07:23:52 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Move task business logic (createTask, dependency resolution, tree queries) from database layer into core task service
+- Decompose three god objects in @grackle-ai/core: split stream-registry (857 lines), credential-bundle (722 lines), and event-processor (615 lines) into focused sub-modules behind re-export barrels. No public API changes.
+- Deduplicate GrackleEventType/GrackleEvent: plugin-sdk is now the single source of truth; core re-exports the types
 
 ## 0.188.0
 Thu, 11 Jun 2026 05:36:53 GMT
