@@ -1,5 +1,6 @@
 import type { Environment, TaskData, Workspace } from "../hooks/types.js";
 import {
+  CHAT_URL,
   ENVIRONMENTS_URL,
   environmentUrl,
   HOME_URL,
@@ -130,10 +131,10 @@ export function buildNewChatBreadcrumbs(): BreadcrumbSegment[] {
   return [HOME_SEGMENT, { label: "New Chat", url: undefined }];
 }
 
-/** Build breadcrumbs for a session page. */
+/** Build breadcrumbs for a session page. Home links to the Code/Agent view. */
 export function buildSessionBreadcrumbs(sessionId: string): BreadcrumbSegment[] {
   return [
-    HOME_SEGMENT,
+    { label: "Home", url: CHAT_URL },
     SESSIONS_SEGMENT,
     { label: `Session ${sessionId.slice(0, 8)}`, url: undefined },
   ];

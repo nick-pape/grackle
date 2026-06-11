@@ -11,7 +11,7 @@ import { useMatch } from "react-router";
 import type { Environment, Session } from "../../hooks/types.js";
 import { sessionUrl, useAppNavigate } from "../../utils/navigation.js";
 import { SectionHeader } from "../display/SectionHeader.js";
-import { describeSessionStatus } from "../sessions/sessionsView.js";
+import { describeSessionStatus, groupSessionsByEnvironment } from "../sessions/sessionsView.js";
 import styles from "./SessionNav.module.scss";
 
 /** CSS custom-property names for each status tone. */
@@ -41,26 +41,10 @@ export function SessionNav({ sessions, environments }: SessionNavProps): JSX.Ele
   const detailMatch = useMatch("/sessions/:sessionId");
   const activeId = detailMatch?.params.sessionId;
 
-  const envMap = useMemo(() => new Map(environments.map((e) => [e.id, e])), [environments]);
-
-  // Group sessions by environment, newest first within each group.
-  const groups = useMemo(() => {
-    const map = new Map<string, Session[]>();
-    for (const s of sessions) {
-      const key = s.environmentId || "(unknown)";
-      const existing = map.get(key);
-      if (existing) {
-        existing.push(s);
-      } else {
-        map.set(key, [s]);
-      }
-    }
-    return [...map.entries()].map(([envId, envSessions]) => ({
-      envId,
-      label: envMap.get(envId)?.displayName ?? envId,
-      sessions: envSessions,
-    }));
-  }, [sessions, envMap]);
+  const groups = useMemo(
+    () => groupSessionsByEnvironment(sessions, environments),
+    [sessions, environments],
+  );
 
   const flatSessions = useMemo(() => groups.flatMap((g) => g.sessions), [groups]);
 
@@ -83,8 +67,9 @@ export function SessionNav({ sessions, environments }: SessionNavProps): JSX.Ele
         return;
       }
       const focusedIndex = Array.from(buttons).findIndex((b) => b === document.activeElement);
-      const currentIndex =
-        focusedIndex >= 0 ? focusedIndex : flatSessions.findIndex((s) => s.id === activeId);
+      const activeIndex = flatSessions.findIndex((s) => s.id === activeId);
+      // Use focused button if present; fall back to active session; fall back to first element.
+      const currentIndex = focusedIndex >= 0 ? focusedIndex : Math.max(activeIndex, 0);
       let nextIndex = currentIndex;
 
       if (e.key === "ArrowDown" || e.key === "j" || e.key === "J") {
@@ -126,8 +111,12 @@ export function SessionNav({ sessions, environments }: SessionNavProps): JSX.Ele
         className={styles.nav}
       >
         {groups.map((group) => (
-          <div key={group.envId}>
-            {groups.length > 1 && <div className={styles.groupLabel}>{group.label}</div>}
+          <div key={group.environmentId}>
+            {groups.length > 1 && (
+              <div className={styles.groupLabel}>
+                {group.environment?.displayName ?? group.environmentId}
+              </div>
+            )}
             {group.sessions.map((session) => {
               const isActive = session.id === activeId;
               const isFocusable = session.id === focusableId;
