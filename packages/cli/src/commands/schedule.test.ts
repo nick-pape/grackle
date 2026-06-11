@@ -203,6 +203,21 @@ describe("registerScheduleCommands", () => {
       expect(mockUpdateSchedule).not.toHaveBeenCalled();
     });
 
+    it("exits 1 when --agent is given an empty string (use --detach-agent instead)", async () => {
+      const { registerScheduleCommands } = await import("./schedule.js");
+      const program = makeProgram();
+      registerScheduleCommands(program);
+
+      await expect(run(program, ["schedule", "edit", "s1", "--agent", ""])).rejects.toThrow(
+        "process.exit called",
+      );
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("--agent requires a non-empty agent ID"),
+      );
+      expect(mockUpdateSchedule).not.toHaveBeenCalled();
+    });
+
     it("does NOT send agentId when neither --agent nor --detach-agent is given", async () => {
       mockUpdateSchedule.mockResolvedValue({
         id: "s1",

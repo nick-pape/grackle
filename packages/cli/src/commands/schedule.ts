@@ -142,6 +142,12 @@ export function registerScheduleCommands(program: Command): void {
           console.error("Error: --agent and --detach-agent are mutually exclusive");
           process.exit(1);
         }
+        if (opts.agent === "") {
+          console.error(
+            "Error: --agent requires a non-empty agent ID. To detach an agent use --detach-agent",
+          );
+          process.exit(1);
+        }
 
         const { scheduling: client } = createGrackleClients();
 
@@ -160,13 +166,13 @@ export function registerScheduleCommands(program: Command): void {
           );
           process.exit(1);
         }
-        if (opts.title) {
+        if (opts.title !== undefined) {
           req.title = opts.title;
         }
         if (opts.desc !== undefined) {
           req.description = opts.desc;
         }
-        if (opts.schedule) {
+        if (opts.schedule !== undefined) {
           req.scheduleExpression = opts.schedule;
         }
         if (opts.persona !== undefined) {
@@ -175,7 +181,7 @@ export function registerScheduleCommands(program: Command): void {
         if (opts.detachAgent) {
           // --detach-agent: detach (send empty string, which the handler maps to null)
           req.agentId = "";
-        } else if (opts.agent) {
+        } else if (opts.agent !== undefined) {
           req.agentId = opts.agent;
         }
 

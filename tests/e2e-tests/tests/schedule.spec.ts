@@ -204,7 +204,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     });
   });
 
-  test("detach agent from schedule via UI — badge disappears, persona required toast on bad detach (#1439)", async ({
+  test("detach agent from schedule via UI — agent badge disappears after detach (#1439)", async ({
     appPage,
     grackle: { client },
   }) => {
@@ -248,6 +248,12 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
         { timeout: 5_000 },
       )
       .toBe("");
+
+    // Navigate to the schedule list and verify the agent badge is gone from the card.
+    await page.goto("/schedules");
+    await expect(page.getByTestId(`schedule-agent-${schedule.id}`)).not.toBeVisible({
+      timeout: 5_000,
+    });
   });
 
   test("legacy /settings/schedules* URLs redirect to /schedules*", async ({
