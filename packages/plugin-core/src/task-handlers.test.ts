@@ -90,6 +90,7 @@ import {
   workspaceEnvironmentLinkStore,
   envRegistry,
 } from "@grackle-ai/database";
+import { taskService } from "@grackle-ai/core";
 // @grackle-ai/auth is intentionally NOT mocked here: revokeTask/isRevokedTask use
 // the real in-memory revocation set so we can assert lifecycle wiring (F12).
 import { isRevokedTask, clearRevocations } from "@grackle-ai/auth";
@@ -137,7 +138,21 @@ function insertTask(
   const dependsOn = overrides.dependsOn ?? [];
   const parentTaskId = overrides.parentTaskId ?? "";
   const canDecompose = overrides.canDecompose ?? false;
-  taskStore.createTask(id, workspaceId, title, "", dependsOn, "ws-1", parentTaskId, canDecompose);
+  taskStore.insertTask({
+    id,
+    workspaceId,
+    title,
+    description: "",
+    branch: `ws-1/${id}`,
+    dependsOn,
+    parentTaskId,
+    depth: 0,
+    canDecompose,
+    injectKnowledge: true,
+    defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+  });
 }
 
 describe("startTask environment resolution", () => {
@@ -171,7 +186,21 @@ describe("startTask environment resolution", () => {
 
   it("throws FailedPrecondition when task has no workspace and no env passed", async () => {
     // Insert a task with no workspace
-    taskStore.createTask("task-no-ws", undefined, "No WS Task", "", [], "ws-1");
+    taskStore.insertTask({
+      id: "task-no-ws",
+      workspaceId: undefined,
+      title: "No WS Task",
+      description: "",
+      branch: "ws-1/no-ws-task",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: true,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
 
     const err = (await handlers
       .startTask({
@@ -200,7 +229,6 @@ describe("scoped-token revocation on task lifecycle (GHSA-f9ff-5x35-7gfw F12)", 
 
     // Spy on store methods needed for assertions
     vi.spyOn(taskStore, "deleteTask");
-    vi.spyOn(taskStore, "checkAndUnblock");
   });
 
   // complete/stop are resumable, and resume reuses the original scoped token
@@ -297,7 +325,8 @@ describe("dependency validation", () => {
       insertTask({ id: "task-2", dependsOn: ["task-1"] });
 
       // Mock detectDependencyCycle to return a specific cycle path for assertion
-      vi.spyOn(taskStore, "detectDependencyCycle").mockReturnValueOnce(["task-2", "task-1"]);
+      // (#1471: moved to taskService, so spy on the service module)
+      vi.spyOn(taskService, "detectDependencyCycle").mockReturnValueOnce(["task-2", "task-1"]);
 
       const err = (await handlers
         .updateTask({
@@ -332,7 +361,8 @@ describe("dependency validation", () => {
 
     it("skips validation when dependsOn is empty", async () => {
       insertTask();
-      vi.spyOn(taskStore, "detectDependencyCycle");
+      // (#1471: moved to taskService, so spy on the service module)
+      vi.spyOn(taskService, "detectDependencyCycle");
 
       await handlers.updateTask({
         id: "task-1",
@@ -343,7 +373,7 @@ describe("dependency validation", () => {
         sessionId: "",
       });
 
-      expect(taskStore.detectDependencyCycle).not.toHaveBeenCalled();
+      expect(taskService.detectDependencyCycle).not.toHaveBeenCalled();
       expect(taskStore.updateTask).toHaveBeenCalled();
     });
   });

@@ -105,9 +105,51 @@ describe.skipIf(!RUN)("rebuild() against real Neo4j: idempotency + keystone reco
       0,
       "env-int",
     );
-    taskStore.createTask("t-parent", "ws-int", "Parent", "", [], "int-parent", "", true);
-    taskStore.createTask("t-child", "ws-int", "Child", "", [], "int-child", "t-parent");
-    taskStore.createTask("t-dep", "ws-int", "Dependent", "", ["t-parent"], "int-dep", "");
+    taskStore.insertTask({
+      id: "t-parent",
+      workspaceId: "ws-int",
+      title: "Parent",
+      description: "",
+      branch: "int-parent",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: true,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
+    taskStore.insertTask({
+      id: "t-child",
+      workspaceId: "ws-int",
+      title: "Child",
+      description: "",
+      branch: "int-child",
+      dependsOn: [],
+      parentTaskId: "t-parent",
+      depth: 1,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
+    taskStore.insertTask({
+      id: "t-dep",
+      workspaceId: "ws-int",
+      title: "Dependent",
+      description: "",
+      branch: "int-dep",
+      dependsOn: ["t-parent"],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
   });
 
   afterAll(async () => {

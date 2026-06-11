@@ -10,7 +10,6 @@ vi.mock("@grackle-ai/database", () => ({
     setScheduleEnabled: vi.fn(),
   },
   taskStore: {
-    createTask: vi.fn(),
     setTaskScheduleId: vi.fn(),
     getTask: vi.fn(),
   },
@@ -36,6 +35,9 @@ vi.mock("@grackle-ai/core", () => ({
   reanimateAgent: vi.fn(),
   publishToStdin: vi.fn(),
   startTaskSession: vi.fn(),
+  toTaskModel: vi.fn((row: unknown) => row),
+  // taskService.createTask is accessed during reconciliationPhases() wiring (#1471)
+  taskService: { createTask: vi.fn() },
 }));
 
 vi.mock("@grackle-ai/common", () => ({

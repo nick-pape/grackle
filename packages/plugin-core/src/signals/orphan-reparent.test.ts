@@ -30,7 +30,7 @@ vi.mock("@grackle-ai/core", async (importOriginal) => {
 // ── Imports ──────────────────────────────────────────────────
 
 import { taskStore, sessionStore, envRegistry, workspaceStore } from "@grackle-ai/database";
-import { deliverSignalToTask } from "@grackle-ai/core";
+import { deliverSignalToTask, taskService } from "@grackle-ai/core";
 import { streamRegistry, ensureAsyncDeliveryListener } from "@grackle-ai/core";
 import { createOrphanReparentSubscriber } from "./orphan-reparent.js";
 import type { GrackleEvent } from "@grackle-ai/core";
@@ -56,12 +56,68 @@ function insertBaseEntities(): void {
 
 function insertTaskHierarchy(): void {
   // grandparent (root-level, canDecompose=true)
-  taskStore.createTask("grandparent-1", "ws-1", "Grandparent Task", "", [], "ws-1", "", true);
+  taskStore.insertTask({
+    id: "grandparent-1",
+    workspaceId: "ws-1",
+    title: "Grandparent Task",
+    description: "",
+    branch: "ws-1/grandparent-task",
+    dependsOn: [],
+    parentTaskId: "",
+    depth: 0,
+    canDecompose: true,
+    injectKnowledge: true,
+    defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+  });
   // parent (child of grandparent, canDecompose=true)
-  taskStore.createTask("parent-1", "ws-1", "Parent Task", "", [], "ws-1", "grandparent-1", true);
+  taskStore.insertTask({
+    id: "parent-1",
+    workspaceId: "ws-1",
+    title: "Parent Task",
+    description: "",
+    branch: "ws-1/parent-task",
+    dependsOn: [],
+    parentTaskId: "grandparent-1",
+    depth: 1,
+    canDecompose: true,
+    injectKnowledge: true,
+    defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+  });
   // children of parent
-  taskStore.createTask("child-1", "ws-1", "Child One", "", [], "ws-1", "parent-1");
-  taskStore.createTask("child-2", "ws-1", "Child Two", "", [], "ws-1", "parent-1");
+  taskStore.insertTask({
+    id: "child-1",
+    workspaceId: "ws-1",
+    title: "Child One",
+    description: "",
+    branch: "ws-1/child-one",
+    dependsOn: [],
+    parentTaskId: "parent-1",
+    depth: 2,
+    canDecompose: false,
+    injectKnowledge: true,
+    defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+  });
+  taskStore.insertTask({
+    id: "child-2",
+    workspaceId: "ws-1",
+    title: "Child Two",
+    description: "",
+    branch: "ws-1/child-two",
+    dependsOn: [],
+    parentTaskId: "parent-1",
+    depth: 2,
+    canDecompose: false,
+    injectKnowledge: true,
+    defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+  });
 }
 
 /** Mark a task as complete so the subscriber treats it as terminal. */
@@ -125,32 +181,46 @@ describe("createOrphanReparentSubscriber", () => {
     it("reparents non-terminal children to grandparent when parent completes", async () => {
       insertTaskHierarchy();
       completeTask("parent-1");
-      vi.spyOn(taskStore, "reparentTask");
+      vi.spyOn(taskService, "reparentTask");
 
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
 
-      expect(taskStore.reparentTask).toHaveBeenCalledWith("child-1", "grandparent-1");
+      expect(taskService.reparentTask).toHaveBeenCalledWith("child-1", "grandparent-1");
     });
 
     it("reparents multiple children", async () => {
       insertTaskHierarchy();
       completeTask("parent-1");
-      vi.spyOn(taskStore, "reparentTask");
+      vi.spyOn(taskService, "reparentTask");
 
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
 
-      expect(taskStore.reparentTask).toHaveBeenCalledTimes(2);
-      expect(taskStore.reparentTask).toHaveBeenCalledWith("child-1", "grandparent-1");
-      expect(taskStore.reparentTask).toHaveBeenCalledWith("child-2", "grandparent-1");
+      expect(taskService.reparentTask).toHaveBeenCalledTimes(2);
+      expect(taskService.reparentTask).toHaveBeenCalledWith("child-1", "grandparent-1");
+      expect(taskService.reparentTask).toHaveBeenCalledWith("child-2", "grandparent-1");
     });
 
     it("does nothing when parent has no children", async () => {
       // Create parent without children
-      taskStore.createTask("lonely-parent", "ws-1", "Lonely", "", [], "ws-1", "", true);
+      taskStore.insertTask({
+        id: "lonely-parent",
+        workspaceId: "ws-1",
+        title: "Lonely",
+        description: "",
+        branch: "ws-1/lonely",
+        dependsOn: [],
+        parentTaskId: "",
+        depth: 0,
+        canDecompose: true,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
       completeTask("lonely-parent");
-      vi.spyOn(taskStore, "reparentTask");
+      vi.spyOn(taskService, "reparentTask");
 
       fireEvent({
         type: "task.completed",
@@ -158,7 +228,7 @@ describe("createOrphanReparentSubscriber", () => {
       });
       await flush();
 
-      expect(taskStore.reparentTask).not.toHaveBeenCalled();
+      expect(taskService.reparentTask).not.toHaveBeenCalled();
     });
 
     it("emits task.reparented event via ctx.emit for each child", async () => {
@@ -213,23 +283,23 @@ describe("createOrphanReparentSubscriber", () => {
     it("reparents when task status is terminal (failed)", async () => {
       insertTaskHierarchy();
       failTask("parent-1");
-      vi.spyOn(taskStore, "reparentTask");
+      vi.spyOn(taskService, "reparentTask");
 
       fireEvent({ type: "task.updated", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
 
-      expect(taskStore.reparentTask).toHaveBeenCalledWith("child-1", "grandparent-1");
+      expect(taskService.reparentTask).toHaveBeenCalledWith("child-1", "grandparent-1");
     });
 
     it("ignores non-terminal task.updated events", async () => {
       insertTaskHierarchy();
       // parent-1 has default status "not_started" — not terminal
-      vi.spyOn(taskStore, "reparentTask");
+      vi.spyOn(taskService, "reparentTask");
 
       fireEvent({ type: "task.updated", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
 
-      expect(taskStore.reparentTask).not.toHaveBeenCalled();
+      expect(taskService.reparentTask).not.toHaveBeenCalled();
     });
   });
 
@@ -245,10 +315,38 @@ describe("createOrphanReparentSubscriber", () => {
 
     it("reparents to ROOT_TASK_ID when parent has no grandparent", async () => {
       // Create a root-level parent with children (no grandparent)
-      taskStore.createTask("root-parent", "ws-1", "Root Parent", "", [], "ws-1", "", true);
-      taskStore.createTask("orphan-child", "ws-1", "Orphan", "", [], "ws-1", "root-parent");
+      taskStore.insertTask({
+        id: "root-parent",
+        workspaceId: "ws-1",
+        title: "Root Parent",
+        description: "",
+        branch: "ws-1/root-parent",
+        dependsOn: [],
+        parentTaskId: "",
+        depth: 0,
+        canDecompose: true,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
+      taskStore.insertTask({
+        id: "orphan-child",
+        workspaceId: "ws-1",
+        title: "Orphan",
+        description: "",
+        branch: "ws-1/orphan",
+        dependsOn: [],
+        parentTaskId: "root-parent",
+        depth: 1,
+        canDecompose: false,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
       completeTask("root-parent");
-      vi.spyOn(taskStore, "reparentTask");
+      vi.spyOn(taskService, "reparentTask");
 
       fireEvent({
         type: "task.completed",
@@ -256,26 +354,26 @@ describe("createOrphanReparentSubscriber", () => {
       });
       await flush();
 
-      expect(taskStore.reparentTask).toHaveBeenCalledWith("orphan-child", "system");
+      expect(taskService.reparentTask).toHaveBeenCalledWith("orphan-child", "system");
     });
 
     it("does not reparent twice for the same parent (deduplication)", async () => {
       insertTaskHierarchy();
       completeTask("parent-1");
-      vi.spyOn(taskStore, "reparentTask");
+      vi.spyOn(taskService, "reparentTask");
 
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       fireEvent({ type: "task.completed", payload: { taskId: "parent-1", workspaceId: "ws-1" } });
       await flush();
 
       // Children reparented once (2 children), not twice
-      expect(taskStore.reparentTask).toHaveBeenCalledTimes(2);
+      expect(taskService.reparentTask).toHaveBeenCalledTimes(2);
     });
 
     it("logs errors but does not throw", async () => {
       insertTaskHierarchy();
       completeTask("parent-1");
-      vi.spyOn(taskStore, "getOrphanedTasks").mockImplementationOnce(() => {
+      vi.spyOn(taskService, "getOrphanedTasks").mockImplementationOnce(() => {
         throw new Error("DB error");
       });
 
@@ -289,7 +387,7 @@ describe("createOrphanReparentSubscriber", () => {
     it("continues reparenting remaining children if one fails", async () => {
       insertTaskHierarchy();
       completeTask("parent-1");
-      vi.spyOn(taskStore, "reparentTask")
+      vi.spyOn(taskService, "reparentTask")
         .mockImplementationOnce(() => {
           throw new Error("fail first");
         })
@@ -299,16 +397,16 @@ describe("createOrphanReparentSubscriber", () => {
       await flush();
 
       // Second child should still be attempted
-      expect(taskStore.reparentTask).toHaveBeenCalledTimes(2);
+      expect(taskService.reparentTask).toHaveBeenCalledTimes(2);
     });
 
     it("skips ROOT_TASK_ID as parent", async () => {
-      vi.spyOn(taskStore, "getOrphanedTasks");
+      vi.spyOn(taskService, "getOrphanedTasks");
 
       fireEvent({ type: "task.completed", payload: { taskId: "system", workspaceId: "ws-1" } });
       await flush();
 
-      expect(taskStore.getOrphanedTasks).not.toHaveBeenCalled();
+      expect(taskService.getOrphanedTasks).not.toHaveBeenCalled();
     });
   });
 
@@ -376,16 +474,36 @@ describe("createOrphanReparentSubscriber", () => {
 
     it("transfers pipe subscriptions even when no orphaned tasks exist", async () => {
       // Parent with no children — grandparent must exist first for FK
-      taskStore.createTask("grandparent-1", "ws-1", "GP", "", [], "ws-1", "", true);
-      taskStore.createTask(
-        "pipe-only-parent",
-        "ws-1",
-        "Pipe Parent",
-        "",
-        [],
-        "ws-1",
-        "grandparent-1",
-      );
+      taskStore.insertTask({
+        id: "grandparent-1",
+        workspaceId: "ws-1",
+        title: "GP",
+        description: "",
+        branch: "ws-1/gp",
+        dependsOn: [],
+        parentTaskId: "",
+        depth: 0,
+        canDecompose: true,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
+      taskStore.insertTask({
+        id: "pipe-only-parent",
+        workspaceId: "ws-1",
+        title: "Pipe Parent",
+        description: "",
+        branch: "ws-1/pipe-parent",
+        dependsOn: [],
+        parentTaskId: "grandparent-1",
+        depth: 1,
+        canDecompose: false,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
       completeTask("pipe-only-parent");
 
       sessionStore.createSession(
@@ -426,7 +544,7 @@ describe("createOrphanReparentSubscriber", () => {
         subscriptions: new Map(),
       } as never);
 
-      vi.spyOn(taskStore, "reparentTask");
+      vi.spyOn(taskService, "reparentTask");
 
       fireEvent({
         type: "task.completed",
@@ -443,20 +561,40 @@ describe("createOrphanReparentSubscriber", () => {
         true,
       );
       expect(streamRegistry.unsubscribe).toHaveBeenCalledWith("sub-only");
-      expect(taskStore.reparentTask).not.toHaveBeenCalled();
+      expect(taskService.reparentTask).not.toHaveBeenCalled();
     });
 
     it("skips non-pipe subscriptions (lifecycle streams)", async () => {
-      taskStore.createTask("grandparent-1", "ws-1", "GP", "", [], "ws-1", "", true);
-      taskStore.createTask(
-        "pipe-lifecycle-parent",
-        "ws-1",
-        "LC Parent",
-        "",
-        [],
-        "ws-1",
-        "grandparent-1",
-      );
+      taskStore.insertTask({
+        id: "grandparent-1",
+        workspaceId: "ws-1",
+        title: "GP",
+        description: "",
+        branch: "ws-1/gp",
+        dependsOn: [],
+        parentTaskId: "",
+        depth: 0,
+        canDecompose: true,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
+      taskStore.insertTask({
+        id: "pipe-lifecycle-parent",
+        workspaceId: "ws-1",
+        title: "LC Parent",
+        description: "",
+        branch: "ws-1/lc-parent",
+        dependsOn: [],
+        parentTaskId: "grandparent-1",
+        depth: 1,
+        canDecompose: false,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
       completeTask("pipe-lifecycle-parent");
 
       sessionStore.createSession(
@@ -510,16 +648,36 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("transfers multiple pipe subs across multiple parent sessions", async () => {
-      taskStore.createTask("grandparent-1", "ws-1", "GP", "", [], "ws-1", "", true);
-      taskStore.createTask(
-        "multi-pipe-parent",
-        "ws-1",
-        "Multi Parent",
-        "",
-        [],
-        "ws-1",
-        "grandparent-1",
-      );
+      taskStore.insertTask({
+        id: "grandparent-1",
+        workspaceId: "ws-1",
+        title: "GP",
+        description: "",
+        branch: "ws-1/gp",
+        dependsOn: [],
+        parentTaskId: "",
+        depth: 0,
+        canDecompose: true,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
+      taskStore.insertTask({
+        id: "multi-pipe-parent",
+        workspaceId: "ws-1",
+        title: "Multi Parent",
+        description: "",
+        branch: "ws-1/multi-parent",
+        dependsOn: [],
+        parentTaskId: "grandparent-1",
+        depth: 1,
+        canDecompose: false,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
       completeTask("multi-pipe-parent");
 
       // Parent has TWO sessions (e.g., restarted task)
@@ -617,16 +775,36 @@ describe("createOrphanReparentSubscriber", () => {
     });
 
     it("continues transferring remaining subs if one fails", async () => {
-      taskStore.createTask("grandparent-1", "ws-1", "GP", "", [], "ws-1", "", true);
-      taskStore.createTask(
-        "fail-pipe-parent",
-        "ws-1",
-        "Fail Parent",
-        "",
-        [],
-        "ws-1",
-        "grandparent-1",
-      );
+      taskStore.insertTask({
+        id: "grandparent-1",
+        workspaceId: "ws-1",
+        title: "GP",
+        description: "",
+        branch: "ws-1/gp",
+        dependsOn: [],
+        parentTaskId: "",
+        depth: 0,
+        canDecompose: true,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
+      taskStore.insertTask({
+        id: "fail-pipe-parent",
+        workspaceId: "ws-1",
+        title: "Fail Parent",
+        description: "",
+        branch: "ws-1/fail-parent",
+        dependsOn: [],
+        parentTaskId: "grandparent-1",
+        depth: 1,
+        canDecompose: false,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
       completeTask("fail-pipe-parent");
 
       sessionStore.createSession(

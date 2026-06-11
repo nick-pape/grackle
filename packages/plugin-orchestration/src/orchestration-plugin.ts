@@ -17,6 +17,7 @@ import {
   createOrphanReparentSubscriber,
 } from "@grackle-ai/plugin-core";
 import { taskStore } from "@grackle-ai/database";
+import { taskService } from "@grackle-ai/core";
 
 /**
  * Create the orchestration plugin that contributes task/persona/finding/escalation
@@ -55,7 +56,7 @@ export function createOrchestrationPlugin(): GracklePlugin {
       createOrphanPhase({
         listAllTasks: () => taskStore.listTasks(),
         reparentTask: (taskId: string, newParentTaskId: string): void => {
-          taskStore.reparentTask(taskId, newParentTaskId);
+          taskService.reparentTask(taskId, newParentTaskId);
         },
         emit: ctx.emit,
       }),

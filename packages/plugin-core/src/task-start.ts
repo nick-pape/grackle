@@ -16,6 +16,7 @@ import { emit } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
 import { computeTaskStatus } from "@grackle-ai/core";
+import { taskService } from "@grackle-ai/core";
 import { toPersonaResolveInput, buildOrchestratorContextInput } from "@grackle-ai/core";
 import { buildMcpServersJson, toPersonaModel } from "@grackle-ai/core";
 import { hasCapacity, type ConcurrencyDeps, checkBudget } from "@grackle-ai/core";
@@ -70,7 +71,7 @@ export async function startTask(req: grackle.StartTaskRequest): Promise<grackle.
       );
     }
   }
-  if (!taskStore.areDependenciesMet(req.taskId)) {
+  if (!taskService.areDependenciesMet(req.taskId)) {
     throw new PreconditionError(`Task ${req.taskId} has unmet dependencies`);
   }
 

@@ -32,6 +32,7 @@ import {
 import { buildMcpServersJson, toPersonaModel } from "@grackle-ai/core";
 import { getTraceId } from "@grackle-ai/core";
 import { publishToStdin } from "@grackle-ai/core";
+import { taskService } from "@grackle-ai/core";
 
 /** Spawn a new agent session in the given environment. */
 export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Session> {
@@ -281,7 +282,7 @@ export async function getUsage(req: grackle.GetUsageRequest): Promise<grackle.Us
       return create(grackle.UsageStatsSchema, usage);
     }
     case "task_tree": {
-      const descendants = taskStore.getDescendants(req.id);
+      const descendants = taskService.getDescendants(req.id);
       const taskIds = [req.id, ...descendants.map((d) => d.id)];
       const usage = sessionStore.aggregateUsage({ taskIds });
       return create(grackle.UsageStatsSchema, usage);

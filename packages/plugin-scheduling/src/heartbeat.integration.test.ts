@@ -25,6 +25,7 @@ import {
   envRegistry,
 } from "@grackle-ai/database";
 import { SESSION_STATUS } from "@grackle-ai/common";
+import { taskService } from "@grackle-ai/core";
 
 import { createCronPhase, type CronPhaseDeps } from "./cron-phase.js";
 
@@ -117,7 +118,7 @@ function makeDeps(overrides: Partial<CronPhaseDeps> = {}): CronPhaseDeps & {
     // ── Real stores ──
     getDueSchedules: scheduleStore.getDueSchedules,
     advanceSchedule: scheduleStore.advanceSchedule,
-    createTask: taskStore.createTask,
+    createTask: taskService.createTask,
     setTaskScheduleId: taskStore.setTaskScheduleId,
     enqueueForDispatch: vi.fn(), // dispatchQueueStore not needed for heartbeat path
     setScheduleEnabled: scheduleStore.setScheduleEnabled,

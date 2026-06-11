@@ -298,7 +298,21 @@ describe("stream error handling", () => {
 
   it("task broadcast fires when session suspends via idle disconnect", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
+    taskStore.insertTask({
+      id: "task1",
+      workspaceId: "proj1",
+      title: "Test Task",
+      description: "desc",
+      branch: "test-workspace/test-task",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: true,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
 
     // Simulate task in_progress
     taskStore.updateTaskStatus("task1", "working");
@@ -417,7 +431,21 @@ describe("task status broadcast on terminal events", () => {
 
   it("broadcasts task_updated when session completes with a task", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
+    taskStore.insertTask({
+      id: "task1",
+      workspaceId: "proj1",
+      title: "Test Task",
+      description: "desc",
+      branch: "test-workspace/test-task",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: true,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     taskStore.updateTaskStatus("task1", "working");
 
     const completedEvent = create(powerline.AgentEventSchema, {
@@ -443,7 +471,21 @@ describe("task status broadcast on terminal events", () => {
 
   it("broadcasts task_updated for both terminal and non-terminal session events", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
+    taskStore.insertTask({
+      id: "task1",
+      workspaceId: "proj1",
+      title: "Test Task",
+      description: "desc",
+      branch: "test-workspace/test-task",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: true,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     taskStore.updateTaskStatus("task1", "working");
 
     const waitingEvent = create(powerline.AgentEventSchema, {
@@ -507,7 +549,21 @@ describe("task status broadcast on terminal events", () => {
 
   it("writes server-enriched workpad on killed session when task has no workpad", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
+    taskStore.insertTask({
+      id: "task1",
+      workspaceId: "proj1",
+      title: "Test Task",
+      description: "desc",
+      branch: "test-workspace/test-task",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: true,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     taskStore.updateTaskStatus("task1", "working");
 
     const killedEvent = create(powerline.AgentEventSchema, {
@@ -534,7 +590,21 @@ describe("task status broadcast on terminal events", () => {
 
   it("does not overwrite existing workpad on abnormal exit", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
+    taskStore.insertTask({
+      id: "task1",
+      workspaceId: "proj1",
+      title: "Test Task",
+      description: "desc",
+      branch: "test-workspace/test-task",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: true,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     taskStore.updateTaskStatus("task1", "working");
     taskStore.setWorkpad(
       "task1",
@@ -648,7 +718,21 @@ describe("late-binding", () => {
 
   it("broadcasts task_updated after late-bind on terminal events", async () => {
     sessionStore.createSession("sess1", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task1", "proj1", "Test Task", "desc", [], "test-workspace");
+    taskStore.insertTask({
+      id: "task1",
+      workspaceId: "proj1",
+      title: "Test Task",
+      description: "desc",
+      branch: "test-workspace/test-task",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: true,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     taskStore.updateTaskStatus("task1", "working");
 
     const { stream, push, end } = controllableStream();
@@ -880,7 +964,21 @@ describe("budget-exceeded end reason on killed/terminated", () => {
 
   it("records BUDGET_EXCEEDED when killed after budget SIGTERM", async () => {
     sessionStore.createSession("sess-bk", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task-bk", "proj1", "Budget Task", "", [], "test-workspace");
+    taskStore.insertTask({
+      id: "task-bk",
+      workspaceId: "proj1",
+      title: "Budget Task",
+      description: "",
+      branch: "test-workspace/budget-task",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: true,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
 
     const runningEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess-bk",
@@ -912,7 +1010,21 @@ describe("budget-exceeded end reason on killed/terminated", () => {
 
   it("records BUDGET_EXCEEDED when terminated after budget SIGTERM", async () => {
     sessionStore.createSession("sess-bt", "env1", "claude-code", "test", "sonnet", "/tmp/log");
-    taskStore.createTask("task-bt", "proj1", "Budget Task", "", [], "test-workspace");
+    taskStore.insertTask({
+      id: "task-bt",
+      workspaceId: "proj1",
+      title: "Budget Task",
+      description: "",
+      branch: "test-workspace/budget-task",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: true,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
 
     const runningEvent = create(powerline.AgentEventSchema, {
       sessionId: "sess-bt",

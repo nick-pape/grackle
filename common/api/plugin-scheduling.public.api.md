@@ -5,6 +5,7 @@
 ```ts
 
 import { computeNextRunAt } from '@grackle-ai/common';
+import type { CreateTaskParams } from '@grackle-ai/core';
 import type { GrackleEventType } from '@grackle-ai/core';
 import type { GracklePlugin } from '@grackle-ai/plugin-sdk';
 import { isIntervalExpression } from '@grackle-ai/common';
@@ -27,7 +28,7 @@ export function createSchedulingPlugin(): GracklePlugin;
 // @public
 export interface CronPhaseDeps {
     advanceSchedule: (id: string, lastRunAt: string, nextRunAt: string) => void;
-    createTask: (id: string, workspaceId: string | undefined, title: string, description: string, dependsOn: string[], workspaceSlug: string, parentTaskId?: string, canDecompose?: boolean, defaultPersonaId?: string) => void;
+    createTask: (params: CreateTaskParams) => unknown;
     emit: (type: GrackleEventType, payload: Record<string, unknown>) => void;
     enqueueForDispatch: (entry: {
         id: string;

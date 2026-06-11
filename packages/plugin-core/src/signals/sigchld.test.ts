@@ -54,7 +54,21 @@ function insertBaseEntities(): void {
 }
 
 function insertParentTask(): void {
-  taskStore.createTask("task-parent", "proj-1", "Parent Task", "", [], "proj-1", "", true);
+  taskStore.insertTask({
+    id: "task-parent",
+    workspaceId: "proj-1",
+    title: "Parent Task",
+    description: "",
+    branch: "proj-1/parent-task",
+    dependsOn: [],
+    parentTaskId: "",
+    depth: 0,
+    canDecompose: true,
+    injectKnowledge: true,
+    defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+  });
 }
 
 function insertChildTask(
@@ -62,7 +76,21 @@ function insertChildTask(
   opts: { parentTaskId?: string | null; title?: string } = {},
 ): void {
   const parentTaskId = opts.parentTaskId === null ? "" : (opts.parentTaskId ?? "task-parent");
-  taskStore.createTask(id, "proj-1", opts.title ?? "Design API", "", [], "proj-1", parentTaskId);
+  taskStore.insertTask({
+    id,
+    workspaceId: "proj-1",
+    title: opts.title ?? "Design API",
+    description: "",
+    branch: `proj-1/${id}`,
+    dependsOn: [],
+    parentTaskId,
+    depth: parentTaskId ? 1 : 0,
+    canDecompose: false,
+    injectKnowledge: true,
+    defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+  });
 }
 
 function insertSession(taskId: string, status: string, id?: string): void {

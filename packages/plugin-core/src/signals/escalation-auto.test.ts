@@ -48,10 +48,38 @@ function insertTask(id: string, opts: { parentTaskId?: string; title?: string } 
     // Ensure parent exists and has canDecompose
     const parent = taskStore.getTask(parentTaskId);
     if (!parent) {
-      taskStore.createTask(parentTaskId, "ws1", "Parent", "", [], "ws1", "", true);
+      taskStore.insertTask({
+        id: parentTaskId,
+        workspaceId: "ws1",
+        title: "Parent",
+        description: "",
+        branch: "ws1/parent",
+        dependsOn: [],
+        parentTaskId: "",
+        depth: 0,
+        canDecompose: true,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
     }
   }
-  taskStore.createTask(id, "ws1", opts.title ?? "Test task", "", [], "ws1", parentTaskId);
+  taskStore.insertTask({
+    id,
+    workspaceId: "ws1",
+    title: opts.title ?? "Test task",
+    description: "",
+    branch: `ws1/${id}`,
+    dependsOn: [],
+    parentTaskId,
+    depth: parentTaskId ? 1 : 0,
+    canDecompose: false,
+    injectKnowledge: true,
+    defaultPersonaId: "",
+    tokenBudget: 0,
+    costBudgetMillicents: 0,
+  });
 }
 
 function insertSession(taskId: string, status: string): void {

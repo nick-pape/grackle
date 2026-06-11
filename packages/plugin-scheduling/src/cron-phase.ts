@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { Logger } from "pino";
 import { computeNextRunAt } from "./schedule-expression.js";
 import type { ScheduleRow, SessionRow } from "@grackle-ai/database";
-import type { GrackleEventType, TaskModel } from "@grackle-ai/core";
+import type { GrackleEventType, TaskModel, CreateTaskParams } from "@grackle-ai/core";
 import type { ReconciliationPhase } from "@grackle-ai/plugin-sdk";
 import {
   ROOT_TASK_ID,
@@ -38,18 +38,8 @@ export interface CronPhaseDeps {
   getDueSchedules: () => ScheduleRow[];
   /** Advance a schedule after firing (update lastRunAt, nextRunAt, runCount). */
   advanceSchedule: (id: string, lastRunAt: string, nextRunAt: string) => void;
-  /** Create a new task in the task store. */
-  createTask: (
-    id: string,
-    workspaceId: string | undefined,
-    title: string,
-    description: string,
-    dependsOn: string[],
-    workspaceSlug: string,
-    parentTaskId?: string,
-    canDecompose?: boolean,
-    defaultPersonaId?: string,
-  ) => void;
+  /** Create a new task via the task service. */
+  createTask: (params: CreateTaskParams) => unknown;
   /** Set the schedule_id FK on a task. */
   setTaskScheduleId: (taskId: string, scheduleId: string) => void;
   /** Enqueue a task for the dispatch phase to start. */
@@ -263,17 +253,16 @@ function fireScheduleAsTask(deps: CronPhaseDeps, schedule: ScheduleRow): void {
     const taskId = uuidv4();
     const taskTitle = `${schedule.title} @ ${now}`;
     const parentTaskId = schedule.parentTaskId || ROOT_TASK_ID;
-    deps.createTask(
-      taskId,
-      schedule.workspaceId || undefined,
-      taskTitle,
-      schedule.description,
-      [], // no dependencies
-      "", // no workspace slug
+    deps.createTask({
+      id: taskId,
+      workspaceId: schedule.workspaceId || undefined,
+      title: taskTitle,
+      description: schedule.description,
+      dependsOn: [],
       parentTaskId,
-      false, // canDecompose
-      schedule.personaId,
-    );
+      canDecompose: false,
+      defaultPersonaId: schedule.personaId,
+    });
     deps.setTaskScheduleId(taskId, schedule.id);
 
     // Enqueue for the dispatch phase to start (respects concurrency limits).

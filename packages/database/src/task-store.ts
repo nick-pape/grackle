@@ -1,11 +1,8 @@
 import db from "./db.js";
 import { tasks, schedules, type TaskRow } from "./schema.js";
 import { eq, and, or, sql, asc, inArray, type SQL } from "drizzle-orm";
-import { TASK_STATUS, taskStatusToEnum, taskStatusToString } from "@grackle-ai/common";
+import { taskStatusToEnum, taskStatusToString } from "@grackle-ai/common";
 import type { TaskStatus } from "@grackle-ai/common";
-import { MAX_TASK_DEPTH } from "@grackle-ai/common";
-import { safeParseJsonArray } from "./json-helpers.js";
-import { slugify } from "./utils/slugify.js";
 
 export type { TaskRow };
 
@@ -75,72 +72,6 @@ export function insertTask(fields: InsertTaskFields): void {
     .run();
 }
 
-/**
- * Create a task with business logic: validates parent, enforces depth limits,
- * auto-generates branch name, and derives canDecompose.
- * Delegates the actual insert to {@link insertTask}.
- */
-export function createTask(
-  id: string,
-  workspaceId: string | undefined,
-  title: string,
-  description: string,
-  dependsOn: string[],
-  workspaceSlug: string,
-  parentTaskId: string = "",
-  canDecompose?: boolean,
-  defaultPersonaId: string = "",
-  tokenBudget: number = 0,
-  costBudgetMillicents: number = 0,
-  injectKnowledge: boolean = true,
-  agentId?: string,
-  kind?: string,
-): void {
-  let depth = 0;
-  let branch: string;
-
-  if (parentTaskId) {
-    const parent = getTask(parentTaskId);
-    if (!parent) {
-      throw new Error(`Parent task not found: ${parentTaskId}`);
-    }
-    if (!parent.canDecompose) {
-      throw new Error(
-        `Parent task "${parent.title}" (${parentTaskId}) does not have decomposition rights`,
-      );
-    }
-    depth = parent.depth + 1;
-    if (depth > MAX_TASK_DEPTH) {
-      throw new Error(`Task depth would exceed maximum of ${MAX_TASK_DEPTH}`);
-    }
-    branch = `${parent.branch}/${slugify(title)}`;
-  } else {
-    const prefix = workspaceSlug || "task";
-    branch = `${prefix}/${slugify(title)}`;
-  }
-
-  // Derive canDecompose when not explicitly set: root=true, child=false
-  const resolvedCanDecompose = canDecompose ?? !parentTaskId;
-
-  insertTask({
-    id,
-    workspaceId,
-    title,
-    description,
-    branch,
-    dependsOn,
-    parentTaskId,
-    depth,
-    canDecompose: resolvedCanDecompose,
-    injectKnowledge,
-    defaultPersonaId,
-    tokenBudget,
-    costBudgetMillicents,
-    agentId,
-    kind,
-  });
-}
-
 /** Retrieve a single task by ID. */
 export function getTask(id: string): TaskRow | undefined {
   return db.select().from(tasks).where(eq(tasks.id, id)).get();
@@ -157,22 +88,6 @@ export interface ListTasksOptions {
 /** Contract for task persistence. */
 export interface TaskStore {
   insertTask(fields: InsertTaskFields): void;
-  createTask(
-    id: string,
-    workspaceId: string | undefined,
-    title: string,
-    description: string,
-    dependsOn: string[],
-    workspaceSlug: string,
-    parentTaskId?: string,
-    canDecompose?: boolean,
-    defaultPersonaId?: string,
-    tokenBudget?: number,
-    costBudgetMillicents?: number,
-    injectKnowledge?: boolean,
-    agentId?: string,
-    kind?: string,
-  ): void;
   getTask(id: string): TaskRow | undefined;
   listTasks(workspaceId?: string, options?: ListTasksOptions): TaskRow[];
   updateTask(
@@ -192,17 +107,9 @@ export interface TaskStore {
   updateTaskStatus(id: string, status: TaskStatus): void;
   markTaskComplete(id: string, status?: "complete" | "failed"): void;
   deleteTask(id: string): number;
-  getUnblockedTasks(workspaceId?: string): TaskRow[];
-  checkAndUnblock(workspaceId?: string): TaskRow[];
-  areDependenciesMet(taskId: string): boolean;
-  detectDependencyCycle(taskId: string, proposedDependsOn: string[]): string[] | null;
-  buildChildIdsMap(rows: TaskRow[]): Map<string, string[]>;
   getChildren(taskId: string): TaskRow[];
-  getDescendants(taskId: string): TaskRow[];
-  getAncestors(taskId: string): TaskRow[];
-  getChildStatusCounts(taskId: string): Record<string, number>;
-  reparentTask(taskId: string, newParentTaskId: string): void;
-  getOrphanedTasks(parentTaskId: string): TaskRow[];
+  setTaskParentAndDepth(taskId: string, parentTaskId: string, depth: number): void;
+  bumpTaskDepths(taskIds: string[], delta: number): void;
   getRootTaskForAgent(agentId: string): TaskRow | undefined;
   getTasksForAgent(agentId: string): TaskRow[];
 }
@@ -380,112 +287,6 @@ export function deleteTask(id: string): number {
   return result.changes;
 }
 
-/** Return all not_started tasks whose dependencies are fully met. */
-export function getUnblockedTasks(workspaceId?: string): TaskRow[] {
-  const all = listTasks(workspaceId);
-  const byId = new Map<string, TaskRow>(all.map((t) => [t.id, t]));
-  return all.filter((task) => {
-    if (task.status !== TASK_STATUS.NOT_STARTED) {
-      return false;
-    }
-    const deps = safeParseJsonArray(task.dependsOn);
-    if (deps.length === 0) {
-      return true;
-    }
-    return deps.every((depId) => byId.get(depId)?.status === TASK_STATUS.COMPLETE);
-  });
-}
-
-/** Alias for getUnblockedTasks — check which pending tasks are now unblocked. */
-export function checkAndUnblock(workspaceId?: string): TaskRow[] {
-  return getUnblockedTasks(workspaceId);
-}
-
-/** Check whether all dependencies of a task are in "complete" status. */
-export function areDependenciesMet(taskId: string): boolean {
-  const task = getTask(taskId);
-  if (!task) {
-    return false;
-  }
-  const uniqueDeps = [...new Set(safeParseJsonArray(task.dependsOn))];
-  if (uniqueDeps.length === 0) {
-    return true;
-  }
-  const depRows = db
-    .select({ id: tasks.id, status: tasks.status })
-    .from(tasks)
-    .where(inArray(tasks.id, uniqueDeps))
-    .all();
-  if (depRows.length !== uniqueDeps.length) {
-    return false;
-  }
-  return depRows.every((row) => row.status === TASK_STATUS.COMPLETE);
-}
-
-/**
- * Detect whether adding the proposed dependencies to a task would create a cycle.
- * Returns the cycle path (array of task IDs) if a cycle exists, or null if safe.
- */
-export function detectDependencyCycle(
-  taskId: string,
-  proposedDependsOn: string[],
-): string[] | null {
-  if (proposedDependsOn.includes(taskId)) {
-    return [taskId];
-  }
-  const visited = new Set<string>();
-  const parent = new Map<string, string>();
-  const queue = [...proposedDependsOn];
-  for (const depId of proposedDependsOn) {
-    parent.set(depId, taskId);
-  }
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    if (current === taskId) {
-      const path: string[] = [];
-      let node = parent.get(current)!;
-      while (node !== taskId) {
-        path.unshift(node);
-        node = parent.get(node)!;
-      }
-      return path;
-    }
-    if (visited.has(current)) {
-      continue;
-    }
-    visited.add(current);
-    const task = getTask(current);
-    if (!task) {
-      continue;
-    }
-    for (const depId of safeParseJsonArray(task.dependsOn)) {
-      if (!visited.has(depId)) {
-        parent.set(depId, current);
-        queue.push(depId);
-      }
-    }
-  }
-  return null;
-}
-
-// ─── Tree Queries ────────────────────────────────────
-
-/** Build a map from parentTaskId to child IDs from a pre-fetched list of rows. Avoids N+1 queries. */
-export function buildChildIdsMap(rows: TaskRow[]): Map<string, string[]> {
-  const map = new Map<string, string[]>();
-  for (const row of rows) {
-    if (row.parentTaskId) {
-      const siblings = map.get(row.parentTaskId);
-      if (siblings) {
-        siblings.push(row.id);
-      } else {
-        map.set(row.parentTaskId, [row.id]);
-      }
-    }
-  }
-  return map;
-}
-
 /** Get direct children of a task, ordered by sort_order. */
 export function getChildren(taskId: string): TaskRow[] {
   return db
@@ -496,123 +297,36 @@ export function getChildren(taskId: string): TaskRow[] {
     .all();
 }
 
-/** Get all descendants of a task (full subtree) via in-memory BFS. Fetches all workspace tasks once to avoid N+1 queries. */
-export function getDescendants(taskId: string): TaskRow[] {
-  const task = getTask(taskId);
-  if (!task) {
-    return [];
-  }
-  const allRows = listTasks(task.workspaceId || undefined);
-  const childIdsMap = buildChildIdsMap(allRows);
-  const rowById = new Map<string, TaskRow>(allRows.map((r) => [r.id, r]));
-
-  const result: TaskRow[] = [];
-  const queue: string[] = [taskId];
-  for (let i = 0; i < queue.length; i++) {
-    const currentId = queue[i]!;
-    const childIds = childIdsMap.get(currentId);
-    if (!childIds) {
-      continue;
-    }
-    for (const childId of childIds) {
-      const child = rowById.get(childId);
-      if (child) {
-        result.push(child);
-        queue.push(child.id);
-      }
-    }
-  }
-  return result;
-}
-
-/** Get ancestor chain from task up to root, ordered root-first. */
-export function getAncestors(taskId: string): TaskRow[] {
-  const task = getTask(taskId);
-  if (!task || !task.parentTaskId) {
-    return [];
-  }
-
-  const allRows = listTasks(task.workspaceId || undefined);
-  const byId = new Map<string, TaskRow>(allRows.map((r) => [r.id, r]));
-
-  const ancestors: TaskRow[] = [];
-  let current: TaskRow | undefined = task;
-  while (current?.parentTaskId) {
-    const parent = byId.get(current.parentTaskId);
-    if (!parent) {
-      break;
-    }
-    ancestors.unshift(parent);
-    current = parent;
-  }
-  return ancestors;
-}
-
-/** Count children by status for a parent task. */
-export function getChildStatusCounts(taskId: string): Record<string, number> {
-  const children = getChildren(taskId);
-  const counts: Record<string, number> = {};
-  for (const child of children) {
-    counts[child.status] = (counts[child.status] ?? 0) + 1;
-  }
-  return counts;
-}
-
-/** Terminal task statuses that indicate the task is done. */
-const TERMINAL_TASK_STATUSES: ReadonlySet<string> = new Set([
-  TASK_STATUS.COMPLETE,
-  TASK_STATUS.FAILED,
-]);
-
 /**
- * Reparent a task to a new parent, updating parentTaskId and recalculating
- * depth for the task and its entire subtree.
+ * Set the parent task ID and depth for a single task.
+ * Used by the task service when reparenting a subtree.
  */
-export function reparentTask(taskId: string, newParentTaskId: string): void {
-  const task = getTask(taskId);
-  if (!task) {
-    throw new Error(`Task not found: ${taskId}`);
-  }
-  const newParent = getTask(newParentTaskId);
-  if (!newParent) {
-    throw new Error(`New parent task not found: ${newParentTaskId}`);
-  }
-
-  const newDepth = newParent.depth + 1;
-  const depthDelta = newDepth - task.depth;
-
-  // Update the task itself
+export function setTaskParentAndDepth(taskId: string, parentTaskId: string, depth: number): void {
   db.update(tasks)
     .set({
-      parentTaskId: newParentTaskId,
-      depth: newDepth,
+      parentTaskId,
+      depth,
       updatedAt: sql`datetime('now')`,
     })
     .where(eq(tasks.id, taskId))
     .run();
-
-  // Batch-update depth for all descendants in a single query
-  if (depthDelta !== 0) {
-    const descendants = getDescendants(taskId);
-    if (descendants.length > 0) {
-      const descendantIds = descendants.map((d) => d.id);
-      db.update(tasks)
-        .set({
-          depth: sql`${tasks.depth} + ${depthDelta}`,
-          updatedAt: sql`datetime('now')`,
-        })
-        .where(inArray(tasks.id, descendantIds))
-        .run();
-    }
-  }
 }
 
 /**
- * Get non-terminal children of a parent task (potential orphans).
- * Returns children whose status is not complete or failed.
+ * Adjust `depth` for a batch of tasks by a signed integer delta.
+ * Used by the task service to cascade depth updates across a reparented subtree.
  */
-export function getOrphanedTasks(parentTaskId: string): TaskRow[] {
-  return getChildren(parentTaskId).filter((child) => !TERMINAL_TASK_STATUSES.has(child.status));
+export function bumpTaskDepths(taskIds: string[], delta: number): void {
+  if (taskIds.length === 0) {
+    return;
+  }
+  db.update(tasks)
+    .set({
+      depth: sql`${tasks.depth} + ${delta}`,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(inArray(tasks.id, taskIds))
+    .run();
 }
 
 /**
@@ -635,7 +349,6 @@ export function getTasksForAgent(agentId: string): TaskRow[] {
 
 const _typeCheck: TaskStore = {
   insertTask,
-  createTask,
   getTask,
   listTasks,
   updateTask,
@@ -648,17 +361,9 @@ const _typeCheck: TaskStore = {
   updateTaskStatus,
   markTaskComplete,
   deleteTask,
-  getUnblockedTasks,
-  checkAndUnblock,
-  areDependenciesMet,
-  detectDependencyCycle,
-  buildChildIdsMap,
   getChildren,
-  getDescendants,
-  getAncestors,
-  getChildStatusCounts,
-  reparentTask,
-  getOrphanedTasks,
+  setTaskParentAndDepth,
+  bumpTaskDepths,
   getRootTaskForAgent,
   getTasksForAgent,
 };

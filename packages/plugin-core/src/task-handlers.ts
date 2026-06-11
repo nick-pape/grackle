@@ -4,18 +4,16 @@ import {
   TERMINAL_SESSION_STATUSES,
   type SessionStatus,
   ROOT_TASK_ID,
-  MAX_TASK_DEPTH,
   taskStatusToString,
   fuzzySearch,
   type FuzzyKey,
 } from "@grackle-ai/common";
-import type { WorkspaceRow } from "@grackle-ai/database";
-import { getDatabaseStores, slugify, safeParseJsonArray } from "@grackle-ai/database";
-import { v4 as uuid } from "uuid";
+import { getDatabaseStores, safeParseJsonArray } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
 import { processorRegistry } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
 import { computeTaskStatus } from "@grackle-ai/core";
+import { taskService } from "@grackle-ai/core";
 import { taskRowToProto } from "./grpc-proto-converters.js";
 import {
   requireField,
@@ -23,7 +21,6 @@ import {
   requireSession,
   requireTask,
   requireTrimmed,
-  requireWorkspace,
 } from "./require-helpers.js";
 
 /** Weighted fields for fuzzy task search: title is twice as important as description. */
@@ -42,7 +39,7 @@ export async function listTasks(req: grackle.ListTasksRequest): Promise<grackle.
     search: req.search || undefined,
     status: req.status || undefined,
   });
-  const childIdsMap = taskStore.buildChildIdsMap(rows);
+  const childIdsMap = taskService.buildChildIdsMap(rows);
 
   // Batch-fetch sessions for all tasks and group by taskId
   const taskIds = rows.map((r) => r.id);
@@ -80,7 +77,7 @@ export async function searchTasks(
 
   // Build childIdsMap from ALL fetched rows so that parent tasks include their full child list
   // even when the children themselves are not among the fuzzy search results
-  const childIdsMap = taskStore.buildChildIdsMap(rows);
+  const childIdsMap = taskService.buildChildIdsMap(rows);
 
   // Batch-fetch sessions for matched tasks and group by taskId
   const taskIds = fuzzyResults.map((r) => r.item.id);
@@ -106,55 +103,28 @@ export async function searchTasks(
 
 /** Create a new task. */
 export async function createTask(req: grackle.CreateTaskRequest): Promise<grackle.Task> {
-  const { taskStore } = getDatabaseStores();
   requireField(req.title, "title");
-  const workspaceId = req.workspaceId || undefined;
-  let workspace: WorkspaceRow | undefined;
-  if (workspaceId) {
-    workspace = requireWorkspace(workspaceId);
-  }
-
-  // Validate parent task if specified
-  if (req.parentTaskId) {
-    const parent = requireTask(req.parentTaskId);
-    if (!parent.canDecompose) {
-      throw new PreconditionError(
-        `Parent task "${parent.title}" (${req.parentTaskId}) does not have decomposition rights`,
-      );
-    }
-    if (parent.depth + 1 > MAX_TASK_DEPTH) {
-      throw new PreconditionError(`Task depth would exceed maximum of ${MAX_TASK_DEPTH}`);
-    }
-  }
-
   requireNonNegativeBudget(req.tokenBudget, req.costBudgetMillicents);
 
-  for (const depId of req.dependsOn) {
-    requireTask(depId);
-  }
-
-  const id = uuid().slice(0, 8);
-  taskStore.createTask(
-    id,
-    workspaceId,
-    req.title,
-    req.description,
-    [...req.dependsOn],
-    workspace ? slugify(workspace.name) : "",
-    req.parentTaskId,
+  const row = taskService.createTask({
+    workspaceId: req.workspaceId || undefined,
+    title: req.title,
+    description: req.description,
+    dependsOn: [...(req.dependsOn ?? [])],
+    parentTaskId: req.parentTaskId,
     // Default to false (no decomposition rights) unless explicitly granted.
     // Orchestrator/root processes that need fork() must opt in.
-    req.canDecompose ?? false,
-    req.defaultPersonaId ?? "",
-    req.tokenBudget ?? 0,
-    req.costBudgetMillicents ?? 0,
+    canDecompose: req.canDecompose ?? false,
+    defaultPersonaId: req.defaultPersonaId ?? "",
+    tokenBudget: req.tokenBudget ?? 0,
+    costBudgetMillicents: req.costBudgetMillicents ?? 0,
     // Knowledge context injection at spawn (#1259) defaults ON; opt out per task.
-    req.injectKnowledge ?? true,
-  );
-  const row = taskStore.getTask(id);
-  emit("task.created", { taskId: id, workspaceId: req.workspaceId });
-  logger.info({ taskId: id, workspaceId: req.workspaceId }, "Task created");
-  return taskRowToProto(row!);
+    injectKnowledge: req.injectKnowledge ?? true,
+  });
+
+  emit("task.created", { taskId: row.id, workspaceId: req.workspaceId });
+  logger.info({ taskId: row.id, workspaceId: req.workspaceId }, "Task created");
+  return taskRowToProto(row);
 }
 
 /** Get a task by ID with computed status. */
@@ -190,7 +160,7 @@ export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackl
     for (const depId of req.dependsOn) {
       requireTask(depId);
     }
-    const cycle = taskStore.detectDependencyCycle(req.id, [...req.dependsOn]);
+    const cycle = taskService.detectDependencyCycle(req.id, [...req.dependsOn]);
     if (cycle) {
       throw new ValidationError(
         `Circular dependency detected: ${req.id} → ${cycle.join(" → ")} → ${req.id}`,

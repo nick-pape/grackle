@@ -171,38 +171,66 @@ describe("gRPC searchTasks handler", () => {
 
     workspaceStore.createWorkspace(WORKSPACE_ID, "Search Test Workspace", "desc", "", "");
     // Tasks with varied titles and descriptions for fuzzy matching
-    taskStore.createTask(
-      "t1",
-      WORKSPACE_ID,
-      "Fix login authentication bug",
-      "User cannot login with SSO provider",
-      [],
-      "",
-    );
-    taskStore.createTask(
-      "t2",
-      WORKSPACE_ID,
-      "Add analytics dashboard",
-      "Create charts for user activity",
-      [],
-      "",
-    );
-    taskStore.createTask(
-      "t3",
-      WORKSPACE_ID,
-      "Update payment processing",
-      "Integrate Stripe for subscriptions",
-      [],
-      "",
-    );
-    taskStore.createTask(
-      "t4",
-      WORKSPACE_ID,
-      "Refactor database layer",
-      "Login info stored in auth module",
-      [],
-      "",
-    );
+    taskStore.insertTask({
+      id: "t1",
+      workspaceId: WORKSPACE_ID,
+      title: "Fix login authentication bug",
+      description: "User cannot login with SSO provider",
+      branch: "ws/t1",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
+    taskStore.insertTask({
+      id: "t2",
+      workspaceId: WORKSPACE_ID,
+      title: "Add analytics dashboard",
+      description: "Create charts for user activity",
+      branch: "ws/t2",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
+    taskStore.insertTask({
+      id: "t3",
+      workspaceId: WORKSPACE_ID,
+      title: "Update payment processing",
+      description: "Integrate Stripe for subscriptions",
+      branch: "ws/t3",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
+    taskStore.insertTask({
+      id: "t4",
+      workspaceId: WORKSPACE_ID,
+      title: "Refactor database layer",
+      description: "Login info stored in auth module",
+      branch: "ws/t4",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
     taskStore.updateTaskStatus("t3", "working");
     taskStore.updateTaskStatus("t4", "complete");
 
@@ -271,14 +299,21 @@ describe("gRPC searchTasks handler", () => {
   it("limits results to the specified limit", async () => {
     // Seed enough tasks to exceed the limit
     for (let i = 5; i <= 15; i++) {
-      taskStore.createTask(
-        `t${i}`,
-        WORKSPACE_ID,
-        `Login related task ${i}`,
-        "login auth description",
-        [],
-        "",
-      );
+      taskStore.insertTask({
+        id: `t${i}`,
+        workspaceId: WORKSPACE_ID,
+        title: `Login related task ${i}`,
+        description: "login auth description",
+        branch: `ws/t${i}`,
+        dependsOn: [],
+        parentTaskId: "",
+        depth: 0,
+        canDecompose: false,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
     }
 
     const result = (await handlers.searchTasks({
@@ -293,14 +328,21 @@ describe("gRPC searchTasks handler", () => {
 
   it("defaults to limit 10 when limit is 0", async () => {
     for (let i = 5; i <= 20; i++) {
-      taskStore.createTask(
-        `tlim${i}`,
-        WORKSPACE_ID,
-        `Login task ${i}`,
-        "login auth description",
-        [],
-        "",
-      );
+      taskStore.insertTask({
+        id: `tlim${i}`,
+        workspaceId: WORKSPACE_ID,
+        title: `Login task ${i}`,
+        description: "login auth description",
+        branch: `ws/tlim${i}`,
+        dependsOn: [],
+        parentTaskId: "",
+        depth: 0,
+        canDecompose: false,
+        injectKnowledge: true,
+        defaultPersonaId: "",
+        tokenBudget: 0,
+        costBudgetMillicents: 0,
+      });
     }
 
     const result = (await handlers.searchTasks({
@@ -355,8 +397,36 @@ describe("gRPC searchTasks handler", () => {
   });
 
   it("includes childTaskIds and latestSessionId in results", async () => {
-    taskStore.createTask("parent", WORKSPACE_ID, "Parent login task", "desc", [], "", "", true);
-    taskStore.createTask("child1", WORKSPACE_ID, "Child 1", "desc", [], "", "parent");
+    taskStore.insertTask({
+      id: "parent",
+      workspaceId: WORKSPACE_ID,
+      title: "Parent login task",
+      description: "desc",
+      branch: "ws/parent",
+      dependsOn: [],
+      parentTaskId: "",
+      depth: 0,
+      canDecompose: true,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
+    taskStore.insertTask({
+      id: "child1",
+      workspaceId: WORKSPACE_ID,
+      title: "Child 1",
+      description: "desc",
+      branch: "ws/child1",
+      dependsOn: [],
+      parentTaskId: "parent",
+      depth: 1,
+      canDecompose: false,
+      injectKnowledge: true,
+      defaultPersonaId: "",
+      tokenBudget: 0,
+      costBudgetMillicents: 0,
+    });
 
     vi.mocked(sessionStore.listSessionsByTaskIds).mockReturnValue([
       {

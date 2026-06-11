@@ -95,10 +95,9 @@ function createSessionStoreMock(): MockedStore<SessionStore> {
   };
 }
 
-/** Create a typed mock of the task store. */
+/** Create a typed mock of the task store (pure persistence layer). */
 function createTaskStoreMock(): MockedStore<TaskStore> {
   return {
-    createTask: vi.fn(),
     insertTask: vi.fn(),
     getTask: vi.fn(() => undefined),
     listTasks: vi.fn(() => []),
@@ -112,19 +111,56 @@ function createTaskStoreMock(): MockedStore<TaskStore> {
     setTaskDependsOn: vi.fn(),
     markTaskComplete: vi.fn(),
     deleteTask: vi.fn(() => 0),
+    getChildren: vi.fn(() => []),
+    setTaskParentAndDepth: vi.fn(),
+    bumpTaskDepths: vi.fn(),
+    getRootTaskForAgent: vi.fn(() => undefined),
+    getTasksForAgent: vi.fn(() => []),
+  };
+}
+
+/**
+ * Explicit mock-shape type for the task service.
+ *
+ * Not derived from `TaskService` in `@grackle-ai/core` because core devDeps
+ * on test-utils, which would create a circular Rush build-graph edge.
+ * Keep this in sync with `TaskService` manually when the interface changes.
+ */
+export interface TaskServiceMock {
+  createTask: Mock;
+  getUnblockedTasks: Mock;
+  checkAndUnblock: Mock;
+  areDependenciesMet: Mock;
+  detectDependencyCycle: Mock;
+  buildChildIdsMap: Mock;
+  getDescendants: Mock;
+  getAncestors: Mock;
+  getChildStatusCounts: Mock;
+  reparentTask: Mock;
+  getOrphanedTasks: Mock;
+}
+
+/**
+ * Create a mock of the task service (business logic layer).
+ *
+ * NOTE: Not typed against `TaskService` from `@grackle-ai/core` because
+ * core devDeps on test-utils, creating a circular Rush build-graph edge.
+ * Methods are intentionally listed here to match `TaskService` exactly —
+ * update both when the interface changes.
+ */
+export function createTaskServiceMock(): TaskServiceMock {
+  return {
+    createTask: vi.fn(),
     getUnblockedTasks: vi.fn(() => []),
     checkAndUnblock: vi.fn(() => []),
     areDependenciesMet: vi.fn(() => true),
     detectDependencyCycle: vi.fn(() => null),
     buildChildIdsMap: vi.fn(() => new Map()),
-    getChildren: vi.fn(() => []),
     getDescendants: vi.fn(() => []),
     getAncestors: vi.fn(() => []),
     getChildStatusCounts: vi.fn(() => ({})),
     reparentTask: vi.fn(),
     getOrphanedTasks: vi.fn(() => []),
-    getRootTaskForAgent: vi.fn(() => undefined),
-    getTasksForAgent: vi.fn(() => []),
   };
 }
 
