@@ -24,12 +24,14 @@ function applySchema(): void {
       next_run_at         TEXT,
       run_count           INTEGER NOT NULL DEFAULT 0,
       task_id             TEXT,
+      agent_id            TEXT,
       created_at          TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_schedules_due ON schedules(enabled, next_run_at);
     CREATE UNIQUE INDEX IF NOT EXISTS uq_schedules_heartbeat_per_task
       ON schedules(task_id) WHERE task_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_schedules_agent_id ON schedules(agent_id);
   `);
 }
 
