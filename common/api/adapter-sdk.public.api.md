@@ -451,6 +451,7 @@ export interface RetryOptions {
     maxAttempts: number;
     maxDelayMs?: number;
     onRetry?: (attempt: number, error: unknown) => void | Promise<void>;
+    shouldRetry?: (error: unknown) => boolean;
     sleep?: (ms: number) => Promise<void>;
 }
 

@@ -2871,6 +2871,20 @@ const ResumeRequestSchema: GenMessage<ResumeRequest>;
 const ResumeRequestSchema_2: GenMessage<ResumeRequest_2>;
 
 // @public
+export interface RetryOptions {
+    backoffMultiplier?: number;
+    delayMs: number;
+    maxAttempts: number;
+    maxDelayMs?: number;
+    onRetry?: (attempt: number, error: unknown) => void | Promise<void>;
+    shouldRetry?: (error: unknown) => boolean;
+    sleep?: (ms: number) => Promise<void>;
+}
+
+// @public
+export function retryWithBackoff<T>(operation: () => Promise<T>, options: RetryOptions): Promise<T>;
+
+// @public
 export function reverseMapAction(envelope: ActionEnvelope, context: ReverseMapperContext): ReverseMapResult;
 
 // @public

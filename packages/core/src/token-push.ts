@@ -18,8 +18,10 @@ import { getDatabaseStores } from "@grackle-ai/database";
 import {
   buildProviderTokenBundle,
   deriveCredentialNeeds,
+  findDisabledRequiredProvider,
   findUnsatisfiedNeeds,
   formatPreflightCredentialError,
+  formatRuntimeProviderDisabledError,
 } from "./credential-bundle.js";
 import { logger } from "./logger.js";
 
@@ -65,11 +67,22 @@ export async function authenticateForRuntime(
   const stored = tokenStore.getBundle();
   const provider = await buildProviderTokenBundle(runtime, undefined, githubAccountId);
 
+  const config = credentialProviders.getCredentialProviders();
+
+  // Pre-flight: catch the case where the runtime's primary credential provider
+  // is still at the default "off" value. deriveCredentialNeeds / findUnsatisfiedNeeds
+  // cannot detect this because disabled providers produce no needs to validate,
+  // meaning the gate below would silently pass and the SDK would throw an opaque
+  // error from inside createSession(). Throw early with an actionable message.
+  const disabledProvider = findDisabledRequiredProvider(runtime, config);
+  if (disabledProvider !== undefined) {
+    throw new PreconditionError(formatRuntimeProviderDisabledError(runtime, disabledProvider));
+  }
+
   // Pre-flight credential validation (#1316). Validate the runtime's advertised
   // needs against the *unfiltered* provider bundle, so the local-env file-token
   // stripping below cannot mask a credential that is present on disk. Throws
   // before delivery (and before any session row is created at the call site).
-  const config = credentialProviders.getCredentialProviders();
   const unsatisfied = findUnsatisfiedNeeds(
     deriveCredentialNeeds(runtime, config),
     provider,

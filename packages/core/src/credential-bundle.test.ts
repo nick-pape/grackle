@@ -43,7 +43,10 @@ import {
   findUnsatisfiedNeeds,
   inspectFileCredentialExpiry,
   formatPreflightCredentialError,
+  formatRuntimeProviderDisabledError,
   RUNTIME_PROVIDERS,
+  RUNTIME_REQUIRED_PROVIDER,
+  findDisabledRequiredProvider,
 } from "./credential-bundle.js";
 import type {
   ProtectedResourceDescriptor,
@@ -1016,5 +1019,89 @@ describe("formatPreflightCredentialError()", () => {
     expect(msg).toContain('provider "claude"');
     expect(msg).toContain('provider "github"');
     expect(msg).toContain("grackle credential-provider set");
+  });
+});
+
+// ─── findDisabledRequiredProvider() (#1591) ──────────────────────────────
+
+describe("findDisabledRequiredProvider()", () => {
+  function allOff(): CredentialProviderConfig {
+    return { claude: "off", github: "off", copilot: "off", codex: "off", goose: "off" };
+  }
+
+  it("returns the provider key when required provider is off for claude-code", () => {
+    expect(findDisabledRequiredProvider("claude-code", allOff())).toBe("claude");
+  });
+
+  it("returns the provider key when required provider is off for copilot", () => {
+    expect(findDisabledRequiredProvider("copilot", allOff())).toBe("copilot");
+  });
+
+  it("returns the provider key when required provider is off for codex", () => {
+    expect(findDisabledRequiredProvider("codex", allOff())).toBe("codex");
+  });
+
+  it("returns undefined when the required provider is enabled (api_key)", () => {
+    expect(
+      findDisabledRequiredProvider("claude-code", { ...allOff(), claude: "api_key" }),
+    ).toBeUndefined();
+  });
+
+  it("returns undefined when the required provider is enabled (subscription)", () => {
+    expect(
+      findDisabledRequiredProvider("claude-code", { ...allOff(), claude: "subscription" }),
+    ).toBeUndefined();
+  });
+
+  it("returns undefined for stub runtime (no required provider)", () => {
+    expect(findDisabledRequiredProvider("stub", allOff())).toBeUndefined();
+  });
+
+  it("returns undefined for an unknown runtime (fails safe)", () => {
+    expect(findDisabledRequiredProvider("totally-unknown", allOff())).toBeUndefined();
+  });
+
+  it("returns undefined for genaiscript (no required provider)", () => {
+    expect(findDisabledRequiredProvider("genaiscript", allOff())).toBeUndefined();
+  });
+
+  // ── Coherence: RUNTIME_REQUIRED_PROVIDER keys ⊆ RUNTIME_CATALOG ──────
+  it("every RUNTIME_REQUIRED_PROVIDER runtime has a catalog entry", () => {
+    for (const runtime of Object.keys(RUNTIME_REQUIRED_PROVIDER)) {
+      expect(
+        RUNTIME_CATALOG[runtime],
+        `Runtime "${runtime}" missing from RUNTIME_CATALOG`,
+      ).toBeDefined();
+    }
+  });
+
+  it("every RUNTIME_REQUIRED_PROVIDER value matches RUNTIME_PROVIDERS[runtime][0]", () => {
+    for (const [runtime, provider] of Object.entries(RUNTIME_REQUIRED_PROVIDER)) {
+      expect(
+        RUNTIME_PROVIDERS[runtime]?.[0],
+        `RUNTIME_REQUIRED_PROVIDER["${runtime}"] = "${provider}" but RUNTIME_PROVIDERS["${runtime}"][0] = "${RUNTIME_PROVIDERS[runtime]?.[0]}"`,
+      ).toBe(provider);
+    }
+  });
+});
+
+// ─── formatRuntimeProviderDisabledError() (#1591) ────────────────────────
+
+describe("formatRuntimeProviderDisabledError()", () => {
+  it("names the runtime and the disabled provider", () => {
+    const msg = formatRuntimeProviderDisabledError("copilot", "copilot");
+    expect(msg).toContain('"copilot"');
+    expect(msg).toContain("COPILOT_GITHUB_TOKEN");
+    expect(msg).toContain("grackle credential-provider set");
+  });
+
+  it("includes claude-specific hint for claude provider", () => {
+    const msg = formatRuntimeProviderDisabledError("claude-code", "claude");
+    expect(msg).toContain("ANTHROPIC_API_KEY");
+  });
+
+  it("includes grackle persona command hint for alternative runtime", () => {
+    const msg = formatRuntimeProviderDisabledError("claude-code", "claude");
+    expect(msg).toContain("grackle persona set");
   });
 });

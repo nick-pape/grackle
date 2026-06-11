@@ -58,3 +58,5 @@ export type {
 } from "./ahp-reverse-mapper.js";
 export { createPinoLogger } from "./logger-factory.js";
 export type { CreatePinoLoggerOptions, Logger } from "./logger-factory.js";
+export { retryWithBackoff } from "./retry.js";
+export type { RetryOptions } from "./retry.js";
