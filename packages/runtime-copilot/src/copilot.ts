@@ -455,7 +455,7 @@ export class CopilotSession extends BaseAgentSession {
 /** Runtime that delegates to the GitHub Copilot SDK (`@github/copilot-sdk`). */
 export class CopilotRuntime extends BaseAgentRuntime {
   public name: string = "copilot";
-  public override readonly capabilities = {
+  public override readonly capabilities: RuntimeCapabilities = {
     supportsHooks: false,
     supportsResume: true,
     requiresNonEmptyResumePrompt: true,

@@ -32,11 +32,9 @@ class TestSession implements AgentSession {
 /** Concrete runtime with default capabilities (supportsHooks: false). */
 class NoHooksRuntime extends BaseAgentRuntime {
   public name: string = "no-hooks";
-  public createSession(opts: CreateSessionOptions): AgentSession {
+  protected createSession(opts: CreateSessionOptions): AgentSession {
     return new TestSession(opts);
   }
-  // expose createSession as protected → public for tests
-  protected createSession2 = this.createSession;
 }
 
 /** Concrete runtime that supports hooks. */

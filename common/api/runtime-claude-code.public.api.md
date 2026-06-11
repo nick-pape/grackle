@@ -8,15 +8,12 @@ import type { AgentEvent } from '@grackle-ai/runtime-sdk';
 import type { AgentSession } from '@grackle-ai/runtime-sdk';
 import { BaseAgentRuntime } from '@grackle-ai/runtime-sdk';
 import type { CreateSessionOptions } from '@grackle-ai/runtime-sdk';
+import type { RuntimeCapabilities } from '@grackle-ai/runtime-sdk';
 
 // @public
 export class ClaudeCodeRuntime extends BaseAgentRuntime {
     // (undocumented)
-    readonly capabilities: {
-        supportsHooks: boolean;
-        supportsResume: boolean;
-        requiresNonEmptyResumePrompt: boolean;
-    };
+    readonly capabilities: RuntimeCapabilities;
     // (undocumented)
     protected createSession(opts: CreateSessionOptions): AgentSession;
     // (undocumented)

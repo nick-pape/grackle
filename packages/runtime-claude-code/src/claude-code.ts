@@ -735,7 +735,7 @@ function isDirectoryWritable(dir: string): boolean {
 /** Runtime that delegates to the Claude Code SDK (`@anthropic-ai/claude-agent-sdk`). */
 export class ClaudeCodeRuntime extends BaseAgentRuntime {
   public name: string = "claude-code";
-  public override readonly capabilities = {
+  public override readonly capabilities: RuntimeCapabilities = {
     supportsHooks: true,
     supportsResume: true,
     requiresNonEmptyResumePrompt: false,
