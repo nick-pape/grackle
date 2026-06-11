@@ -357,7 +357,19 @@ async function ensureRepoInContainer(
         rmdirSync(tmpDir);
       } catch {}
     }
-    await execFn("docker", ["exec", containerName, "chmod", "700", containerHelperPath]);
+    // docker cp creates root-owned files. Resolve the container's exec user UID so we can
+    // chown the helper to them (running chown as root), then restrict to 700.
+    const { stdout: uidOut } = await execFn("docker", ["exec", containerName, "id", "-u"]);
+    const containerUid = uidOut.trim();
+    await execFn("docker", [
+      "exec",
+      "-u",
+      "root",
+      containerName,
+      "sh",
+      "-c",
+      `chown ${containerUid} ${containerHelperPath} && chmod 700 ${containerHelperPath}`,
+    ]);
     await execFn("docker", [
       "exec",
       containerName,
@@ -367,24 +379,29 @@ async function ensureRepoInContainer(
       "credential.helper",
       containerHelperPath,
     ]);
-    await execFn("docker", ["exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH], {
-      timeout: GIT_CLONE_TIMEOUT_MS,
-    });
-    await execFn("docker", [
-      "exec",
-      containerName,
-      "git",
-      "config",
-      "--global",
-      "--unset",
-      "credential.helper",
-    ]).catch((err) => {
-      logger.warn({ err }, "Failed to unset credential helper");
-    });
-    // Remove the helper script from the container — token at rest after unset
-    await execFn("docker", ["exec", containerName, "rm", "-f", containerHelperPath]).catch(
-      () => {},
-    );
+    // Wrap clone in try/finally so cleanup always runs even if clone fails.
+    // Leaving the helper configured or on-disk would leave a token-bearing file in the container.
+    try {
+      await execFn("docker", ["exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH], {
+        timeout: GIT_CLONE_TIMEOUT_MS,
+      });
+    } finally {
+      await execFn("docker", [
+        "exec",
+        containerName,
+        "git",
+        "config",
+        "--global",
+        "--unset",
+        "credential.helper",
+      ]).catch((err) => {
+        logger.warn({ err }, "Failed to unset credential helper");
+      });
+      // Remove the helper script from the container
+      await execFn("docker", ["exec", containerName, "rm", "-f", containerHelperPath]).catch(
+        () => {},
+      );
+    }
   } else {
     await execFn("docker", ["exec", containerName, "git", "clone", cloneUrl, WORKSPACE_PATH], {
       timeout: GIT_CLONE_TIMEOUT_MS,
