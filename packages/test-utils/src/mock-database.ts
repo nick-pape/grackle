@@ -296,6 +296,7 @@ function createScheduleStoreMock(): MockedStore<ScheduleStore> {
     getDueSchedules: vi.fn(() => []),
     advanceSchedule: vi.fn(),
     setScheduleEnabled: vi.fn(),
+    detachSchedulesForAgent: vi.fn(),
   };
 }
 

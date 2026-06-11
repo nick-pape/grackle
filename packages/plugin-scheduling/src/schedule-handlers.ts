@@ -157,7 +157,7 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
         const incomingPersonaId = (req.personaId ?? "").trim();
         if (!existingPersonaId && !incomingPersonaId) {
           throw new ConnectError(
-            "Cannot detach agent: schedule has no personaId set. Provide --persona in the same request or set a personaId first.",
+            "Cannot detach agent: schedule has no persona_id set. Provide persona_id in the same request or set it first.",
             Code.InvalidArgument,
           );
         }

@@ -144,7 +144,7 @@ export async function updateAgent(req: grackle.UpdateAgentRequest): Promise<grac
  * `ON DELETE CASCADE` (project convention; see `db.ts` migration comments).
  */
 export async function deleteAgent(req: grackle.AgentId): Promise<grackle.Empty> {
-  const { agentStore, taskStore, sessionStore } = getDatabaseStores();
+  const { agentStore, taskStore, sessionStore, scheduleStore } = getDatabaseStores();
   const agentTasks = taskStore.getTasksForAgent(req.id);
   for (const task of agentTasks) {
     for (const session of sessionStore.listSessionsForTask(task.id)) {
@@ -154,6 +154,9 @@ export async function deleteAgent(req: grackle.AgentId): Promise<grackle.Empty> 
   for (const task of agentTasks) {
     taskStore.deleteTask(task.id);
   }
+  // Detach any standalone schedules owned by this agent (#1439) before
+  // deleting the agent row — prevents FK violations (PRAGMA foreign_keys ON).
+  scheduleStore.detachSchedulesForAgent(req.id);
   agentStore.deleteAgent(req.id);
   emit("agent.deleted", { agentId: req.id });
   return create(grackle.EmptySchema, {});

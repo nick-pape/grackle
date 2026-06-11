@@ -165,6 +165,13 @@ vi.mock("@grackle-ai/database", () => {
       deleteSchedule: (id: string): void => {
         mockDb.schedules.delete(id);
       },
+      detachSchedulesForAgent: (agentId: string): void => {
+        for (const [id, s] of mockDb.schedules.entries()) {
+          if ((s as { agentId?: string | null }).agentId === agentId) {
+            mockDb.schedules.set(id, { ...s, agentId: null });
+          }
+        }
+      },
     },
   };
   return {

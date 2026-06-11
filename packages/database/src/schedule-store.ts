@@ -27,6 +27,8 @@ export interface ScheduleStore {
   getDueSchedules(): ScheduleRow[];
   advanceSchedule(id: string, lastRunAt: string, nextRunAt: string): void;
   setScheduleEnabled(id: string, enabled: boolean, nextRunAt: string | null): void;
+  /** Detach all schedules owned by the given agent (set agent_id to null). */
+  detachSchedulesForAgent(agentId: string): void;
 }
 
 /** Fields that can be updated on a schedule. */
@@ -203,6 +205,21 @@ export function setScheduleEnabled(id: string, enabled: boolean, nextRunAt: stri
     .run();
 }
 
+/**
+ * Detach all schedules owned by the given agent by setting their `agent_id`
+ * to null. Called by `deleteAgent` before removing the agent row to avoid
+ * FK violations (FK enforcement is on in production via `PRAGMA foreign_keys`).
+ */
+export function detachSchedulesForAgent(agentId: string): void {
+  db.update(schedules)
+    .set({
+      agentId: null,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(schedules.agentId, agentId))
+    .run();
+}
+
 const _typeCheck: ScheduleStore = {
   createSchedule,
   getSchedule,
@@ -213,5 +230,6 @@ const _typeCheck: ScheduleStore = {
   getDueSchedules,
   advanceSchedule,
   setScheduleEnabled,
+  detachSchedulesForAgent,
 };
 void _typeCheck;
