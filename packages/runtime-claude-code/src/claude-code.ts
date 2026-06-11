@@ -1,4 +1,10 @@
-import type { AgentEvent, AgentSession, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
+import type {
+  AgentEvent,
+  AgentSession,
+  CreateSessionOptions,
+  ResolvedMcpConfig,
+  RuntimeCapabilities,
+} from "@grackle-ai/runtime-sdk";
 import {
   BaseAgentSession,
   BaseAgentRuntime,
@@ -284,24 +290,12 @@ class ClaudeCodeSession extends BaseAgentSession {
       ...(cwd ? { cwd } : {}),
     };
 
-    // Load MCP server config from env var or SpawnOptions.
-    // resolveMcpServers() injects the Grackle MCP server entry. When broker config is
-    // available, it uses HTTP (url + headers). The Claude Agent SDK supports both stdio
-    // (command/args) and HTTP (url/headers) MCP server configs.
-    const mcpConfig = this.resolveMcp();
-    if (mcpConfig.servers) {
-      sdkOptions.mcpServers = mcpConfig.servers;
-    }
-    if (mcpConfig.disallowedTools.length > 0) {
-      sdkOptions.disallowedTools = mcpConfig.disallowedTools;
-    }
+    // Store before applyMcpConfig so the override can read and write it.
+    this.cachedSdkOptions = sdkOptions;
 
-    // Add MCP tool patterns to allowedTools
-    if (sdkOptions.mcpServers) {
-      const mcpServerNames = Object.keys(sdkOptions.mcpServers as Record<string, unknown>);
-      const mcpTools = mcpServerNames.map((name) => `mcp__${name}__*`);
-      (sdkOptions.allowedTools as string[]).push(...mcpTools);
-    }
+    // Apply MCP config through the named seam — transforms ResolvedMcpConfig into the
+    // Claude Agent SDK's mcpServers/disallowedTools/allowedTools options.
+    this.applyMcpConfig(this.resolveMcp());
 
     // Inject system context via SDK-native systemPrompt (appended to Claude Code's built-in prompt)
     if (this.systemContext) {
@@ -367,8 +361,36 @@ class ClaudeCodeSession extends BaseAgentSession {
         );
       }
     }
+    // Note: this.cachedSdkOptions was already assigned above (before applyMcpConfig).
+    // The local `sdkOptions` and `this.cachedSdkOptions` are the same object reference,
+    // so all mutations to sdkOptions above are already reflected.
+  }
 
-    this.cachedSdkOptions = sdkOptions;
+  /**
+   * Apply resolved MCP config to the Claude Agent SDK options.
+   *
+   * The Claude Agent SDK accepts both stdio and HTTP MCP server configs natively,
+   * so this is a pass-through. Resolved servers go into `mcpServers`, disallowed
+   * tools into `disallowedTools`, and allowed patterns are expanded for each server.
+   */
+  protected override applyMcpConfig(resolved: ResolvedMcpConfig): void {
+    if (!this.cachedSdkOptions) {
+      return;
+    }
+    if (resolved.servers) {
+      this.cachedSdkOptions.mcpServers = resolved.servers;
+    }
+    if (resolved.disallowedTools.length > 0) {
+      this.cachedSdkOptions.disallowedTools = resolved.disallowedTools;
+    }
+    // Expand mcp__<server>__* wildcard patterns into the allowedTools list.
+    if (this.cachedSdkOptions.mcpServers) {
+      const mcpServerNames = Object.keys(
+        this.cachedSdkOptions.mcpServers as Record<string, unknown>,
+      );
+      const mcpTools: string[] = mcpServerNames.map((name) => `mcp__${name}__*`);
+      (this.cachedSdkOptions.allowedTools as string[]).push(...mcpTools);
+    }
   }
 
   protected async runInitialQuery(prompt: string): Promise<number> {
@@ -713,6 +735,11 @@ function isDirectoryWritable(dir: string): boolean {
 /** Runtime that delegates to the Claude Code SDK (`@anthropic-ai/claude-agent-sdk`). */
 export class ClaudeCodeRuntime extends BaseAgentRuntime {
   public name: string = "claude-code";
+  public override readonly capabilities = {
+    supportsHooks: true,
+    supportsResume: true,
+    requiresNonEmptyResumePrompt: false,
+  };
 
   protected createSession(opts: CreateSessionOptions): AgentSession {
     return new ClaudeCodeSession(opts);

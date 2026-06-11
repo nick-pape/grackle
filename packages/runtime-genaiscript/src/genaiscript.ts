@@ -12,6 +12,7 @@ import type {
   AgentEvent,
   SpawnOptions,
   ResumeOptions,
+  RuntimeCapabilities,
 } from "@grackle-ai/runtime-sdk";
 import { logger, ensureRuntimeInstalled } from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS, assertTransition, serverTimestamp } from "@grackle-ai/common";
@@ -297,6 +298,11 @@ class GenAIScriptSession implements AgentSession {
  */
 export class GenAIScriptRuntime implements AgentRuntime {
   public name: string = "genaiscript";
+  public readonly capabilities: RuntimeCapabilities = {
+    supportsHooks: false,
+    supportsResume: false,
+    requiresNonEmptyResumePrompt: false,
+  };
 
   public spawn(opts: SpawnOptions): AgentSession {
     return new GenAIScriptSession(opts);

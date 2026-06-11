@@ -12,6 +12,12 @@ import type { CreateSessionOptions } from '@grackle-ai/runtime-sdk';
 // @public
 export class ClaudeCodeRuntime extends BaseAgentRuntime {
     // (undocumented)
+    readonly capabilities: {
+        supportsHooks: boolean;
+        supportsResume: boolean;
+        requiresNonEmptyResumePrompt: boolean;
+    };
+    // (undocumented)
     protected createSession(opts: CreateSessionOptions): AgentSession;
     // (undocumented)
     name: string;
@@ -19,7 +25,7 @@ export class ClaudeCodeRuntime extends BaseAgentRuntime {
 
 // Warnings were encountered during analysis:
 //
-// src/claude-code.ts:93:1 - (ae-internal-missing-underscore) The name "mapMessage" should be prefixed with an underscore because the declaration is marked as @internal
+// src/claude-code.ts:99:1 - (ae-internal-missing-underscore) The name "mapMessage" should be prefixed with an underscore because the declaration is marked as @internal
 
 // (No @packageDocumentation comment for this package)
 

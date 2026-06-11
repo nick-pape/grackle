@@ -7,10 +7,13 @@
 import type { AgentRuntime } from '@grackle-ai/runtime-sdk';
 import type { AgentSession } from '@grackle-ai/runtime-sdk';
 import type { ResumeOptions } from '@grackle-ai/runtime-sdk';
+import type { RuntimeCapabilities } from '@grackle-ai/runtime-sdk';
 import type { SpawnOptions } from '@grackle-ai/runtime-sdk';
 
 // @public
 export class GenAIScriptRuntime implements AgentRuntime {
+    // (undocumented)
+    readonly capabilities: RuntimeCapabilities;
     // (undocumented)
     name: string;
     // (undocumented)

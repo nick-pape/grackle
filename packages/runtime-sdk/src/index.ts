@@ -5,6 +5,7 @@ export type {
   CreateSessionOptions,
   AgentSession,
   AgentRuntime,
+  RuntimeCapabilities,
 } from "./runtime.js";
 export { BaseAgentRuntime } from "./base-runtime.js";
 export { BaseAgentSession } from "./base-session.js";

@@ -148,6 +148,22 @@ export abstract class BaseAgentSession implements AgentSession {
   }
 
   /**
+   * Apply a resolved MCP configuration to the runtime-specific SDK options.
+   *
+   * Each runtime overrides this to transform the generic `ResolvedMcpConfig` into
+   * its SDK's expected shape (Claude: pass-through, Copilot: pass-through,
+   * Codex: snake_case, ACP: named-array via `convertMcpServers`). The base
+   * implementation is a no-op; override to perform the transform during `setupSdk()`.
+   *
+   * GenAIScript does not extend `BaseAgentSession` and injects MCP via env vars,
+   * so it intentionally does not participate in this seam.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected applyMcpConfig(_resolved: ResolvedMcpConfig): void {
+    // Default: no-op. Override to transform resolved MCP config into SDK-specific shape.
+  }
+
+  /**
    * Push a usage event with a standardized JSON shape.
    * Skips the push when all values are zero (no meaningful usage to report).
    */

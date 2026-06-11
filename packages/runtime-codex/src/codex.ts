@@ -1,4 +1,8 @@
-import type { AgentSession, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
+import type {
+  AgentSession,
+  CreateSessionOptions,
+  ResolvedMcpConfig,
+} from "@grackle-ai/runtime-sdk";
 import {
   BaseAgentSession,
   BaseAgentRuntime,
@@ -102,6 +106,8 @@ class CodexSession extends BaseAgentSession {
   private activeStream?: any;
   /** Cached thread options built during setupSdk(), reused for thread creation. */
   private threadOptions?: Record<string, unknown>;
+  /** Codex constructor options built during setupSdk(), written by applyMcpConfig(). */
+  private codexOptions: Record<string, unknown> = {};
 
   /** System context is injected via codexOptions.config.developer_instructions, not prepended to the prompt. */
   protected override buildInitialPrompt(): string {
@@ -118,64 +124,41 @@ class CodexSession extends BaseAgentSession {
     const workingDirectory = await this.resolveWorkDir();
 
     // ── Create Codex instance ──
-    const codexOptions: Record<string, unknown> = {};
+    this.codexOptions = {};
 
     const cliPath = process.env[ENV_CODEX_CLI_PATH];
     if (cliPath) {
-      codexOptions.codexPathOverride = cliPath;
+      this.codexOptions.codexPathOverride = cliPath;
     }
 
     // API key: SDK reads OPENAI_API_KEY from env automatically,
     // but also support CODEX_API_KEY as an explicit override.
     const apiKey = process.env.CODEX_API_KEY || process.env.OPENAI_API_KEY;
     if (apiKey) {
-      codexOptions.apiKey = apiKey;
+      this.codexOptions.apiKey = apiKey;
     }
 
     // Custom base URL for the OpenAI API
     const baseUrl = process.env.OPENAI_BASE_URL;
     if (baseUrl) {
-      codexOptions.baseUrl = baseUrl;
+      this.codexOptions.baseUrl = baseUrl;
     }
 
-    // MCP servers — pass via config overrides, filtering disallowed tools.
-    // Codex CLI uses snake_case config keys and different field names than
-    // the generic format returned by resolveMcpServers(), so we transform here.
-    const mcpConfig = this.resolveMcp();
-    if (mcpConfig.servers) {
-      const codexServers: Record<string, unknown> = {};
-      for (const [name, config] of Object.entries(mcpConfig.servers)) {
-        const cfg = config as Record<string, unknown>;
-        if (cfg.type === "http" && typeof cfg.url === "string") {
-          // HTTP MCP: Codex infers transport from `url` presence (no `type` field).
-          // Static headers use `http_headers` instead of `headers`.
-          const headers = cfg.headers as Record<string, string> | undefined;
-          codexServers[name] = {
-            url: cfg.url,
-            ...(headers ? { http_headers: headers } : {}),
-          };
-        } else if (typeof cfg.command === "string") {
-          // Stdio MCP: command/args/env are the same in Codex format
-          codexServers[name] = cfg;
-        } else {
-          // Unknown format: pass through as-is
-          codexServers[name] = cfg;
-        }
-      }
-      codexOptions.config = { mcp_servers: codexServers };
-    }
+    // Apply MCP config through the named seam — transforms ResolvedMcpConfig into Codex's
+    // snake_case config format (url+http_headers for HTTP, command/args for stdio).
+    this.applyMcpConfig(this.resolveMcp());
 
     // Inject system context via Codex developer_instructions config
     if (this.systemContext) {
-      const existingConfig = (codexOptions.config ?? {}) as Record<string, unknown>;
-      codexOptions.config = {
+      const existingConfig = (this.codexOptions.config ?? {}) as Record<string, unknown>;
+      this.codexOptions.config = {
         ...existingConfig,
         developer_instructions: this.systemContext,
       };
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    this.codexInstance = new Codex(codexOptions);
+    this.codexInstance = new Codex(this.codexOptions);
 
     this.emit({
       type: "system",
@@ -236,6 +219,39 @@ class CodexSession extends BaseAgentSession {
     this.activeStream = undefined;
     this.thread = undefined;
     this.codexInstance = undefined;
+  }
+
+  /**
+   * Apply resolved MCP config to the Codex SDK options.
+   *
+   * Codex uses snake_case config keys and different field names from the generic format:
+   * HTTP servers use `url` + `http_headers` (no `type` field); stdio servers are passed
+   * through as-is. Servers are nested under `codexOptions.config.mcp_servers`.
+   */
+  protected override applyMcpConfig(resolved: ResolvedMcpConfig): void {
+    if (!resolved.servers) {
+      return;
+    }
+    const codexServers: Record<string, unknown> = {};
+    for (const [name, config] of Object.entries(resolved.servers)) {
+      const cfg = config as Record<string, unknown>;
+      if (cfg.type === "http" && typeof cfg.url === "string") {
+        // HTTP MCP: Codex infers transport from `url` presence (no `type` field).
+        // Static headers use `http_headers` instead of `headers`.
+        const headers = cfg.headers as Record<string, string> | undefined;
+        codexServers[name] = {
+          url: cfg.url,
+          ...(headers ? { http_headers: headers } : {}),
+        };
+      } else if (typeof cfg.command === "string") {
+        // Stdio MCP: command/args/env are the same in Codex format
+        codexServers[name] = cfg;
+      } else {
+        // Unknown format: pass through as-is
+        codexServers[name] = cfg;
+      }
+    }
+    this.codexOptions.config = { mcp_servers: codexServers };
   }
 
   // ─── Codex-specific internals ────────────────────────────
@@ -480,6 +496,7 @@ export class CodexRuntime extends BaseAgentRuntime {
   public name: string = "codex";
 
   protected createSession(opts: CreateSessionOptions): AgentSession {
-    return new CodexSession({ ...opts, hooks: undefined });
+    // hooks is already dropped by BaseAgentRuntime.spawn() when supportsHooks is false.
+    return new CodexSession(opts);
   }
 }

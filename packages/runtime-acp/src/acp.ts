@@ -12,7 +12,12 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 import type { ChildProcess } from "node:child_process";
-import type { AgentSession, AgentEvent, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
+import type {
+  AgentSession,
+  AgentEvent,
+  CreateSessionOptions,
+  ResolvedMcpConfig,
+} from "@grackle-ai/runtime-sdk";
 import {
   BaseAgentSession,
   BaseAgentRuntime,
@@ -368,6 +373,11 @@ class AcpSession extends BaseAgentSession {
   private messageCount: number = 0;
   /** Last cumulative cost reported by usage_update (for delta computation). */
   private lastReportedCost: number = 0;
+  /**
+   * ACP-shaped MCP servers, populated by applyMcpConfig() during setupSdk() and
+   * consumed when calling connection.newSession().
+   */
+  private acpMcpServers?: ReturnType<typeof convertMcpServers>;
 
   public constructor(config: AcpAgentConfig, opts: CreateSessionOptions) {
     super(opts);
@@ -387,8 +397,9 @@ class AcpSession extends BaseAgentSession {
     // Resolve working directory
     const cwd = await this.resolveWorkDir();
 
-    // Resolve MCP servers (shared config + spawn-provided servers + broker)
-    const mcpConfig = this.resolveMcp();
+    // Apply MCP config through the named seam — transforms ResolvedMcpConfig into
+    // ACP's named-array format via convertMcpServers(), stored in this.acpMcpServers.
+    this.applyMcpConfig(this.resolveMcp());
 
     // Spawn agent subprocess in the resolved working directory
     const spawnCwd = cwd || process.cwd();
@@ -586,7 +597,7 @@ class AcpSession extends BaseAgentSession {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       sessionResult = await this.connection.newSession({
         cwd: spawnCwd,
-        mcpServers: convertMcpServers(mcpConfig.servers),
+        mcpServers: this.acpMcpServers,
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : JSON.stringify(err);
@@ -669,6 +680,17 @@ class AcpSession extends BaseAgentSession {
   protected override releaseResources(): void {
     this.connection = undefined;
     this.child = undefined;
+  }
+
+  /**
+   * Apply resolved MCP config to the ACP session.
+   *
+   * ACP expects a named-array format (via `convertMcpServers()`), unlike the keyed-object
+   * format that Claude and Copilot accept. The result is stored in `acpMcpServers` and
+   * consumed when calling `connection.newSession()`.
+   */
+  protected override applyMcpConfig(resolved: ResolvedMcpConfig): void {
+    this.acpMcpServers = convertMcpServers(resolved.servers);
   }
 }
 

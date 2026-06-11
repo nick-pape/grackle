@@ -234,6 +234,28 @@ describe("ClaudeCodeRuntime structural", () => {
     expect(runtime.name).toBe("claude-code");
   });
 
+  it("declares correct capabilities (supportsHooks: true)", async () => {
+    const { ClaudeCodeRuntime } = await import("./claude-code.js");
+    const runtime = new ClaudeCodeRuntime();
+    expect(runtime.capabilities.supportsHooks).toBe(true);
+    expect(runtime.capabilities.supportsResume).toBe(true);
+    expect(runtime.capabilities.requiresNonEmptyResumePrompt).toBe(false);
+  });
+
+  it("spawn forwards hooks to session (supportsHooks: true)", async () => {
+    const { ClaudeCodeRuntime } = await import("./claude-code.js");
+    const runtime = new ClaudeCodeRuntime();
+    const hooks = { onStop: () => {} };
+    const session = runtime.spawn({
+      sessionId: "cc-hooks",
+      prompt: "test",
+      model: "claude-3",
+      maxTurns: 0,
+      hooks,
+    });
+    expect((session as any).hooks).toBe(hooks);
+  });
+
   it("spawn returns a session with correct properties", async () => {
     const { ClaudeCodeRuntime } = await import("./claude-code.js");
     const runtime = new ClaudeCodeRuntime();
