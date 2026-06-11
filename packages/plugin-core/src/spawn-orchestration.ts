@@ -96,6 +96,16 @@ export async function ensureSpawnConnection(env: EnvironmentRow): Promise<PowerL
     }
   } catch (err) {
     logger.error({ environmentId, err }, "Auto-provision failed (SpawnAgent)");
+    // If err originated in the loop body (e.g. emit threw) rather than inside
+    // the generator itself, the generator is still suspended at its last yield
+    // and its error-handling path (status→error, event) hasn't run yet.
+    // Forward the error so runProvisionLoop can clean up, then discard the
+    // re-thrown ProvisionLoopError — we produce our own PreconditionError below.
+    try {
+      await gen.throw(err);
+    } catch {
+      // Expected: runProvisionLoop re-throws as ProvisionLoopError.
+    }
     throw new PreconditionError(
       `Failed to auto-connect environment ${environmentId}: ${err instanceof Error ? err.message : String(err)}`,
     );
