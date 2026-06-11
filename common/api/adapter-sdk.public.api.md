@@ -494,15 +494,6 @@ export interface StartRemotePowerLineOptions {
 export const TCP_PORT_PROBER: PortProber;
 
 // @public
-export const TUNNEL_KILL_GRACE_MS: number;
-
-// @public
-export const TUNNEL_PORT_POLL_DELAY_MS: number;
-
-// @public
-export const TUNNEL_PORT_POLL_MAX_ATTEMPTS: number;
-
-// @public
 export interface TunnelPortProbe {
     waitForPort(port: number): Promise<void>;
 }
