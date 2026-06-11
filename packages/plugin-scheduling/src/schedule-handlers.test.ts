@@ -445,6 +445,24 @@ describe("createScheduleHandlers", () => {
       );
     });
 
+    it("clears personaId when personaId='' and agent is being attached in the same request (atomic attach+inherit)", async () => {
+      vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+        makeRow({ agentId: null, personaId: "p-1" }) as ReturnType<
+          typeof scheduleStore.getSchedule
+        >,
+      );
+      const req = {
+        id: "sched-1",
+        personaId: "",
+        agentId: "agent-1",
+      } as grackle.UpdateScheduleRequest;
+      await handlers.updateSchedule(req);
+      expect(scheduleStore.updateSchedule).toHaveBeenCalledWith(
+        "sched-1",
+        expect.objectContaining({ personaId: "", agentId: "agent-1" }),
+      );
+    });
+
     it("ignores personaId='' when schedule is not agent-owned (no-op, already unresolvable)", async () => {
       vi.mocked(scheduleStore.getSchedule).mockReturnValue(
         makeRow({ agentId: null, personaId: "p-1" }) as ReturnType<

@@ -150,11 +150,12 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
           throw new ConnectError(`Persona not found: ${trimmedPersonaId}`, Code.NotFound);
         }
         update.personaId = trimmedPersonaId;
-      } else if (existing.agentId && req.agentId !== "") {
-        // Clear the explicit persona override on an agent-owned schedule so it reverts to
-        // inheriting from agent.primaryPersonaId at fire time. Guard: the schedule must
-        // remain agent-owned after this update (reject if the same request also detaches
-        // the agent, which would leave the schedule with no resolvable persona).
+      } else if ((existing.agentId || req.agentId?.trim()) && req.agentId !== "") {
+        // Clear the explicit persona override so the schedule inherits from
+        // agent.primaryPersonaId at fire time. Guard: the schedule must be (or become)
+        // agent-owned after this update — allowed when the schedule is already agent-owned
+        // OR when an agent is being attached in the same request. Silently ignored when
+        // also detaching (agentId=""), which would leave the schedule with no persona.
         update.personaId = "";
       }
       // Empty personaId on an unowned schedule or paired with agent detach: silently ignored.

@@ -184,15 +184,24 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     const nav = page.getByTestId("schedule-nav");
     await expect(nav.getByText("Agent Owned Scan")).toBeVisible({ timeout: 5_000 });
 
-    // The schedule card must show the agent badge.
-    await nav.getByText("Agent Owned Scan").click();
-    await page.waitForURL(/\/schedules\/[^/]+$/, { timeout: 5_000 });
+    // Poll for the backend to confirm agentId is set and capture the schedule ID.
+    let createdSchedule: { id: string; agentId: string } | undefined;
+    await expect
+      .poll(
+        async () => {
+          const listResp = await client.scheduling.listSchedules({});
+          createdSchedule = listResp.schedules.find((s) => s.title === "Agent Owned Scan");
+          return createdSchedule?.agentId;
+        },
+        { timeout: 5_000 },
+      )
+      .toBe(agent.id);
 
-    // Back to list to check the badge on the manager card.
-    const createdSchedule = await client.scheduling
-      .listSchedules({})
-      .then((r) => r.schedules.find((s) => s.title === "Agent Owned Scan")!);
-    expect(createdSchedule.agentId).toBe(agent.id);
+    // Navigate to the schedule list and verify the agent badge appears on the manager card.
+    await page.goto("/schedules");
+    await expect(page.getByTestId(`schedule-agent-${createdSchedule!.id}`)).toBeVisible({
+      timeout: 5_000,
+    });
   });
 
   test("detach agent from schedule via UI — badge disappears, persona required toast on bad detach (#1439)", async ({
@@ -229,9 +238,16 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     await page.getByTestId("schedule-detail-agent-button").click();
     await page.getByTestId("schedule-detail-agent-select").selectOption({ value: "" });
 
-    // The update should succeed and the stored schedule should have no agentId.
-    const updated = await client.scheduling.getSchedule({ id: schedule.id });
-    expect(updated.agentId).toBe("");
+    // Poll for the update to propagate to the backend before asserting.
+    await expect
+      .poll(
+        async () => {
+          const updated = await client.scheduling.getSchedule({ id: schedule.id });
+          return updated.agentId;
+        },
+        { timeout: 5_000 },
+      )
+      .toBe("");
   });
 
   test("legacy /settings/schedules* URLs redirect to /schedules*", async ({
