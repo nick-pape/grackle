@@ -3,6 +3,8 @@ import type { ToastVariant } from "../../context/ToastContext.js";
 import type { Codespace, DockerContainer, GitHubAccountData } from "../../hooks/types.js";
 import { ENVIRONMENTS_URL, useAppNavigate } from "../../utils/navigation.js";
 import { isPortValid, MIN_PORT, MAX_PORT } from "../../utils/environmentUtils.js";
+import { CodespacePicker } from "./CodespacePicker.js";
+import { DockerContainerPicker } from "./DockerContainerPicker.js";
 import styles from "./EnvironmentEditPanel.module.scss";
 
 /** Props for the EnvironmentEditPanel component. */
@@ -37,151 +39,6 @@ interface Props {
   /** Display a toast notification. */
   onShowToast?: (message: string, variant?: ToastVariant) => void;
 }
-
-// ─── Codespace Picker ─────────────────────────────────────────────────────────
-
-interface CodespacePickerProps {
-  codespaceName: string;
-  onCodespaceNameChange: (name: string) => void;
-  envName: string;
-  onEnvNameChange: (name: string) => void;
-  /** Available codespaces. */
-  codespaces: Codespace[];
-  /** Error from codespace operations. */
-  codespaceError: string;
-  /** Error from listing codespaces. */
-  codespaceListError: string;
-  /** Whether a codespace is being created. */
-  codespaceCreating: boolean;
-  /** Callback to create a new codespace. */
-  onCreateCodespace: (repo: string, machine?: string) => void;
-}
-
-/** Codespace picker subcomponent — pick an existing or create a new codespace. */
-function CodespacePicker({
-  codespaceName,
-  onCodespaceNameChange,
-  envName,
-  onEnvNameChange,
-  codespaces,
-  codespaceError,
-  codespaceListError,
-  codespaceCreating,
-  onCreateCodespace,
-}: CodespacePickerProps): JSX.Element {
-  const [mode, setMode] = useState<"pick" | "create">("pick");
-  const [createRepo, setCreateRepo] = useState("");
-  const [createMachine, setCreateMachine] = useState("");
-
-  if (mode === "create") {
-    return (
-      <div className={styles.codespaceSection}>
-        <div className={styles.section}>
-          <label className={styles.label}>Repository</label>
-          <input
-            type="text"
-            value={createRepo}
-            onChange={(e) => setCreateRepo(e.target.value)}
-            placeholder="owner/repo"
-            className={styles.fieldInput}
-            data-testid="env-codespace-repo"
-          />
-        </div>
-        <div className={styles.section}>
-          <label className={styles.label}>Machine Type</label>
-          <input
-            type="text"
-            value={createMachine}
-            onChange={(e) => setCreateMachine(e.target.value)}
-            placeholder="Machine type (optional)..."
-            className={styles.fieldInput}
-            data-testid="env-codespace-machine"
-          />
-        </div>
-        <div className={styles.codespaceActions}>
-          <button
-            onClick={() => {
-              if (createRepo.trim()) {
-                onCreateCodespace(createRepo.trim(), createMachine.trim() || undefined);
-                setMode("pick");
-                setCreateRepo("");
-                setCreateMachine("");
-              }
-            }}
-            disabled={!createRepo.trim()}
-            className={styles.btnPrimary}
-          >
-            Create
-          </button>
-          <button
-            onClick={() => {
-              setMode("pick");
-              setCreateRepo("");
-              setCreateMachine("");
-            }}
-            className={styles.btnGhost}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.codespaceSection}>
-      <div className={styles.section}>
-        <label className={styles.label}>Codespace</label>
-        {!codespaceListError && (
-          <select
-            value={codespaceName}
-            onChange={(e) => {
-              if (e.target.value === "__create__") {
-                setMode("create");
-                onCodespaceNameChange("");
-              } else {
-                onCodespaceNameChange(e.target.value);
-                if (e.target.value && !envName.trim()) {
-                  onEnvNameChange(e.target.value);
-                }
-              }
-            }}
-            disabled={codespaceCreating}
-            className={styles.adapterSelect}
-            data-testid="env-codespace-select"
-          >
-            <option value="">Select a codespace...</option>
-            {codespaces.map((cs) => (
-              <option key={cs.name} value={cs.name}>
-                {cs.name} ({cs.repository}) — {cs.state}
-              </option>
-            ))}
-            <option value="__create__">Create new from repo...</option>
-          </select>
-        )}
-        {codespaceCreating && <span className={styles.creatingHint}>Creating codespace...</span>}
-        {codespaceListError && (
-          <>
-            <span className={styles.errorHint}>{codespaceListError}</span>
-            <input
-              type="text"
-              value={codespaceName}
-              onChange={(e) => onCodespaceNameChange(e.target.value)}
-              placeholder="Or enter codespace name manually..."
-              className={styles.fieldInput}
-              data-testid="env-codespace-manual"
-            />
-          </>
-        )}
-        {codespaceError && !codespaceListError && (
-          <span className={styles.errorHint}>{codespaceError}</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
 
 /** Full-panel create form for new environments. */
 export function EnvironmentEditPanel({
@@ -515,110 +372,21 @@ export function EnvironmentEditPanel({
           )}
 
           {adapterType === "docker" && (
-            <>
-              <div className={styles.section}>
-                <label className={styles.label} htmlFor="env-docker-mode">
-                  Source
-                </label>
-                <select
-                  id="env-docker-mode"
-                  value={dockerMode}
-                  onChange={(e) => {
-                    const next = e.target.value as "create" | "attach";
-                    setDockerMode(next);
-                    if (next === "attach") {
-                      onListDockerContainers();
-                    }
-                  }}
-                  className={styles.adapterSelect}
-                  data-testid="env-docker-mode"
-                >
-                  <option value="create">Create new container</option>
-                  <option value="attach">Attach to existing container</option>
-                </select>
-              </div>
-
-              {dockerMode === "create" ? (
-                <>
-                  <div className={styles.section}>
-                    <label className={styles.label} htmlFor="env-create-image">
-                      Image
-                    </label>
-                    <input
-                      id="env-create-image"
-                      type="text"
-                      value={image}
-                      onChange={(e) => setImage(e.target.value)}
-                      placeholder="Image (optional)..."
-                      className={styles.fieldInput}
-                      data-testid="env-create-image"
-                    />
-                  </div>
-                  <div className={styles.section}>
-                    <label className={styles.label} htmlFor="env-create-repo">
-                      Repo
-                    </label>
-                    <input
-                      id="env-create-repo"
-                      type="text"
-                      value={repo}
-                      onChange={(e) => setRepo(e.target.value)}
-                      placeholder="Repo (optional)..."
-                      className={styles.fieldInput}
-                      data-testid="env-create-repo"
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className={styles.section}>
-                  <label className={styles.label}>Container</label>
-                  {!dockerContainersError && dockerContainers.length > 0 && (
-                    <select
-                      value={attachContainer}
-                      onChange={(e) => {
-                        setAttachContainer(e.target.value);
-                        if (e.target.value && !envName.trim()) {
-                          setEnvName(e.target.value);
-                        }
-                      }}
-                      className={styles.adapterSelect}
-                      data-testid="env-docker-container-select"
-                    >
-                      <option value="">Select a container...</option>
-                      {dockerContainers.map((c) => (
-                        <option key={c.id} value={c.name}>
-                          {c.name} ({c.image}) {c.status}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {/* Manual entry fallback: shown on listing error OR when no running
-                      containers were found, so the user is never stuck with an empty picker. */}
-                  {(dockerContainersError || dockerContainers.length === 0) && (
-                    <>
-                      {dockerContainersError ? (
-                        <span className={styles.errorHint}>{dockerContainersError}</span>
-                      ) : (
-                        <span className={styles.creatingHint}>No running containers found.</span>
-                      )}
-                      <input
-                        type="text"
-                        value={attachContainer}
-                        onChange={(e) => {
-                          setAttachContainer(e.target.value);
-                          if (e.target.value && !envName.trim()) {
-                            setEnvName(e.target.value);
-                          }
-                        }}
-                        placeholder="Enter container name/ID..."
-                        className={styles.fieldInput}
-                        data-testid="env-docker-container-manual"
-                      />
-                    </>
-                  )}
-                </div>
-              )}
-            </>
+            <DockerContainerPicker
+              dockerMode={dockerMode}
+              onDockerModeChange={setDockerMode}
+              image={image}
+              onImageChange={setImage}
+              repo={repo}
+              onRepoChange={setRepo}
+              attachContainer={attachContainer}
+              onAttachContainerChange={setAttachContainer}
+              envName={envName}
+              onEnvNameChange={setEnvName}
+              dockerContainers={dockerContainers}
+              dockerContainersError={dockerContainersError}
+              onListDockerContainers={onListDockerContainers}
+            />
           )}
 
           {adapterType === "codespace" && (
