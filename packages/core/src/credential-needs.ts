@@ -166,3 +166,47 @@ export function deriveCredentialNeeds(
   }
   return needs;
 }
+
+/**
+ * The primary credential provider each runtime requires to function. Only
+ * includes runtimes that need a credential; credential-free runtimes (`stub`,
+ * `genaiscript`) are absent.
+ *
+ * @internal Exported for catalog-coherence testing — verify that every key is
+ * a {@link RUNTIME_CATALOG} entry and its value equals `RUNTIME_PROVIDERS[runtime][0]`.
+ */
+export const RUNTIME_REQUIRED_PROVIDER: Readonly<
+  Partial<Record<string, keyof CredentialProviderConfig>>
+> = {
+  "claude-code": "claude",
+  copilot: "copilot",
+  codex: "codex",
+  goose: "goose",
+  "claude-code-acp": "claude",
+  "codex-acp": "codex",
+  "copilot-acp": "copilot",
+};
+
+/**
+ * Return the primary credential provider key when it is disabled for a
+ * credential-requiring runtime, or `undefined` when the runtime is either
+ * credential-free or its primary provider is already enabled.
+ *
+ * This detects the misconfiguration where a runtime that needs credentials
+ * has its primary provider left at the default `"off"` value — the normal
+ * {@link deriveCredentialNeeds} / {@link findUnsatisfiedNeeds} path cannot
+ * catch this because disabled providers produce no needs to validate.
+ *
+ * **Pure**: reads no env vars, files, or credential store.
+ */
+export function findDisabledRequiredProvider(
+  runtime: string,
+  config: CredentialProviderConfig,
+): keyof CredentialProviderConfig | undefined {
+  const required = RUNTIME_REQUIRED_PROVIDER[runtime];
+  if (required === undefined) {
+    return undefined;
+  }
+  const value = config[required];
+  return value === "off" ? required : undefined;
+}

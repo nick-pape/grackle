@@ -76,3 +76,33 @@ export function formatPreflightCredentialError(
     `Configure or disable the provider with \`grackle credential-provider set <provider> <value>\`, then retry.`
   );
 }
+
+/** Per-provider actionable hints for the "provider is off" error message. */
+const PROVIDER_SETUP_HINTS: Partial<Record<string, string>> = {
+  claude:
+    "Set ANTHROPIC_API_KEY (api_key mode) or configure a Claude subscription (subscription mode):\n" +
+    "  grackle credential-provider set claude api_key",
+  copilot:
+    "Set COPILOT_GITHUB_TOKEN or mount ~/.copilot/config.json (via -v), then:\n" +
+    "  grackle credential-provider set copilot on",
+  codex:
+    "Set OPENAI_API_KEY or mount ~/.codex/auth.json (via -v), then:\n" +
+    "  grackle credential-provider set codex on",
+  goose: "Configure Goose credentials, then:\n  grackle credential-provider set goose on",
+  github: "Set GH_TOKEN or GITHUB_TOKEN, then:\n  grackle credential-provider set github on",
+};
+
+/**
+ * Build an actionable error message for the case where a runtime's required
+ * credential provider is disabled (`"off"`) — a misconfiguration not caught by
+ * {@link formatPreflightCredentialError} because disabled providers produce no
+ * needs to validate.
+ */
+export function formatRuntimeProviderDisabledError(runtime: string, provider: string): string {
+  const hint = PROVIDER_SETUP_HINTS[provider];
+  return (
+    `Cannot start runtime "${runtime}": the required "${provider}" credential provider is not configured.\n` +
+    (hint ? `${hint}\n` : `  grackle credential-provider set ${provider} on\n`) +
+    `Or choose a different runtime with \`grackle persona edit <persona-id> --runtime <runtime>\`.`
+  );
+}

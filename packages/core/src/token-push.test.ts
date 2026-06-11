@@ -98,14 +98,16 @@ describe("authenticateForRuntime", () => {
       tokens: [tok("p", "env_var", "P")],
     } as never);
 
-    await authenticateForRuntime("env-1", "claude-code");
+    // Use stub runtime — it has no required provider so the disabled-provider
+    // gate does not fire, letting the delivery path be exercised cleanly.
+    await authenticateForRuntime("env-1", "stub");
 
     expect(conn.transport.authenticate).toHaveBeenCalledTimes(1);
     const arg = conn.transport.authenticate.mock.calls[0][0] as {
       provider: string;
       tokens: TokenItemLike[];
     };
-    expect(arg.provider).toBe("claude-code");
+    expect(arg.provider).toBe("stub");
     expect(arg.tokens.map((t) => t.envVar)).toEqual(["U", "P"]);
   });
 
@@ -117,7 +119,8 @@ describe("authenticateForRuntime", () => {
       tokens: [tok("e", "env_var", "E")],
     } as never);
 
-    await authenticateForRuntime("env-1", "claude-code", { excludeFileTokens: true });
+    // Use stub runtime to avoid the disabled-provider gate.
+    await authenticateForRuntime("env-1", "stub", { excludeFileTokens: true });
 
     const arg = conn.transport.authenticate.mock.calls[0][0] as { tokens: TokenItemLike[] };
     expect(arg.tokens.map((t) => t.name)).toEqual(["e"]);
@@ -126,7 +129,8 @@ describe("authenticateForRuntime", () => {
   it("skips authenticate when there are no credentials", async () => {
     const conn = mockConn();
     vi.mocked(adapterManager.getConnection).mockReturnValue(conn as never);
-    await authenticateForRuntime("env-1", "claude-code");
+    // Use stub runtime — credential-free, no required provider.
+    await authenticateForRuntime("env-1", "stub");
     expect(conn.transport.authenticate).not.toHaveBeenCalled();
   });
 
@@ -137,7 +141,8 @@ describe("authenticateForRuntime", () => {
     vi.mocked(tokenStore.getBundle).mockReturnValue({
       tokens: [tok("e", "env_var", "E")],
     } as never);
-    await expect(authenticateForRuntime("env-1", "claude-code")).resolves.toBeUndefined();
+    // Use stub runtime to avoid the disabled-provider gate.
+    await expect(authenticateForRuntime("env-1", "stub")).resolves.toBeUndefined();
   });
 
   // ── Pre-flight credential validation (#1316) ──────────────
@@ -186,12 +191,50 @@ describe("authenticateForRuntime", () => {
       expect(conn.transport.authenticate).toHaveBeenCalledTimes(1);
     });
 
-    it("proceeds when the provider is off (no needs to validate)", async () => {
+    it("proceeds when the runtime is credential-free (stub)", async () => {
       const conn = mockConn();
       vi.mocked(adapterManager.getConnection).mockReturnValue(conn as never);
-      // Default all-off; buildProviderTokenBundle empty → nothing to deliver, no throw.
-      await expect(authenticateForRuntime("env-1", "claude-code")).resolves.toBeUndefined();
+      // stub has no required provider → no disabled-provider gate, no needs to validate.
+      await expect(authenticateForRuntime("env-1", "stub")).resolves.toBeUndefined();
       expect(conn.transport.authenticate).not.toHaveBeenCalled();
+    });
+
+    // ── Disabled-provider gate (fixes #1591 — opaque SDK failure) ─────────
+    it("throws PreconditionError when the runtime's required provider is off", async () => {
+      const conn = mockConn();
+      vi.mocked(adapterManager.getConnection).mockReturnValue(conn as never);
+      // Default all-off config: claude provider is "off" for claude-code runtime.
+      await expect(authenticateForRuntime("env-1", "claude-code")).rejects.toBeInstanceOf(
+        PreconditionError,
+      );
+      expect(conn.transport.authenticate).not.toHaveBeenCalled();
+    });
+
+    it("disabled-provider error has an actionable message", async () => {
+      const conn = mockConn();
+      vi.mocked(adapterManager.getConnection).mockReturnValue(conn as never);
+
+      const err = await authenticateForRuntime("env-1", "copilot").catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(PreconditionError);
+      const msg = (err as PreconditionError).message;
+      expect(msg).toContain('"copilot"');
+      expect(msg).toContain("COPILOT_GITHUB_TOKEN");
+    });
+
+    it("does not fire the disabled-provider gate when the provider is enabled", async () => {
+      const conn = mockConn();
+      vi.mocked(adapterManager.getConnection).mockReturnValue(conn as never);
+      // Enable the claude provider so the disabled-provider gate passes, then
+      // the normal findUnsatisfiedNeeds gate fires (claude enabled but no token).
+      mockGetCredentialProviders.mockReturnValue({ ...allOff(), claude: "api_key" });
+
+      await expect(authenticateForRuntime("env-1", "claude-code")).rejects.toBeInstanceOf(
+        PreconditionError,
+      );
+      // The error should be from findUnsatisfiedNeeds (enabled but missing),
+      // not from the disabled-provider gate.
+      const err = await authenticateForRuntime("env-1", "claude-code").catch((e: unknown) => e);
+      expect((err as PreconditionError).message).toContain("enabled but no credential was found");
     });
 
     it("fails fast on an expired, non-refreshable OAuth file", async () => {
