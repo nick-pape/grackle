@@ -139,6 +139,12 @@ export function buildEnvFileContent(powerlineToken: string, extraEnv?: Record<st
 export function buildRemoteKillCommand(): string;
 
 // @public
+export const CONNECT_MAX_RETRIES: number;
+
+// @public
+export const CONNECT_RETRY_DELAY_MS: number;
+
+// @public
 export function connectThroughTunnel(environmentId: string, localPort: number, powerlineToken: string, tunnelRegistry: TunnelRegistry, logger?: AdapterLogger): Promise<PowerLineConnection>;
 
 export { ContentEncoding }
@@ -324,6 +330,9 @@ export interface ReanimateParams {
 
 // @public
 export function reconnectOrProvision(environmentId: string, adapter: EnvironmentAdapter, config: Record<string, unknown>, powerlineToken: string, bootstrapped: boolean, force?: boolean, logger?: AdapterLogger): AsyncGenerator<ProvisionEvent>;
+
+// @public
+export const REMOTE_COPY_TIMEOUT_MS: number;
 
 // @public
 export const REMOTE_EXEC_DEFAULT_TIMEOUT_MS: number;

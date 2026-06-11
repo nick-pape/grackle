@@ -6,23 +6,13 @@ import { parseAdapterConfig } from "./adapter-config.js";
 import { emit } from "./event-bus.js";
 import { logger } from "./logger.js";
 import { resolveBootstrapRuntime } from "./resolve-bootstrap-runtime.js";
-
-// ─── Constants ──────────────────────────────────────────────
-
-/** Initial delay before first reconnect attempt (milliseconds). */
-const RECONNECT_INITIAL_DELAY_MS: number = 10_000;
-
-/** Maximum number of reconnect attempts before giving up. */
-const RECONNECT_MAX_RETRIES: number = 5;
-
-/** Maximum delay between reconnect attempts (milliseconds). */
-const RECONNECT_MAX_DELAY_MS: number = 120_000;
-
-/** Multiplier for exponential backoff. */
-const RECONNECT_BACKOFF_MULTIPLIER: number = 2;
-
-/** Interval between probes for sleeping environments (milliseconds). */
-const PROBE_INTERVAL_MS: number = 60_000;
+import {
+  RECONNECT_INITIAL_DELAY_MS,
+  RECONNECT_MAX_RETRIES,
+  RECONNECT_MAX_DELAY_MS,
+  RECONNECT_BACKOFF_MULTIPLIER,
+  PROBE_INTERVAL_MS,
+} from "./constants.js";
 
 // ─── State ──────────────────────────────────────────────────
 

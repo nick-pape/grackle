@@ -15,14 +15,12 @@ import { getDatabaseStores, type DatabaseInstance } from "@grackle-ai/database";
 import { exec } from "./utils/exec.js";
 import { type TokenItem, type ProviderTokenBundle } from "./credential-types.js";
 import { RUNTIME_PROVIDERS } from "./credential-needs.js";
+import { GH_AUTH_TOKEN_TIMEOUT_MS } from "./constants.js";
 
 /** Type-asserting identity helper; replaces the proto-bound `create()` factory. */
 function tokenItem(data: TokenItem): TokenItem {
   return data;
 }
-
-/** Timeout for the `gh auth token` subprocess call. */
-const GH_AUTH_TOKEN_TIMEOUT_MS: number = 5_000;
 
 /**
  * Resolve a GitHub token from the `gh` CLI's credential store.
