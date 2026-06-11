@@ -158,7 +158,7 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     await expect(nav.getByText("UI Updated Schedule")).not.toBeVisible({ timeout: 5_000 });
   });
 
-  test("create agent-owned schedule via UI — agent badge appears on card (#1439)", async ({
+  test("create agent-owned schedule via UI — selected agent persists and shows in edit form (#1439)", async ({
     appPage,
     grackle: { client },
   }) => {
@@ -181,30 +181,25 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     await page.getByTestId("schedule-detail-agent").selectOption({ value: agent.id });
     await page.getByTestId("schedule-detail-save").click();
 
-    const nav = page.getByTestId("schedule-nav");
-    await expect(nav.getByText("Agent Owned Scan")).toBeVisible({ timeout: 5_000 });
+    // After save, redirected to the edit page — the agent EditableSelect shows the agent name.
+    await page.waitForURL(/\/schedules\/[^/]+$/, { timeout: 5_000 });
+    await expect(page.getByTestId("schedule-detail-agent-button")).toContainText("UI Test Agent", {
+      timeout: 5_000,
+    });
 
-    // Poll for the backend to confirm agentId is set and capture the schedule ID.
-    let createdSchedule: { id: string; agentId: string } | undefined;
+    // Backend confirms agentId is stored.
     await expect
       .poll(
         async () => {
           const listResp = await client.scheduling.listSchedules({});
-          createdSchedule = listResp.schedules.find((s) => s.title === "Agent Owned Scan");
-          return createdSchedule?.agentId;
+          return listResp.schedules.find((s) => s.title === "Agent Owned Scan")?.agentId;
         },
         { timeout: 5_000 },
       )
       .toBe(agent.id);
-
-    // Navigate to the schedule list and verify the agent badge appears on the manager card.
-    await page.goto("/schedules");
-    await expect(page.getByTestId(`schedule-agent-${createdSchedule!.id}`)).toBeVisible({
-      timeout: 5_000,
-    });
   });
 
-  test("detach agent from schedule via UI — agent badge disappears after detach (#1439)", async ({
+  test("detach agent from schedule via UI — agent field reverts to None after detach (#1439)", async ({
     appPage,
     grackle: { client },
   }) => {
@@ -249,11 +244,11 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
       )
       .toBe("");
 
-    // Navigate to the schedule list and verify the agent badge is gone from the card.
-    await page.goto("/schedules");
-    await expect(page.getByTestId(`schedule-agent-${schedule.id}`)).not.toBeVisible({
-      timeout: 5_000,
-    });
+    // The edit page's agent field should revert to "None (no agent)" in display mode.
+    await expect(page.getByTestId("schedule-detail-agent-button")).toContainText(
+      "None (no agent)",
+      { timeout: 5_000 },
+    );
   });
 
   test("legacy /settings/schedules* URLs redirect to /schedules*", async ({
