@@ -14,11 +14,11 @@ const RESUMED_PROMPT_PLACEHOLDER: string = "(resumed)";
  * Default capabilities for runtimes that extend `BaseAgentRuntime`.
  * Subclasses override `capabilities` to declare their actual affordances.
  */
-const DEFAULT_CAPABILITIES: RuntimeCapabilities = {
+const DEFAULT_CAPABILITIES: RuntimeCapabilities = Object.freeze({
   supportsHooks: false,
   supportsResume: true,
   requiresNonEmptyResumePrompt: false,
-};
+});
 
 /**
  * Abstract base class for agent runtimes that share the spawn/resume pattern.
