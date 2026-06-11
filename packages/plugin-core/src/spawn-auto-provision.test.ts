@@ -1,8 +1,10 @@
 /**
  * Unit tests for the `ensureSpawnConnection` helper extracted from spawnAgent.
  *
- * Tests the auto-provision path in isolation: connection cache hit, successful
- * provision, no-adapter failure, connect failure, and fire-and-forget recovery.
+ * Covers: connection cache hit, already-reconnecting fast-fail, successful
+ * provision (status transitions, markBootstrapped, recovery, events),
+ * no-adapter failure, config-parse failure (status never set), connect
+ * failure, connected-status race guard, and fire-and-forget recovery.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { PreconditionError } from "@grackle-ai/common";
@@ -100,6 +102,7 @@ import {
   emit,
   recoverSuspendedSessions,
   parseAdapterConfig,
+  isReconnecting,
 } from "@grackle-ai/core";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import type { EnvironmentRow } from "@grackle-ai/database";
@@ -140,6 +143,7 @@ describe("ensureSpawnConnection", () => {
     vi.clearAllMocks();
     // vi.clearAllMocks does not reset implementations — restore defaults here.
     vi.mocked(parseAdapterConfig).mockReturnValue({} as never);
+    vi.mocked(isReconnecting).mockReturnValue(false);
   });
 
   it("returns existing connection immediately without provisioning", async () => {
@@ -151,6 +155,16 @@ describe("ensureSpawnConnection", () => {
     expect(result).toBe(existing);
     expect(adapterManager.getAdapter).not.toHaveBeenCalled();
     expect(reconnectOrProvision).not.toHaveBeenCalled();
+  });
+
+  it("throws UnavailableError immediately when auto-reconnect is already in flight", async () => {
+    vi.mocked(adapterManager.getConnection).mockReturnValue(undefined);
+    vi.mocked(isReconnecting).mockReturnValue(true);
+
+    await expect(ensureSpawnConnection("test-env", FAKE_ENV)).rejects.toThrow("reconnecting");
+    // Must not touch status or attempt any provisioning
+    expect(adapterManager.getAdapter).not.toHaveBeenCalled();
+    expect(envRegistry.updateEnvironmentStatus).not.toHaveBeenCalled();
   });
 
   it("provisions and connects when no connection exists", async () => {
