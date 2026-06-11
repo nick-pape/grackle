@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Centralize timeout/delay constants into adapter-sdk/constants.ts and core/constants.ts; eliminate cross-file duplicates (REMOTE_COPY_TIMEOUT_MS, CONNECT_RETRY_DELAY_MS, CONNECT_MAX_RETRIES, GH_AUTH_TOKEN_TIMEOUT_MS)",
+      "type": "patch",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
