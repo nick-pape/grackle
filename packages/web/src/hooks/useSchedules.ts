@@ -73,15 +73,18 @@ export function useSchedules(): UseSchedulesResult {
       parentTaskId?: string,
       agentId?: string,
     ): Promise<ScheduleData> => {
-      const resp = await grackleClient.createSchedule({
+      const req: Parameters<typeof grackleClient.createSchedule>[0] = {
         title,
         description,
         scheduleExpression,
         personaId,
         workspaceId: workspaceId || "",
         parentTaskId: parentTaskId || "",
-        agentId: agentId || "",
-      });
+      };
+      if (agentId) {
+        req.agentId = agentId;
+      }
+      const resp = await grackleClient.createSchedule(req);
       const created = protoToSchedule(resp);
       setSchedules((prev) => [...prev.filter((s) => s.id !== created.id), created]);
       return created;
