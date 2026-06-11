@@ -7,3 +7,5 @@ export { PersonaNav } from "./PersonaNav.js";
 export type { PersonaNavProps } from "./PersonaNav.js";
 export { ScheduleNav } from "./ScheduleNav.js";
 export type { ScheduleNavProps } from "./ScheduleNav.js";
+export { SessionNav } from "./SessionNav.js";
+export type { SessionNavProps } from "./SessionNav.js";

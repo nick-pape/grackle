@@ -121,7 +121,8 @@ export type {
 } from "./components/layout/index.js";
 
 // Lists
-export { EnvironmentNav, PersonaNav, ScheduleNav } from "./components/lists/index.js";
+export { EnvironmentNav, PersonaNav, ScheduleNav, SessionNav } from "./components/lists/index.js";
+export type { SessionNavProps } from "./components/lists/index.js";
 export { TaskList } from "./components/lists/TaskList.js";
 export {
   HighlightedText,

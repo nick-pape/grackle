@@ -104,6 +104,7 @@ import {
   WithKnowledgeSidebar,
   WithPersonaSidebar,
   WithScheduleSidebar,
+  WithSessionSidebar,
   WithCoordinationSidebar,
 } from "./components/layout/WithSidebar.js";
 import { SetupWizard } from "./pages/SetupWizard.js";
@@ -583,15 +584,18 @@ function AppRoutes(): JSX.Element {
           <Route path="coordination" element={<CoordinationPage />} />
         </Route>
 
-        <Route
-          path="sessions"
-          element={
-            <Suspense fallback={<SplashScreen />}>
-              <SessionsListPage />
-            </Suspense>
-          }
-        />
-        <Route path="sessions/:sessionId" element={<SessionPage />} />
+        {/* Sessions: list in sidebar, detail in main */}
+        <Route element={<WithSessionSidebar />}>
+          <Route
+            path="sessions"
+            element={
+              <Suspense fallback={<SplashScreen />}>
+                <SessionsListPage />
+              </Suspense>
+            }
+          />
+          <Route path="sessions/:sessionId" element={<SessionPage />} />
+        </Route>
 
         {/* Knowledge sidebar (knowledge plugin) */}
         {hasKnowledge && (
