@@ -18,9 +18,9 @@
 export const RECONNECT_INITIAL_DELAY_MS: number = 10_000;
 
 /**
- * Maximum number of reconnect attempts before marking an environment as error.
- * At exponential backoff from 10s the 5th attempt fires at ~160s, giving
- * environments enough time to complete a cold reboot.
+ * Maximum number of reconnect attempts before transitioning an environment to
+ * the `sleeping` state for periodic probing. The exponential backoff delay is
+ * capped at {@link RECONNECT_MAX_DELAY_MS}, so retries 4+ each wait 120s.
  */
 export const RECONNECT_MAX_RETRIES: number = 5;
 
