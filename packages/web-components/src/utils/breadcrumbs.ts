@@ -1,10 +1,12 @@
 import type { Environment, TaskData, Workspace } from "../hooks/types.js";
 import {
+  CHAT_URL,
   ENVIRONMENTS_URL,
   environmentUrl,
   HOME_URL,
   PERSONAS_URL,
   SCHEDULES_URL,
+  SESSIONS_URL,
   SETTINGS_URL,
   taskUrl,
   workspaceUrl,
@@ -71,6 +73,9 @@ const PERSONAS_SEGMENT: BreadcrumbSegment = { label: "Personas", url: PERSONAS_U
 /** Schedules breadcrumb segment (links back to the top-level Schedules page). */
 const SCHEDULES_SEGMENT: BreadcrumbSegment = { label: "Schedules", url: SCHEDULES_URL };
 
+/** Sessions breadcrumb segment (links back to the Sessions list). */
+const SESSIONS_SEGMENT: BreadcrumbSegment = { label: "Sessions", url: SESSIONS_URL };
+
 /** Build breadcrumbs for the top-level Persona Library page. */
 export function buildPersonaLibraryBreadcrumbs(): BreadcrumbSegment[] {
   return [HOME_SEGMENT, { label: "Personas", url: undefined }];
@@ -126,9 +131,13 @@ export function buildNewChatBreadcrumbs(): BreadcrumbSegment[] {
   return [HOME_SEGMENT, { label: "New Chat", url: undefined }];
 }
 
-/** Build breadcrumbs for a session page. */
+/** Build breadcrumbs for a session page. Home links to the Code/Agent view. */
 export function buildSessionBreadcrumbs(sessionId: string): BreadcrumbSegment[] {
-  return [HOME_SEGMENT, { label: `Session ${sessionId.slice(0, 8)}`, url: undefined }];
+  return [
+    { label: "Home", url: CHAT_URL },
+    SESSIONS_SEGMENT,
+    { label: `Session ${sessionId.slice(0, 8)}`, url: undefined },
+  ];
 }
 
 /** Build breadcrumbs for a workspace page: Home > Environments > [Env] > [Workspace]. */

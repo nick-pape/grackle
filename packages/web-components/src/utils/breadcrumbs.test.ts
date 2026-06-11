@@ -286,10 +286,13 @@ describe("breadcrumb builders", () => {
     expect(segments[1].label).toBe("New Chat");
   });
 
-  it("session returns Home > Session prefix", () => {
+  it("session returns Home (Code view) > Sessions > Session prefix", () => {
     const segments: BreadcrumbSegment[] = buildSessionBreadcrumbs("abcdef1234567890");
-    expect(segments).toHaveLength(2);
-    expect(segments[1].label).toBe("Session abcdef12");
+    expect(segments).toHaveLength(3);
+    expect(segments[0]).toEqual({ label: "Home", url: "/chat" });
+    expect(segments[1]).toEqual({ label: "Sessions", url: "/sessions" });
+    expect(segments[2].label).toBe("Session abcdef12");
+    expect(segments[2].url).toBeUndefined();
   });
 
   it("persona library returns Home > Personas (current page, non-clickable)", () => {

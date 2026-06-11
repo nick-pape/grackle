@@ -8,6 +8,7 @@ import {
   SettingsNav,
   PersonaNav,
   ScheduleNav,
+  SessionNav,
 } from "@grackle-ai/web-components";
 import { useKnowledgeSidebar } from "./useKnowledgeSidebar.js";
 import { useCoordinationSidebar } from "./useCoordinationSidebar.js";
@@ -77,6 +78,20 @@ export function WithScheduleSidebar(): JSX.Element {
   const sidebar = useMemo(
     () => <ScheduleNav schedules={schedules} personas={personas} workspaces={workspaces} />,
     [schedules, personas, workspaces],
+  );
+  useSidebarSlot(sidebar);
+  return <Outlet />;
+}
+
+/** Layout route wrapper that shows the SessionNav in the sidebar. */
+export function WithSessionSidebar(): JSX.Element {
+  const {
+    sessions: { sessions },
+    environments: { environments },
+  } = useGrackle();
+  const sidebar = useMemo(
+    () => <SessionNav sessions={sessions} environments={environments} />,
+    [sessions, environments],
   );
   useSidebarSlot(sidebar);
   return <Outlet />;

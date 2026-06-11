@@ -187,7 +187,7 @@ export const COORDINATION_URL: string = "/coordination";
 /** URL for the Sessions activity monitor (all sessions, grouped by environment). */
 export const SESSIONS_URL: string = "/sessions";
 
-/** URL for the home dashboard page. */
+/** URL for the application home/dashboard page. */
 export const HOME_URL: string = "/";
 
 /** URL for the tasks landing page. */
