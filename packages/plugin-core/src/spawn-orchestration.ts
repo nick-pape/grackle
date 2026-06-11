@@ -33,7 +33,7 @@ import type { grackle } from "@grackle-ai/common";
 
 /**
  * Return a live connection for the given environment, auto-provisioning it if
- * it is currently disconnected.
+ * it is currently disconnected. The environment ID is derived from `env.id`.
  *
  * When a connection already exists it is returned immediately. Otherwise the
  * environment is provisioned via {@link reconnectOrProvision} and then
@@ -43,10 +43,8 @@ import type { grackle } from "@grackle-ai/common";
  * Throws {@link PreconditionError} if no adapter is registered for the
  * environment's type, or if provisioning or connecting fails.
  */
-export async function ensureSpawnConnection(
-  environmentId: string,
-  env: EnvironmentRow,
-): Promise<PowerLineConnection> {
+export async function ensureSpawnConnection(env: EnvironmentRow): Promise<PowerLineConnection> {
+  const environmentId = env.id;
   const { envRegistry } = getDatabaseStores();
   const existing = adapterManager.getConnection(environmentId);
   if (existing) {

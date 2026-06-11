@@ -150,7 +150,7 @@ describe("ensureSpawnConnection", () => {
     const existing = makeFakeConn();
     vi.mocked(adapterManager.getConnection).mockReturnValue(existing as never);
 
-    const result = await ensureSpawnConnection("test-env", FAKE_ENV);
+    const result = await ensureSpawnConnection(FAKE_ENV);
 
     expect(result).toBe(existing);
     expect(adapterManager.getAdapter).not.toHaveBeenCalled();
@@ -161,7 +161,7 @@ describe("ensureSpawnConnection", () => {
     vi.mocked(adapterManager.getConnection).mockReturnValue(undefined);
     vi.mocked(isReconnecting).mockReturnValue(true);
 
-    await expect(ensureSpawnConnection("test-env", FAKE_ENV)).rejects.toThrow("reconnecting");
+    await expect(ensureSpawnConnection(FAKE_ENV)).rejects.toThrow("reconnecting");
     // Must not touch status or attempt any provisioning
     expect(adapterManager.getAdapter).not.toHaveBeenCalled();
     expect(envRegistry.updateEnvironmentStatus).not.toHaveBeenCalled();
@@ -178,7 +178,7 @@ describe("ensureSpawnConnection", () => {
     };
     vi.mocked(adapterManager.getAdapter).mockReturnValue(fakeAdapter as never);
 
-    const result = await ensureSpawnConnection("test-env", FAKE_ENV);
+    const result = await ensureSpawnConnection(FAKE_ENV);
 
     expect(result).toBe(fakeConn);
     expect(adapterManager.setConnection).toHaveBeenCalledWith("test-env", fakeConn);
@@ -197,9 +197,7 @@ describe("ensureSpawnConnection", () => {
     vi.mocked(adapterManager.getConnection).mockReturnValue(undefined);
     vi.mocked(adapterManager.getAdapter).mockReturnValue(undefined);
 
-    await expect(ensureSpawnConnection("test-env", FAKE_ENV)).rejects.toBeInstanceOf(
-      PreconditionError,
-    );
+    await expect(ensureSpawnConnection(FAKE_ENV)).rejects.toBeInstanceOf(PreconditionError);
     expect(envRegistry.updateEnvironmentStatus).not.toHaveBeenCalledWith("test-env", "connecting");
   });
 
@@ -215,7 +213,7 @@ describe("ensureSpawnConnection", () => {
       throw new Error("invalid JSON");
     });
 
-    await expect(ensureSpawnConnection("test-env", FAKE_ENV)).rejects.toThrow("invalid JSON");
+    await expect(ensureSpawnConnection(FAKE_ENV)).rejects.toThrow("invalid JSON");
     // Config parsing happens before the status flip — status must never be set
     expect(envRegistry.updateEnvironmentStatus).not.toHaveBeenCalledWith("test-env", "connecting");
   });
@@ -230,9 +228,7 @@ describe("ensureSpawnConnection", () => {
     };
     vi.mocked(adapterManager.getAdapter).mockReturnValue(fakeAdapter as never);
 
-    await expect(ensureSpawnConnection("test-env", FAKE_ENV)).rejects.toBeInstanceOf(
-      PreconditionError,
-    );
+    await expect(ensureSpawnConnection(FAKE_ENV)).rejects.toBeInstanceOf(PreconditionError);
     expect(envRegistry.updateEnvironmentStatus).toHaveBeenCalledWith("test-env", "error");
     expect(emit).toHaveBeenCalledWith("environment.changed", {});
   });
@@ -252,9 +248,7 @@ describe("ensureSpawnConnection", () => {
       status: "connected",
     });
 
-    await expect(ensureSpawnConnection("test-env", FAKE_ENV)).rejects.toBeInstanceOf(
-      PreconditionError,
-    );
+    await expect(ensureSpawnConnection(FAKE_ENV)).rejects.toBeInstanceOf(PreconditionError);
     // Status must NOT be reverted to "error" — the concurrent provision won
     expect(envRegistry.updateEnvironmentStatus).not.toHaveBeenCalledWith("test-env", "error");
   });
@@ -272,7 +266,7 @@ describe("ensureSpawnConnection", () => {
     vi.mocked(recoverSuspendedSessions).mockRejectedValue(new Error("recovery boom"));
 
     // Should resolve successfully even though recovery fails
-    const result = await ensureSpawnConnection("test-env", FAKE_ENV);
+    const result = await ensureSpawnConnection(FAKE_ENV);
     expect(result).toBe(fakeConn);
   });
 });

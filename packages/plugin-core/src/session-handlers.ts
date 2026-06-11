@@ -35,9 +35,9 @@ import { publishToStdin } from "@grackle-ai/core";
 
 /** Spawn a new agent session in the given environment. */
 export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Session> {
-  const { envRegistry, sessionStore, taskStore, personaStore, settingsStore } = getDatabaseStores();
+  const { sessionStore, taskStore, personaStore, settingsStore } = getDatabaseStores();
   const env = requireEnvironment(req.environmentId);
-  const conn = await ensureSpawnConnection(req.environmentId, env);
+  const conn = await ensureSpawnConnection(env);
 
   // Resolve persona via cascade (request → app default)
   let resolved: ReturnType<typeof resolvePersona>;
