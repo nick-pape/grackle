@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { schedules, type ScheduleRow } from "./schema.js";
-import { eq, and, lte, sql } from "drizzle-orm";
+import { eq, and, lte, sql, isNotNull, isNull } from "drizzle-orm";
 import { serverTimestamp } from "@grackle-ai/common";
 
 export type { ScheduleRow };
@@ -206,17 +206,27 @@ export function setScheduleEnabled(id: string, enabled: boolean, nextRunAt: stri
 }
 
 /**
- * Detach all schedules owned by the given agent by setting their `agent_id`
- * to null. Called by `deleteAgent` before removing the agent row to avoid
- * FK violations (FK enforcement is on in production via `PRAGMA foreign_keys`).
+ * Clean up all schedules owned by the given agent before the agent row is
+ * deleted (called by `deleteAgent` to satisfy `PRAGMA foreign_keys ON`).
+ *
+ * Two distinct cases:
+ * - Heartbeat schedules (`task_id IS NOT NULL`): deleted outright — their
+ *   target task is being removed too, so they would be orphaned.
+ * - Standalone cron schedules (`task_id IS NULL`): `agent_id` is set to null
+ *   so the rows survive as unowned schedules (preserving their config).
  */
 export function detachSchedulesForAgent(agentId: string): void {
+  // Delete heartbeat schedules — target task is going away.
+  db.delete(schedules)
+    .where(and(eq(schedules.agentId, agentId), isNotNull(schedules.taskId)))
+    .run();
+  // Detach standalone cron schedules — keep the row, clear the owner.
   db.update(schedules)
     .set({
       agentId: null,
       updatedAt: sql`datetime('now')`,
     })
-    .where(eq(schedules.agentId, agentId))
+    .where(and(eq(schedules.agentId, agentId), isNull(schedules.taskId)))
     .run();
 }
 

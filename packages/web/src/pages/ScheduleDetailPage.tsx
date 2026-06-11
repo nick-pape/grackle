@@ -179,6 +179,16 @@ function ScheduleForm({
     if (!existing) {
       return;
     }
+    // Guard: detaching the agent while there is no explicit personaId would leave
+    // the schedule unresolvable at fire time. Show a friendly error instead of
+    // letting the server reject it with a generic toast.
+    if (field === "agentId" && value === "" && !existing.personaId) {
+      showToast(
+        "Set a Persona before detaching the Agent — the schedule needs a persona to fire.",
+        "error",
+      );
+      return;
+    }
     onUpdateSchedule(existing.id, { [field]: value }).then(
       () => {
         showToast("Schedule updated", "success");

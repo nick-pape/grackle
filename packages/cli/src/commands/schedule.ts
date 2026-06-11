@@ -147,6 +147,19 @@ export function registerScheduleCommands(program: Command): void {
 
         // Build the partial update request — only include fields the user provided.
         const req: Parameters<typeof client.updateSchedule>[0] = { id };
+        const hasChanges =
+          opts.title !== undefined ||
+          opts.desc !== undefined ||
+          opts.schedule !== undefined ||
+          opts.persona !== undefined ||
+          opts.agent !== undefined ||
+          opts.detachAgent === true;
+        if (!hasChanges) {
+          console.error(
+            "Error: no fields to update. Provide at least one of: --title, --desc, --schedule, --persona, --agent, --detach-agent",
+          );
+          process.exit(1);
+        }
         if (opts.title) {
           req.title = opts.title;
         }
