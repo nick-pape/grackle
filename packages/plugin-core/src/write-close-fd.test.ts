@@ -183,6 +183,34 @@ describe("writeToFd + closeFd -- async delivery integration", () => {
     });
   });
 
+  // ─── writeToFd — validation branches ────────────────────────────────────────
+
+  describe("writeToFd — validation branches", () => {
+    it("throws NotFound when no subscription exists for (sessionId, fd)", async () => {
+      await expect(
+        writeToFd(
+          create(grackle.WriteToFdRequestSchema, { sessionId: "nobody", fd: 99, message: "hi" }),
+        ),
+      ).rejects.toMatchObject({ code: Code.NotFound });
+    });
+
+    it("throws FailedPrecondition when caller has read-only permission", async () => {
+      insertSession("reader-only");
+      const stream = streamRegistry.createStream("pipe:data");
+      const readerSub = streamRegistry.subscribe(stream.id, "reader-only", "r", "async", true);
+
+      await expect(
+        writeToFd(
+          create(grackle.WriteToFdRequestSchema, {
+            sessionId: "reader-only",
+            fd: readerSub.fd,
+            message: "should fail",
+          }),
+        ),
+      ).rejects.toMatchObject({ code: Code.FailedPrecondition });
+    });
+  });
+
   // ─── closeFd ─────────────────────────────────────────────────────────────────
 
   describe("closeFd", () => {
@@ -237,6 +265,36 @@ describe("writeToFd + closeFd -- async delivery integration", () => {
 
       expect((caughtErr as ConnectError).code).toBe(Code.FailedPrecondition);
       expect((caughtErr as ConnectError).message).toContain("undelivered messages");
+    });
+  });
+
+  // ─── closeFd — validation branches ──────────────────────────────────────────
+
+  describe("closeFd — validation branches", () => {
+    it("throws NotFound when no subscription exists for (sessionId, fd)", async () => {
+      await expect(
+        closeFd(create(grackle.CloseFdRequestSchema, { sessionId: "nobody", fd: 99 })),
+      ).rejects.toMatchObject({ code: Code.NotFound });
+    });
+
+    it("only unsubscribes the caller on a global (non-reserved) stream — other participants survive", async () => {
+      // Global streams: closing one fd should NOT evict other participants.
+      // (closeFd only calls sessionStore when isInternalStream is true — this stream
+      // is not reserved so no DB access occurs, no insertSession needed.)
+      const stream = streamRegistry.createStream("team-room");
+      const subA = streamRegistry.subscribe(stream.id, "session-a", "rw", "async", false);
+      const subB = streamRegistry.subscribe(stream.id, "session-b", "rw", "async", false);
+
+      const result = await closeFd(
+        create(grackle.CloseFdRequestSchema, { sessionId: "session-a", fd: subA.fd }),
+      );
+
+      // stopped=false: session-b was not auto-stopped
+      expect(result.stopped).toBe(false);
+      // session-b is still subscribed
+      expect(streamRegistry.getSubscription("session-b", subB.fd)).toBeDefined();
+      // session-a has been removed
+      expect(streamRegistry.getSubscription("session-a", subA.fd)).toBeUndefined();
     });
   });
 });
