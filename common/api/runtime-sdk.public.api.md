@@ -26,6 +26,7 @@ export interface AgentEvent {
 
 // @public
 export interface AgentRuntime {
+    readonly capabilities: RuntimeCapabilities;
     // (undocumented)
     name: string;
     resume(opts: ResumeOptions): AgentSession;
@@ -65,11 +66,11 @@ export class AsyncQueue<T> {
 
 // @public
 export abstract class BaseAgentRuntime implements AgentRuntime {
+    readonly capabilities: RuntimeCapabilities;
     protected abstract createSession(opts: CreateSessionOptions): AgentSession;
     // (undocumented)
     abstract name: string;
     resume(opts: ResumeOptions): AgentSession;
-    protected resumePrompt: string;
     spawn(opts: SpawnOptions): AgentSession;
 }
 
@@ -77,6 +78,7 @@ export abstract class BaseAgentRuntime implements AgentRuntime {
 export abstract class BaseAgentSession implements AgentSession {
     constructor(opts: CreateSessionOptions);
     protected abstract abortActive(): void;
+    protected applyMcpConfig(_resolved: ResolvedMcpConfig): void;
     // (undocumented)
     protected readonly branch?: string;
     protected buildInitialPrompt(): string;
@@ -246,6 +248,13 @@ export interface ResumeOptions {
     runtimeSessionId: string;
     // (undocumented)
     sessionId: string;
+}
+
+// @public
+export interface RuntimeCapabilities {
+    readonly requiresNonEmptyResumePrompt: boolean;
+    readonly supportsHooks: boolean;
+    readonly supportsResume: boolean;
 }
 
 // @public

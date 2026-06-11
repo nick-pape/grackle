@@ -10,6 +10,7 @@ import type {
   AgentSession,
   SpawnOptions,
   ResumeOptions,
+  RuntimeCapabilities,
 } from "@grackle-ai/runtime-sdk";
 import { StubSession } from "./stub.js";
 
@@ -20,6 +21,11 @@ import { StubSession } from "./stub.js";
  */
 export class StubMcpRuntime implements AgentRuntime {
   public name: string = "stub-mcp";
+  public readonly capabilities: RuntimeCapabilities = {
+    supportsHooks: false,
+    supportsResume: true,
+    requiresNonEmptyResumePrompt: false,
+  };
 
   public spawn(opts: SpawnOptions): AgentSession {
     return new StubSession(
@@ -32,6 +38,6 @@ export class StubMcpRuntime implements AgentRuntime {
   }
 
   public resume(opts: ResumeOptions): AgentSession {
-    return new StubSession(opts.sessionId, "(resumed session)", "stub-mcp");
+    return new StubSession(opts.sessionId, "(resumed)", "stub-mcp");
   }
 }

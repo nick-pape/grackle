@@ -158,13 +158,33 @@ describe("text", () => {
     expect(result.note?.disposition).toBe("mapped");
   });
 
-  it("drops when no active turn", () => {
+  it("orphan-wraps when no active turn", () => {
     const context = makeContext();
     const event = makeEvent("text", { content: "Hello" });
     const result = mapAgentEvent(event, 3, context);
 
-    expect(result.actions.length).toBe(0);
-    expect(result.note?.disposition).toBe("dropped");
+    // [TurnStarted, ResponsePart, TurnComplete]
+    expect(result.actions.length).toBe(3);
+    assertActionType<{ type: string; turnId: string }>(
+      result.actions,
+      ActionType.SessionTurnStarted,
+      0,
+    );
+    const part = assertActionType<{ type: string; turnId: string; part: { content: string } }>(
+      result.actions,
+      ActionType.SessionResponsePart,
+      1,
+    );
+    expect(part.part.content).toBe("Hello");
+    assertActionType<{ type: string; turnId: string }>(
+      result.actions,
+      ActionType.SessionTurnComplete,
+      2,
+    );
+    expect(result.note?.disposition).toBe("mapped");
+    expect(result.note?.detail).toContain("turn-orphan-3");
+    // Orphan turn is self-contained — context cleared afterward
+    expect(context.turnId).toBeUndefined();
   });
 });
 
@@ -218,13 +238,32 @@ describe("tool_use", () => {
     expect(context.openToolCalls).toEqual(["tc-10"]);
   });
 
-  it("drops when no active turn", () => {
+  it("orphan-wraps when no active turn", () => {
     const context = makeContext();
-    const event = makeEvent("tool_use", { content: "{}" });
+    const event = makeEvent("tool_use", {
+      content: JSON.stringify({ tool_name: "read_file" }),
+    });
     const result = mapAgentEvent(event, 4, context);
 
-    expect(result.actions.length).toBe(0);
-    expect(result.note?.disposition).toBe("dropped");
+    // [TurnStarted, ToolCallStart, ToolCallReady, TurnComplete]
+    expect(result.actions.length).toBe(4);
+    const started = assertActionType<{ type: string; turnId: string }>(
+      result.actions,
+      ActionType.SessionTurnStarted,
+      0,
+    );
+    expect(started.turnId).toBe("turn-orphan-4");
+    assertActionType<{ type: string }>(result.actions, ActionType.SessionToolCallStart, 1);
+    assertActionType<{ type: string }>(result.actions, ActionType.SessionToolCallReady, 2);
+    assertActionType<{ type: string; turnId: string }>(
+      result.actions,
+      ActionType.SessionTurnComplete,
+      3,
+    );
+    expect(result.note?.disposition).toBe("mapped");
+    // Orphan turn clears context
+    expect(context.turnId).toBeUndefined();
+    expect(context.openToolCalls).toEqual([]);
   });
 });
 
@@ -311,13 +350,34 @@ describe("tool_result", () => {
     expect(result.note?.disposition).toBe("mapped");
   });
 
-  it("drops when no active turn", () => {
-    const context = makeContext({ openToolCalls: ["tc-xyz"] });
-    const event = makeEvent("tool_result", { toolCallId: "tc-xyz", content: "{}" });
+  it("orphan-wraps when no active turn", () => {
+    // No active turn — synthesizes a complete orphan turn containing the tool result.
+    // Use toolError:true so no system notification is appended (clean 3-action sequence).
+    const context = makeContext({ openToolCalls: [], partCounter: 0 });
+    const event = makeEvent("tool_result", { toolError: true });
     const result = mapAgentEvent(event, 5, context);
 
-    expect(result.actions.length).toBe(0);
-    expect(result.note?.disposition).toBe("dropped");
+    // [TurnStarted, ToolCallComplete, TurnComplete]
+    expect(result.actions.length).toBe(3);
+    assertActionType<{ type: string; turnId: string }>(
+      result.actions,
+      ActionType.SessionTurnStarted,
+      0,
+    );
+    const complete = assertActionType<{ type: string; toolCallId: string }>(
+      result.actions,
+      ActionType.SessionToolCallComplete,
+      1,
+    );
+    // Synthesized tc-orphan-result-* id (no prior tool_use to pair with)
+    expect(complete.toolCallId).toMatch(/^tc-orphan-result-/);
+    assertActionType<{ type: string; turnId: string }>(
+      result.actions,
+      ActionType.SessionTurnComplete,
+      2,
+    );
+    expect(result.note?.disposition).toBe("mapped");
+    expect(context.turnId).toBeUndefined();
   });
 });
 
@@ -424,13 +484,20 @@ describe("error", () => {
     expect(context.turnId).toBeUndefined();
   });
 
-  it("clears context.turnId so subsequent text events are dropped after in-turn error", () => {
+  it("clears context.turnId so subsequent text events are orphan-wrapped (not attributed to defunct turn) after in-turn error", () => {
     const context = makeContext({ turnId: "turn-abc" });
     mapAgentEvent(makeEvent("error", { content: "Oops" }), 7, context);
+    // turnId must be undefined after the error — text must NOT map into the defunct turn
+    expect(context.turnId).toBeUndefined();
 
     const textResult = mapAgentEvent(makeEvent("text", { content: "After error" }), 8, context);
-    expect(textResult.actions.length).toBe(0);
-    expect(textResult.note?.disposition).toBe("dropped");
+    // Orphan-wrapped in its own synthetic turn (not dropped — content is preserved)
+    expect(textResult.actions.length).toBe(3); // TurnStarted + ResponsePart + TurnComplete
+    const turnStarted = textResult.actions[0] as { turnId: string };
+    // The orphan turn id is derived from the event index, NOT the defunct "turn-abc"
+    expect(turnStarted.turnId).toMatch(/^turn-orphan-/);
+    expect(turnStarted.turnId).not.toBe("turn-abc");
+    expect(textResult.note?.disposition).toBe("mapped");
   });
 
   it("maps to SessionCreationFailed when pre-turn", () => {
@@ -535,13 +602,38 @@ describe("system", () => {
     expect(result.note?.detail).toContain("diagnostic");
   });
 
-  it("drops non-diagnostic system when no active turn", () => {
+  it("orphan-wraps non-diagnostic system when no active turn", () => {
     const context = makeContext();
     const event = makeEvent("system", { content: "Subagent completed" });
     const result = mapAgentEvent(event, 11, context);
 
+    // [TurnStarted, ResponsePart(systemNotification), TurnComplete]
+    expect(result.actions.length).toBe(3);
+    assertActionType<{ type: string }>(result.actions, ActionType.SessionTurnStarted, 0);
+    const part = assertActionType<{ type: string; part: { kind: string; content: string } }>(
+      result.actions,
+      ActionType.SessionResponsePart,
+      1,
+    );
+    expect(part.part.kind).toBe("systemNotification");
+    expect(part.part.content).toBe("Subagent completed");
+    assertActionType<{ type: string }>(result.actions, ActionType.SessionTurnComplete, 2);
+    expect(result.note?.disposition).toBe("mapped");
+    expect(context.turnId).toBeUndefined();
+  });
+
+  it("drops diagnostic system even when no active turn (never orphan-wrapped)", () => {
+    const context = makeContext();
+    const event = makeEvent("system", {
+      diagnostic: true,
+      content: JSON.stringify({ level: "info", msg: "diagnostic" }),
+    });
+    const result = mapAgentEvent(event, 12, context);
+
     expect(result.actions.length).toBe(0);
-    expect(result.note?.disposition).toBe("dropped");
+    expect(result.note?.disposition).toBe("carried");
+    // Context unchanged — no synthetic turn was created
+    expect(context.turnId).toBeUndefined();
   });
 });
 

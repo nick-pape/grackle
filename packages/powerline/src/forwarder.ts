@@ -6,7 +6,7 @@
  */
 
 import type { StateAction } from "@grackle-ai/ahp";
-import { ActionType, MessageKind } from "@grackle-ai/ahp";
+import { ActionType } from "@grackle-ai/ahp";
 import type { AhpServerConnection } from "@grackle-ai/ahp-transport";
 import { mapAgentEvent } from "@grackle-ai/common";
 import type { AgentEvent } from "@grackle-ai/runtime-sdk";
@@ -19,35 +19,6 @@ import {
   registerPumpForwarder,
   unregisterPumpForwarder,
 } from "./session-mgr.js";
-
-/**
- * Status-event contents that PowerLine rescues by synthesizing a
- * `SessionMetaChangedAction` with `_meta.status`. mapAgentEvent drops these
- * as "redundant with turn_* events", but Grackle's consumer relies on them
- * to flip `session.status` in the UI.
- */
-export const STATUS_RESCUE_CONTENTS: ReadonlySet<string> = new Set([
-  "running",
-  "waiting_input",
-  "completed",
-  "idle",
-  "killed",
-  "terminated",
-  "failed",
-]);
-
-/**
- * Event types whose mapper-drop ("no active turn") should be rescued by
- * synthesizing an orphan turn-started. These are runtime-emitted content
- * events that, under the gRPC wire, flowed through regardless of turn
- * context.
- */
-const ORPHAN_RESCUABLE_TYPES: ReadonlySet<string> = new Set([
-  "text",
-  "tool_use",
-  "tool_result",
-  "system",
-]);
 
 /**
  * Drive the parked-event replay + live-buffer tail loop for a single
@@ -139,7 +110,16 @@ export function emitActionsForEvent(
     raw: event.raw !== undefined ? JSON.stringify(event.raw) : undefined,
   };
 
-  if (event.type === "status" && STATUS_RESCUE_CONTENTS.has(event.content)) {
+  // TEMPORARY HR8d tunnel: Grackle's native session status is smuggled through
+  // AHP's `_meta` side-channel rather than reconstructed from the action stream.
+  // Pass through ANY non-empty status content so new runtime status values aren't
+  // silently dropped (#1460). The mapper's own status branches are dead code on
+  // the production wire — the forwarder intercepts all statuses here before they
+  // reach mapAgentEvent.
+  //
+  // SUNSET: replace with reducer-derived status reconstruction under epic #1348
+  // (specifically sub-issue #1343 "Flatten event-processor onto AHP actions").
+  if (event.type === "status" && event.content) {
     forwarder.serverSeq += 1;
     const statusAction: StateAction = {
       type: ActionType.SessionMetaChanged,
@@ -154,32 +134,10 @@ export function emitActionsForEvent(
     return;
   }
 
-  let result = mapAgentEvent(normalized, idx, forwarder.mapperContext);
-  let synthesizedOrphanTurnId: string | undefined;
-
-  if (
-    result.actions.length === 0 &&
-    result.note?.disposition === "dropped" &&
-    ORPHAN_RESCUABLE_TYPES.has(normalized.type) &&
-    forwarder.mapperContext.turnId === undefined
-  ) {
-    synthesizedOrphanTurnId = `turn-orphan-${String(idx)}`;
-    const startAction: StateAction = {
-      type: ActionType.SessionTurnStarted,
-      turnId: synthesizedOrphanTurnId,
-      message: { text: "", origin: { kind: MessageKind.User } },
-    };
-    forwarder.serverSeq += 1;
-    conn.session.notify("action", {
-      channel: sessionChannel(sessionId),
-      serverSeq: forwarder.serverSeq,
-      action: startAction,
-      origin: undefined,
-    });
-    forwarder.mapperContext.turnId = synthesizedOrphanTurnId;
-    const reIdx = forwarder.mapperContext.eventIndex++;
-    result = mapAgentEvent(normalized, reIdx, forwarder.mapperContext);
-  }
+  // The mapper now handles orphan-turn synthesis internally (see `withTurn` in
+  // ahp-mapper.ts). Content events emitted without an active turn are wrapped in
+  // a synthetic `turn-orphan-${index}` turn — no forwarder-side rescue needed.
+  const result = mapAgentEvent(normalized, idx, forwarder.mapperContext);
 
   for (const action of result.actions) {
     forwarder.serverSeq += 1;
@@ -189,21 +147,6 @@ export function emitActionsForEvent(
       action,
       origin: undefined,
     });
-  }
-
-  if (synthesizedOrphanTurnId !== undefined) {
-    const completeAction: StateAction = {
-      type: ActionType.SessionTurnComplete,
-      turnId: synthesizedOrphanTurnId,
-    };
-    forwarder.serverSeq += 1;
-    conn.session.notify("action", {
-      channel: sessionChannel(sessionId),
-      serverSeq: forwarder.serverSeq,
-      action: completeAction,
-      origin: undefined,
-    });
-    forwarder.mapperContext.turnId = undefined;
   }
 
   const metaSnapshot: Record<string, unknown> = {};

@@ -30,6 +30,7 @@ import type {
   AgentRuntime,
   AgentSession,
   ResumeOptions,
+  RuntimeCapabilities,
   SpawnOptions,
 } from "@grackle-ai/runtime-sdk";
 import { worktreeDir } from "@grackle-ai/runtime-sdk";
@@ -121,6 +122,11 @@ class StubSession implements AgentSession {
 
 class StubRuntime implements AgentRuntime {
   public readonly name: string;
+  public readonly capabilities: RuntimeCapabilities = {
+    supportsHooks: false,
+    supportsResume: true,
+    requiresNonEmptyResumePrompt: false,
+  };
   public readonly spawnCalls: SpawnOptions[] = [];
   public readonly resumeCalls: ResumeOptions[] = [];
   public lastSession: StubSession | undefined;
@@ -570,6 +576,32 @@ describe("ahp-handlers: subscribe", () => {
       const action = client.received[0]!.action as { type: unknown; _meta?: { status?: string } };
       expect(action.type).toBe(ActionType.SessionMetaChanged);
       expect(action._meta?.status).toBe("killed");
+    } finally {
+      await client.cleanup();
+      await lb.cleanup();
+    }
+  });
+
+  it("[status rescue] passes through an unrecognized status value without dropping (#1460)", async () => {
+    // Before #1460, STATUS_RESCUE_CONTENTS was a hardcoded allowlist — any new runtime
+    // status value not in the set was silently dropped. Now the forwarder passes through
+    // ANY non-empty status content so new values aren't lost.
+    const lb = await spinUpLoopback();
+    const client = await openClient(lb.port);
+    try {
+      const sessionId = `s-newstatus-${String(Date.now())}`;
+      await client.socket.request("createSession", {
+        channel: `ahp-session:/${sessionId}`,
+        provider: TEST_RUNTIME.name,
+        config: {},
+      });
+      const session = TEST_RUNTIME.lastSession!;
+      await client.socket.request("subscribe", { channel: `ahp-session:/${sessionId}` });
+      session.push({ type: "status", content: "paused" });
+      await waitForCount(client.received, 1);
+      const action = client.received[0]!.action as { type: unknown; _meta?: { status?: string } };
+      expect(action.type).toBe(ActionType.SessionMetaChanged);
+      expect(action._meta?.status).toBe("paused");
     } finally {
       await client.cleanup();
       await lb.cleanup();

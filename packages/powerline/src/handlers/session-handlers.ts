@@ -125,6 +125,17 @@ export function handleCreateSession(
   const resumeId =
     typeof cfg.resumeFromRuntimeSessionId === "string" ? cfg.resumeFromRuntimeSessionId : undefined;
 
+  if (resumeId !== undefined && !runtime.capabilities.supportsResume) {
+    return {
+      jsonrpc: "2.0",
+      id: 0,
+      error: {
+        code: JsonRpcErrorCodes.InvalidParams,
+        message: `Runtime '${runtime.name}' does not support session resume`,
+      },
+    } satisfies AhpResponse;
+  }
+
   let session: AgentSession;
   try {
     if (resumeId !== undefined) {

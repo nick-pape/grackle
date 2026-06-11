@@ -38,6 +38,23 @@ export interface AgentEvent {
   toolError?: boolean;
 }
 
+/**
+ * Declarative description of which optional runtime affordances a runtime honors.
+ * Consumers must gate on these flags rather than branching on `runtime.name`.
+ */
+export interface RuntimeCapabilities {
+  /** Runtime honors `SpawnOptions.hooks` (SDK hook callbacks, e.g. Stop hooks). */
+  readonly supportsHooks: boolean;
+  /** Runtime can resume a prior session via `resume()`. */
+  readonly supportsResume: boolean;
+  /**
+   * Runtime's SDK rejects an empty resume prompt.
+   * When true, `BaseAgentRuntime.resume()` substitutes a non-empty placeholder
+   * instead of passing an empty string.
+   */
+  readonly requiresNonEmptyResumePrompt: boolean;
+}
+
 /** Parameters for spawning a new agent session. */
 export interface SpawnOptions {
   sessionId: string;
@@ -52,7 +69,11 @@ export interface SpawnOptions {
   taskId?: string;
   /** MCP server configurations to pass to the agent SDK. */
   mcpServers?: Record<string, unknown>;
-  /** SDK hook callbacks (e.g. Stop hooks). Only supported by the Claude Code runtime; other runtimes ignore this field. */
+  /**
+   * SDK hook callbacks (e.g. Stop hooks).
+   * Honored only when the runtime's `capabilities.supportsHooks` is true;
+   * `BaseAgentRuntime.spawn()` drops this field for runtimes that do not support hooks.
+   */
   hooks?: Record<string, unknown>;
   /** MCP broker connection details. Both url and token must be present together. */
   mcpBroker?: { url: string; token: string };
@@ -90,7 +111,11 @@ export interface CreateSessionOptions {
   systemContext?: string;
   /** MCP server configurations to pass to the agent SDK. */
   mcpServers?: Record<string, unknown>;
-  /** SDK hook callbacks (e.g. Stop hooks). Only supported by the Claude Code runtime; other runtimes ignore this field. */
+  /**
+   * SDK hook callbacks (e.g. Stop hooks).
+   * Honored only when the runtime's `capabilities.supportsHooks` is true;
+   * `BaseAgentRuntime.spawn()` drops this field for runtimes that do not support hooks.
+   */
   hooks?: Record<string, unknown>;
   /** MCP broker connection details. Both url and token must be present together. */
   mcpBroker?: { url: string; token: string };
@@ -115,6 +140,8 @@ export interface AgentSession {
 /** Contract for pluggable agent runtime implementations (e.g. Claude Code, stub). */
 export interface AgentRuntime {
   name: string;
+  /** Declarative capability surface — consumers gate on these flags rather than branching on `name`. */
+  readonly capabilities: RuntimeCapabilities;
   /** Create and start a new agent session. */
   spawn(opts: SpawnOptions): AgentSession;
   /** Resume a previously suspended session. */

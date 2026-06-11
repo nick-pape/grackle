@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Move AHP orphan-event rescue into the mapper (withTurn helper); document status _meta tunnel as temporary HR8d artifact; delete hardcoded ORPHAN_RESCUABLE_TYPES and STATUS_RESCUE_CONTENTS from PowerLine forwarder",
+      "type": "minor",
+      "packageName": "@grackle-ai/cli"
+    }
+  ],
+  "packageName": "@grackle-ai/cli",
+  "email": "5674316+nick-pape@users.noreply.github.com"
+}
