@@ -1,6 +1,7 @@
 import { ulid } from "ulid";
 import { SequencedLog, type LogSink, serverTimestamp } from "@grackle-ai/common";
 import { getDatabaseStores } from "@grackle-ai/database";
+import type { GrackleEvent, GrackleEventType } from "@grackle-ai/plugin-sdk";
 import { logger } from "./logger.js";
 
 // ─── Event Types ──────────────────────────────────────────
@@ -9,7 +10,6 @@ import { logger } from "./logger.js";
 // `import { GrackleEvent } from "@grackle-ai/core"` statements continue to work.
 
 export type { GrackleEvent, GrackleEventType } from "@grackle-ai/plugin-sdk";
-import type { GrackleEvent, GrackleEventType } from "@grackle-ai/plugin-sdk";
 
 /**
  * Callback signature for event subscribers. May be sync or async; async rejections
