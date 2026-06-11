@@ -2,30 +2,39 @@ import { describe, it, expect, vi } from "vitest";
 import type { PluginContext } from "@grackle-ai/plugin-sdk";
 import type { Logger } from "pino";
 
-// Mock database stores (scheduling plugin reads from them directly)
-vi.mock("@grackle-ai/database", () => ({
-  scheduleStore: {
+// Mock database stores (scheduling plugin reads via getDatabaseStores())
+vi.mock("@grackle-ai/database", () => {
+  const scheduleStore = {
     getDueSchedules: vi.fn(),
     advanceSchedule: vi.fn(),
     setScheduleEnabled: vi.fn(),
-  },
-  taskStore: {
+  };
+  const taskStore = {
     setTaskScheduleId: vi.fn(),
     getTask: vi.fn(),
-  },
-  personaStore: {
-    getPersona: vi.fn(),
-  },
-  agentStore: {
-    getAgent: vi.fn(),
-  },
-  sessionStore: {
-    getLatestSessionForTask: vi.fn(),
-  },
-  dispatchQueueStore: {
-    enqueue: vi.fn(),
-  },
-}));
+  };
+  const personaStore = { getPersona: vi.fn() };
+  const agentStore = { getAgent: vi.fn() };
+  const sessionStore = { getLatestSessionForTask: vi.fn() };
+  const dispatchQueueStore = { enqueue: vi.fn() };
+  const stores = {
+    scheduleStore,
+    taskStore,
+    personaStore,
+    agentStore,
+    sessionStore,
+    dispatchQueueStore,
+  };
+  return {
+    scheduleStore,
+    taskStore,
+    personaStore,
+    agentStore,
+    sessionStore,
+    dispatchQueueStore,
+    getDatabaseStores: () => stores,
+  };
+});
 
 // The heartbeat branch (#1438) reads core helpers (reanimate, stdin, spawn,
 // env resolver). Mock the surface to avoid pulling in the real event-bus,

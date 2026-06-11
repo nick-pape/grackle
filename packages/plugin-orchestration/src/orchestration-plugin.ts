@@ -16,7 +16,7 @@ import {
   createEscalationAutoSubscriber,
   createOrphanReparentSubscriber,
 } from "@grackle-ai/plugin-core";
-import { taskStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { taskService } from "@grackle-ai/core";
 
 /**
@@ -54,7 +54,7 @@ export function createOrchestrationPlugin(): GracklePlugin {
 
     reconciliationPhases: (ctx) => [
       createOrphanPhase({
-        listAllTasks: () => taskStore.listTasks(),
+        listAllTasks: () => getDatabaseStores().taskStore.listTasks(),
         reparentTask: (taskId: string, newParentTaskId: string): void => {
           taskService.reparentTask(taskId, newParentTaskId);
         },

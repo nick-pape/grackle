@@ -1,5 +1,5 @@
 import { registerAdapter, exec, logger } from "@grackle-ai/core";
-import { credentialProviders, githubAccountStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { TunnelRegistry } from "@grackle-ai/adapter-sdk";
 import { DockerAdapter } from "@grackle-ai/adapter-docker";
 import { LocalAdapter } from "@grackle-ai/adapter-local";
@@ -19,9 +19,9 @@ export function registerAllAdapters(): TunnelRegistry {
     logger,
     tunnelRegistry,
     isGitHubProviderEnabled: (): boolean =>
-      credentialProviders.getCredentialProviders().github !== "off",
+      getDatabaseStores().credentialProviders.getCredentialProviders().github !== "off",
     resolveGitHubToken: (accountId?: string): string | undefined =>
-      githubAccountStore.resolveStoredGitHubToken(accountId),
+      getDatabaseStores().githubAccountStore.resolveStoredGitHubToken(accountId),
   };
 
   registerAdapter(new DockerAdapter(adapterDeps));

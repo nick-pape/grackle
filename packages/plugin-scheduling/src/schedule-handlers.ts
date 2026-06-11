@@ -10,7 +10,8 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import { personaStore, scheduleStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
+import type { ScheduleUpdate } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import type { PluginContext } from "@grackle-ai/plugin-sdk";
 import { scheduleRowToProto } from "@grackle-ai/common";
@@ -31,6 +32,7 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
 } {
   /** Create a new schedule. */
   async function createSchedule(req: grackle.CreateScheduleRequest): Promise<grackle.Schedule> {
+    const { personaStore, scheduleStore } = getDatabaseStores();
     const title = req.title.trim();
     const expr = req.scheduleExpression.trim();
     const personaId = req.personaId.trim();
@@ -76,6 +78,7 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
 
   /** List all schedules, optionally filtered by workspace. */
   async function listSchedules(req: grackle.ListSchedulesRequest): Promise<grackle.ScheduleList> {
+    const { scheduleStore } = getDatabaseStores();
     const rows = scheduleStore.listSchedules(req.workspaceId || undefined);
     return create(grackle.ScheduleListSchema, {
       schedules: rows.map(scheduleRowToProto),
@@ -84,6 +87,7 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
 
   /** Get a schedule by ID. */
   async function getSchedule(req: grackle.ScheduleId): Promise<grackle.Schedule> {
+    const { scheduleStore } = getDatabaseStores();
     const row = scheduleStore.getSchedule(req.id);
     if (!row) {
       throw new ConnectError(`Schedule not found: ${req.id}`, Code.NotFound);
@@ -93,12 +97,13 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
 
   /** Update an existing schedule. */
   async function updateSchedule(req: grackle.UpdateScheduleRequest): Promise<grackle.Schedule> {
+    const { personaStore, scheduleStore } = getDatabaseStores();
     const existing = scheduleStore.getSchedule(req.id);
     if (!existing) {
       throw new ConnectError(`Schedule not found: ${req.id}`, Code.NotFound);
     }
 
-    const update: scheduleStore.ScheduleUpdate = {};
+    const update: ScheduleUpdate = {};
     if (req.title !== undefined && req.title.trim() !== "") {
       update.title = req.title.trim();
     }
@@ -153,6 +158,7 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
 
   /** Delete a schedule by ID. */
   async function deleteSchedule(req: grackle.ScheduleId): Promise<grackle.Empty> {
+    const { scheduleStore } = getDatabaseStores();
     scheduleStore.deleteSchedule(req.id);
     emit("schedule.deleted", { scheduleId: req.id });
     return create(grackle.EmptySchema, {});

@@ -10,14 +10,7 @@
 import type { GracklePlugin, PluginContext } from "@grackle-ai/plugin-sdk";
 import { registerPlugin } from "@grackle-ai/plugin-sdk";
 import { grackle } from "@grackle-ai/common";
-import {
-  scheduleStore,
-  taskStore,
-  personaStore,
-  agentStore,
-  sessionStore,
-  dispatchQueueStore,
-} from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import {
   findFirstConnectedEnvironment,
   reanimateAgent,
@@ -43,6 +36,7 @@ import { createCronPhase } from "./cron-phase.js";
  */
 export function resolveEnvironmentForHeartbeat(task: TaskModel): string | undefined {
   if (task.agentId) {
+    const { agentStore } = getDatabaseStores();
     const agent = agentStore.getAgent(task.agentId);
     if (agent?.environmentId) {
       return agent.environmentId;
@@ -77,30 +71,34 @@ export function createSchedulingPlugin(): GracklePlugin {
       },
     ],
 
-    reconciliationPhases: (ctx: PluginContext) => [
-      createCronPhase({
-        getDueSchedules: scheduleStore.getDueSchedules,
-        advanceSchedule: scheduleStore.advanceSchedule,
-        createTask: taskService.createTask,
-        setTaskScheduleId: taskStore.setTaskScheduleId,
-        enqueueForDispatch: dispatchQueueStore.enqueue,
-        emit: ctx.emit,
-        getPersona: personaStore.getPersona,
-        setScheduleEnabled: scheduleStore.setScheduleEnabled,
-        // Heartbeat branch wiring (#1438). `reanimateAgent` is sync (returns
-        // SessionRow); the CronPhaseDep type accepts `unknown` so it can be
-        // passed directly without an async wrapper.
-        getTask: (id: string) => {
-          const row = taskStore.getTask(id);
-          return row ? toTaskModel(row) : undefined;
-        },
-        getLatestSessionForTask: sessionStore.getLatestSessionForTask,
-        reanimateAgent,
-        publishToStdin,
-        startTaskSession,
-        resolveEnvironment: resolveEnvironmentForHeartbeat,
-        logger: ctx.logger,
-      }),
-    ],
+    reconciliationPhases: (ctx: PluginContext) => {
+      const { scheduleStore, taskStore, personaStore, dispatchQueueStore, sessionStore } =
+        getDatabaseStores();
+      return [
+        createCronPhase({
+          getDueSchedules: scheduleStore.getDueSchedules,
+          advanceSchedule: scheduleStore.advanceSchedule,
+          createTask: taskService.createTask,
+          setTaskScheduleId: taskStore.setTaskScheduleId,
+          enqueueForDispatch: dispatchQueueStore.enqueue,
+          emit: ctx.emit,
+          getPersona: personaStore.getPersona,
+          setScheduleEnabled: scheduleStore.setScheduleEnabled,
+          // Heartbeat branch wiring (#1438). `reanimateAgent` is sync (returns
+          // SessionRow); the CronPhaseDep type accepts `unknown` so it can be
+          // passed directly without an async wrapper.
+          getTask: (id: string) => {
+            const row = taskStore.getTask(id);
+            return row ? toTaskModel(row) : undefined;
+          },
+          getLatestSessionForTask: sessionStore.getLatestSessionForTask,
+          reanimateAgent,
+          publishToStdin,
+          startTaskSession,
+          resolveEnvironment: resolveEnvironmentForHeartbeat,
+          logger: ctx.logger,
+        }),
+      ];
+    },
   };
 }

@@ -5,18 +5,35 @@ import type { Logger } from "pino";
 // ── Mock external dependencies used by the real scheduling plugin ─────────────
 // (The real createSchedulingPlugin() is imported below — no mock of the plugin itself)
 
-vi.mock("@grackle-ai/database", () => ({
-  scheduleStore: {
+vi.mock("@grackle-ai/database", () => {
+  const scheduleStore = {
     getDueSchedules: vi.fn(),
     advanceSchedule: vi.fn(),
     setScheduleEnabled: vi.fn(),
-  },
-  taskStore: { createTask: vi.fn(), setTaskScheduleId: vi.fn(), getTask: vi.fn() },
-  personaStore: { getPersona: vi.fn() },
-  agentStore: { getAgent: vi.fn() },
-  sessionStore: { getLatestSessionForTask: vi.fn() },
-  dispatchQueueStore: { enqueue: vi.fn() },
-}));
+  };
+  const taskStore = { createTask: vi.fn(), setTaskScheduleId: vi.fn(), getTask: vi.fn() };
+  const personaStore = { getPersona: vi.fn() };
+  const agentStore = { getAgent: vi.fn() };
+  const sessionStore = { getLatestSessionForTask: vi.fn() };
+  const dispatchQueueStore = { enqueue: vi.fn() };
+  const stores = {
+    scheduleStore,
+    taskStore,
+    personaStore,
+    agentStore,
+    sessionStore,
+    dispatchQueueStore,
+  };
+  return {
+    scheduleStore,
+    taskStore,
+    personaStore,
+    agentStore,
+    sessionStore,
+    dispatchQueueStore,
+    getDatabaseStores: () => stores,
+  };
+});
 
 // Heartbeat branch (#1438) pulls in core helpers. Mock the surface to avoid
 // loading the real event-bus, which imports SequencedLog from common.

@@ -18,11 +18,18 @@ const stores = vi.hoisted(() => ({
   getWorkspace: vi.fn(),
   getPersona: vi.fn(),
 }));
-vi.mock("@grackle-ai/database", () => ({
-  taskStore: { getTask: stores.getTask },
-  workspaceStore: { getWorkspace: stores.getWorkspace },
-  personaStore: { getPersona: stores.getPersona },
-}));
+vi.mock("@grackle-ai/database", () => {
+  const taskStore = { getTask: stores.getTask };
+  const workspaceStore = { getWorkspace: stores.getWorkspace };
+  const personaStore = { getPersona: stores.getPersona };
+  const registry = { taskStore, workspaceStore, personaStore };
+  return {
+    taskStore,
+    workspaceStore,
+    personaStore,
+    getDatabaseStores: () => registry,
+  };
+});
 
 const gates = vi.hoisted(() => ({
   getEmbedder: vi.fn(() => ({}) as unknown),

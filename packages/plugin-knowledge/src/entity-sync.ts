@@ -14,7 +14,7 @@
  */
 
 import type { GrackleEvent, PluginContext, Disposable } from "@grackle-ai/plugin-sdk";
-import { taskStore, workspaceStore, personaStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { logger } from "./logger.js";
 import { getKnowledgeEmbedder } from "./knowledge-init.js";
 import { isNeo4jHealthy } from "./knowledge-health.js";
@@ -52,7 +52,7 @@ async function handleEvent(event: GrackleEvent): Promise<void> {
       if (!taskId) {
         return;
       }
-      const task = taskStore.getTask(taskId);
+      const task = getDatabaseStores().taskStore.getTask(taskId);
       if (task) {
         await projectTask(task);
       }
@@ -74,7 +74,7 @@ async function handleEvent(event: GrackleEvent): Promise<void> {
       if (!workspaceId) {
         return;
       }
-      const workspace = workspaceStore.getWorkspace(workspaceId);
+      const workspace = getDatabaseStores().workspaceStore.getWorkspace(workspaceId);
       if (workspace) {
         await projectWorkspace(workspace);
       }
@@ -86,7 +86,7 @@ async function handleEvent(event: GrackleEvent): Promise<void> {
       if (!personaId) {
         return;
       }
-      const persona = personaStore.getPersona(personaId);
+      const persona = getDatabaseStores().personaStore.getPersona(personaId);
       if (persona) {
         await projectPersona(persona);
       }

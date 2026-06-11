@@ -13,11 +13,19 @@ vi.mock("@grackle-ai/core", () => ({
   },
 }));
 
-vi.mock("@grackle-ai/database", () => ({
-  credentialProviders: {
+vi.mock("@grackle-ai/database", () => {
+  const credentialProviders = {
     getCredentialProviders: vi.fn(() => ({ github: "oauth" })),
-  },
-}));
+  };
+  const githubAccountStore = {
+    resolveStoredGitHubToken: vi.fn(),
+  };
+  const stores = { credentialProviders, githubAccountStore };
+  return {
+    credentialProviders,
+    getDatabaseStores: () => stores,
+  };
+});
 
 vi.mock("@grackle-ai/adapter-docker", () => ({
   DockerAdapter: vi.fn(),
