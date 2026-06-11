@@ -42,7 +42,12 @@ export interface ServerConfig {
   skipRootAutostart?: boolean;
 }
 
-/** Event types emitted by the domain event bus. */
+/**
+ * All domain event types emitted by the event bus.
+ *
+ * This is the single source of truth. `@grackle-ai/core` re-exports these
+ * types from here; do not redefine them elsewhere.
+ */
 export type GrackleEventType =
   | "task.created"
   | "task.updated"
@@ -70,18 +75,40 @@ export type GrackleEventType =
   | "agent.created"
   | "agent.updated"
   | "agent.deleted"
+  // Heartbeat schedule for an Agent's root task was created/updated/paused (#1438).
+  // payload: { agentId }
   | "agent.heartbeat.updated"
+  // Heartbeat schedule for an Agent was deleted via SetAgentHeartbeat({ cadence: "" }).
+  // payload: { agentId }
   | "agent.heartbeat.cleared"
   | "notification.escalated"
   | "plugin.changed"
   | "github_account.changed"
-  // Keep in sync with the same union in @grackle-ai/core event-bus.ts.
+  // A workspace's promoted-component set changed (promote/demote, or a promoted
+  // component edited) — the MCP server pushes tools/list_changed to that
+  // workspace's sessions so dynamic render_<name> tools refresh (#1297). payload: { workspaceId }
   | "component.changed"
+  // A watched resource (file/dir) changed on an environment's PowerLine-owned
+  // worktree (#1395). Forwarded from the AHP resource-watch channel; the web
+  // `useResources` hook re-reads the affected URIs. payload:
+  // { environmentId, uri, changes: [{ uri, type }] }
   | "resource.changed"
+  // IPC stream (room) lifecycle (#1309). Emitted from the stream registry for
+  // observable (non-reserved) rooms so the Coordination roster updates live as
+  // streams are created/joined/left/closed by either agents or the operator.
+  // payloads:
+  //   stream.created  { streamId, name, selfEcho }
+  //   stream.attached { streamId, name, sessionId, permission, deliveryMode }
+  //   stream.detached { streamId, name, sessionId }
+  //   stream.closed   { streamId, name }
   | "stream.created"
   | "stream.attached"
   | "stream.detached"
   | "stream.closed"
+  // An agent asked the UI to open a read-only live view of a file (#1396 live
+  // docs v0). Emitted when the `show_file` MCP tool's result carries a document
+  // descriptor; the web `useDocuments` hook opens a tab bound to the URI
+  // reference (NOT baked content). payload: { environmentId, uri, sessionId }
   | "document.show";
 
 /** A domain event from the event bus. */
