@@ -228,12 +228,8 @@ export function areDependenciesMet(taskId: string): boolean {
   if (uniqueDeps.length === 0) {
     return true;
   }
-  // Load all tasks in the workspace and check statuses
-  const allTasks = taskStore.listTasks(task.workspaceId || undefined);
-  const byId = new Map<string, TaskRow>(allTasks.map((t) => [t.id, t]));
-
   for (const depId of uniqueDeps) {
-    const dep = byId.get(depId);
+    const dep = taskStore.getTask(depId);
     if (dep?.status !== TASK_STATUS.COMPLETE) {
       return false;
     }
