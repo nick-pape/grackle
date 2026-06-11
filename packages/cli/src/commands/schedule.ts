@@ -102,7 +102,12 @@ export function registerScheduleCommands(program: Command): void {
       if (res.agentId) {
         console.log(`Agent:       ${res.agentId}`);
       }
-      console.log(`Persona:     ${res.personaId || "(inherited from agent)"}`);
+      const personaDisplay = res.personaId
+        ? res.personaId
+        : res.agentId
+          ? "(inherited from agent)"
+          : "(none)";
+      console.log(`Persona:     ${personaDisplay}`);
       console.log(`Workspace:   ${res.workspaceId || "(system-level)"}`);
       console.log(`Parent Task: ${res.parentTaskId || "(root)"}`);
       console.log(`Enabled:     ${res.enabled ? chalk.green("yes") : chalk.red("no")}`);
