@@ -153,6 +153,36 @@ describe("CopilotRuntime structural", () => {
     expect(runtime.name).toBe("copilot");
   });
 
+  it("declares correct capabilities", () => {
+    const runtime = new CopilotRuntime();
+    expect(runtime.capabilities.supportsHooks).toBe(false);
+    expect(runtime.capabilities.supportsResume).toBe(true);
+    expect(runtime.capabilities.requiresNonEmptyResumePrompt).toBe(true);
+  });
+
+  it("spawn does not forward hooks (supportsHooks: false)", () => {
+    const runtime = new CopilotRuntime();
+    const session = runtime.spawn({
+      sessionId: "cop-hooks",
+      prompt: "test",
+      model: "gpt-4",
+      maxTurns: 0,
+      hooks: { onStop: () => {} },
+    });
+    // hooks should have been dropped by BaseAgentRuntime.spawn() before createSession
+    expect((session as any).hooks).toBeUndefined();
+  });
+
+  it("resume passes '(resumed)' prompt (requiresNonEmptyResumePrompt: true)", () => {
+    const runtime = new CopilotRuntime();
+    const session = runtime.resume({
+      sessionId: "cop-resume-prompt",
+      runtimeSessionId: "prev",
+    });
+    // CopilotSession stores opts.prompt as protected field; access via any for assertion
+    expect((session as any).prompt).toBe("(resumed)");
+  });
+
   it("spawn returns a session with correct properties", () => {
     const runtime = new CopilotRuntime();
     const session = runtime.spawn({

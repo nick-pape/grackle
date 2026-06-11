@@ -238,6 +238,23 @@ jobs:
             exit 1
           fi
 
+      # Same @vue/compiler-sfc@3.5.36 workaround as in build-and-test/action.yml.
+      - name: Pre-install Rush (pin @vue/compiler-sfc away from broken 3.5.36)
+        run: |
+          RUSH_VERSION=$(node -e "const r=require('./rush.json'); process.stdout.write(r.rushVersion)")
+          RUSH_DIR="common/temp/install-run/@microsoft+rush@${RUSH_VERSION}"
+          mkdir -p "$RUSH_DIR"
+          RUSH_VERSION="$RUSH_VERSION" RUSH_DIR="$RUSH_DIR" node -e "
+            const fs=require('fs');
+            const v=process.env.RUSH_VERSION, d=process.env.RUSH_DIR;
+            const pkg={name:'ci-rush',version:'0.0.0',dependencies:{'@microsoft/rush':v},
+              description:\"DON'T WARN\",repository:\"DON'T WARN\",license:'MIT',
+              overrides:{'@vue/compiler-sfc':'3.5.35','@vue/shared':'3.5.35'}};
+            fs.writeFileSync(d+'/package.json',JSON.stringify(pkg,null,2));
+          "
+          (cd "$RUSH_DIR" && npm install)
+          node -v > "$RUSH_DIR/installed.flag"
+
       - name: Rush install
         run: node common/scripts/install-run-rush.js install
 

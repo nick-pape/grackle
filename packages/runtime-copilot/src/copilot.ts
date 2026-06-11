@@ -1,4 +1,9 @@
-import type { AgentSession, CreateSessionOptions } from "@grackle-ai/runtime-sdk";
+import type {
+  AgentSession,
+  CreateSessionOptions,
+  ResolvedMcpConfig,
+  RuntimeCapabilities,
+} from "@grackle-ai/runtime-sdk";
 import {
   BaseAgentSession,
   BaseAgentRuntime,
@@ -142,6 +147,8 @@ export class CopilotSession extends BaseAgentSession {
   private copilotClient?: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private copilotSession?: any;
+  /** Session config built during setupSdk(), written by applyMcpConfig() and consumed by createSession/resumeSession. */
+  private sessionConfig: Record<string, unknown> = {};
 
   /** Callbacks for the current query's idle promise (reset per sendAndWaitForIdle call). */
   private idleResolve?: () => void;
@@ -192,7 +199,7 @@ export class CopilotSession extends BaseAgentSession {
     this.copilotClient = new copilotSdk.CopilotClient(clientOptions);
 
     // ── Build session config ──
-    const sessionConfig: Record<string, unknown> = {
+    this.sessionConfig = {
       model: this.model,
       streaming: true,
       onPermissionRequest: () => ({ kind: "approve-once" }),
@@ -200,20 +207,18 @@ export class CopilotSession extends BaseAgentSession {
 
     // Inject system context via SDK-native systemMessage
     if (this.systemContext) {
-      sessionConfig.systemMessage = { mode: "append" as const, content: this.systemContext };
+      this.sessionConfig.systemMessage = { mode: "append" as const, content: this.systemContext };
     }
 
     // BYOK provider config
     const providerConfig = resolveProviderConfig();
     if (providerConfig) {
-      sessionConfig.provider = providerConfig;
+      this.sessionConfig.provider = providerConfig;
     }
 
-    // MCP servers
-    const mcpConfig = this.resolveMcp();
-    if (mcpConfig.servers) {
-      sessionConfig.mcpServers = mcpConfig.servers;
-    }
+    // Apply MCP config through the named seam — transforms ResolvedMcpConfig into the
+    // Copilot SDK's mcpServers option (pass-through; Copilot natively accepts the generic shape).
+    this.applyMcpConfig(this.resolveMcp());
 
     // Note: Copilot SDK does not have a maxTurns config option.
     // The session runs until idle. Log if the caller requested a limit.
@@ -226,7 +231,7 @@ export class CopilotSession extends BaseAgentSession {
 
     // Working directory (SDK uses "workingDirectory", not "cwd")
     if (workingDirectory) {
-      sessionConfig.workingDirectory = workingDirectory;
+      this.sessionConfig.workingDirectory = workingDirectory;
     }
 
     // ── Create or resume session ──
@@ -234,11 +239,11 @@ export class CopilotSession extends BaseAgentSession {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       this.copilotSession = await this.copilotClient.resumeSession(
         this.resumeSessionId,
-        sessionConfig,
+        this.sessionConfig,
       );
     } else {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      this.copilotSession = await this.copilotClient.createSession(sessionConfig);
+      this.copilotSession = await this.copilotClient.createSession(this.sessionConfig);
     }
 
     this.setRuntimeSessionId((this.copilotSession.sessionId as string | undefined) || this.id);
@@ -411,6 +416,17 @@ export class CopilotSession extends BaseAgentSession {
     return this.currentMessageCount;
   }
 
+  /**
+   * Apply resolved MCP config to the Copilot session config.
+   *
+   * The Copilot SDK accepts the generic MCP server shape natively (pass-through).
+   */
+  protected override applyMcpConfig(resolved: ResolvedMcpConfig): void {
+    if (resolved.servers) {
+      this.sessionConfig.mcpServers = resolved.servers;
+    }
+  }
+
   /** Tear down the Copilot session and client. */
   private async cleanup(): Promise<void> {
     try {
@@ -439,9 +455,14 @@ export class CopilotSession extends BaseAgentSession {
 /** Runtime that delegates to the GitHub Copilot SDK (`@github/copilot-sdk`). */
 export class CopilotRuntime extends BaseAgentRuntime {
   public name: string = "copilot";
-  protected resumePrompt: string = "(resumed)";
+  public override readonly capabilities: RuntimeCapabilities = {
+    supportsHooks: false,
+    supportsResume: true,
+    requiresNonEmptyResumePrompt: true,
+  };
 
   protected createSession(opts: CreateSessionOptions): AgentSession {
-    return new CopilotSession({ ...opts, hooks: undefined });
+    // hooks is already dropped by BaseAgentRuntime.spawn() when supportsHooks is false.
+    return new CopilotSession(opts);
   }
 }

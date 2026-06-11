@@ -8,23 +8,25 @@ import type { AgentSession } from '@grackle-ai/runtime-sdk';
 import { BaseAgentRuntime } from '@grackle-ai/runtime-sdk';
 import { BaseAgentSession } from '@grackle-ai/runtime-sdk';
 import type { CreateSessionOptions } from '@grackle-ai/runtime-sdk';
+import type { ResolvedMcpConfig } from '@grackle-ai/runtime-sdk';
+import type { RuntimeCapabilities } from '@grackle-ai/runtime-sdk';
 
 // @public
 export class CopilotRuntime extends BaseAgentRuntime {
     // (undocumented)
+    readonly capabilities: RuntimeCapabilities;
+    // (undocumented)
     protected createSession(opts: CreateSessionOptions): AgentSession;
     // (undocumented)
     name: string;
-    // (undocumented)
-    protected resumePrompt: string;
 }
 
 // Warnings were encountered during analysis:
 //
-// src/copilot.ts:54:1 - (ae-forgotten-export) The symbol "CopilotSdkModule" needs to be exported by the entry point index.d.ts
-// src/copilot.ts:100:1 - (ae-internal-missing-underscore) The name "resolveGithubToken" should be prefixed with an underscore because the declaration is marked as @internal
-// src/copilot.ts:111:1 - (ae-internal-missing-underscore) The name "resolveProviderConfig" should be prefixed with an underscore because the declaration is marked as @internal
-// src/copilot.ts:135:1 - (ae-internal-missing-underscore) The name "CopilotSession" should be prefixed with an underscore because the declaration is marked as @internal
+// src/copilot.ts:59:1 - (ae-forgotten-export) The symbol "CopilotSdkModule" needs to be exported by the entry point index.d.ts
+// src/copilot.ts:105:1 - (ae-internal-missing-underscore) The name "resolveGithubToken" should be prefixed with an underscore because the declaration is marked as @internal
+// src/copilot.ts:116:1 - (ae-internal-missing-underscore) The name "resolveProviderConfig" should be prefixed with an underscore because the declaration is marked as @internal
+// src/copilot.ts:140:1 - (ae-internal-missing-underscore) The name "CopilotSession" should be prefixed with an underscore because the declaration is marked as @internal
 
 // (No @packageDocumentation comment for this package)
 

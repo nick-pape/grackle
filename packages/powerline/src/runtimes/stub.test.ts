@@ -23,7 +23,7 @@ describe("StubRuntime", () => {
     expect(session.runtimeSessionId).toBe("stub-test-123");
   });
 
-  it("resume() uses '(resumed session)' prompt", async () => {
+  it("resume() uses '(resumed)' prompt", async () => {
     const runtime = new StubRuntime();
     const session = runtime.resume({
       sessionId: "resume-1",
@@ -46,7 +46,7 @@ describe("StubRuntime", () => {
 
     const textEvent = events.find((e) => e.type === "text" && e.content.startsWith("Echo:"));
     expect(textEvent).toBeDefined();
-    expect(textEvent!.content).toBe("Echo: (resumed session)");
+    expect(textEvent!.content).toBe("Echo: (resumed)");
   });
 
   it("full stream lifecycle: system → text → tool_use → tool_result → waiting_input → sendInput → running → text → waiting_input", async () => {

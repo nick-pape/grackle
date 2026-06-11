@@ -82,8 +82,8 @@ test.describe("Session Reanimate (stub runtime)", { tag: ["@session"] }, () => {
     expect(resumeResult.id).toBeTruthy();
 
     // ── 6. UI transitions: session re-enters waiting_input ────────────────
-    // The stub resume emits "Echo: (resumed session)" as its first text event
-    await expect(page.locator("text=Echo: (resumed session)")).toBeVisible({ timeout: 10_000 });
+    // The stub resume emits "Echo: (resumed)" as its first text event
+    await expect(page.locator("text=Echo: (resumed)")).toBeVisible({ timeout: 10_000 });
     const resumedInput = page.locator('textarea[placeholder="Type a message..."]');
     await expect(resumedInput).toBeVisible({ timeout: 10_000 });
 

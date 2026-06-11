@@ -257,7 +257,7 @@ describe("StubMcpRuntime", () => {
     expect(session.status).toBe("idle");
   });
 
-  it("resume() uses '(resumed session)' prompt", async () => {
+  it("resume() uses '(resumed)' prompt", async () => {
     const runtime = new StubMcpRuntime();
     const session = runtime.resume({
       sessionId: "resume-1",
@@ -277,6 +277,6 @@ describe("StubMcpRuntime", () => {
 
     const textEvent = events.find((e) => e.type === "text" && e.content.startsWith("Echo:"));
     expect(textEvent).toBeDefined();
-    expect(textEvent!.content).toBe("Echo: (resumed session)");
+    expect(textEvent!.content).toBe("Echo: (resumed)");
   });
 });

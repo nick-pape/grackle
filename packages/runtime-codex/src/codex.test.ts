@@ -193,6 +193,13 @@ describe("CodexRuntime structural", () => {
     expect(runtime.name).toBe("codex");
   });
 
+  it("declares correct capabilities (default: no hooks)", () => {
+    const runtime = new CodexRuntime();
+    expect(runtime.capabilities.supportsHooks).toBe(false);
+    expect(runtime.capabilities.supportsResume).toBe(true);
+    expect(runtime.capabilities.requiresNonEmptyResumePrompt).toBe(false);
+  });
+
   it("spawn returns a session with correct properties", () => {
     const runtime = new CodexRuntime();
     const session = runtime.spawn({

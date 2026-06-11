@@ -6,6 +6,7 @@ import type {
   AgentEvent,
   SpawnOptions,
   ResumeOptions,
+  RuntimeCapabilities,
 } from "@grackle-ai/runtime-sdk";
 import { SESSION_STATUS, assertTransition, serverTimestamp } from "@grackle-ai/common";
 import type { SessionStatus } from "@grackle-ai/common";
@@ -584,12 +585,17 @@ export function resetMcpToolUseCounter(): void {
 /** A mock runtime that echoes prompts and waits for one round of user input. Useful for testing. */
 export class StubRuntime implements AgentRuntime {
   public name: string = "stub";
+  public readonly capabilities: RuntimeCapabilities = {
+    supportsHooks: false,
+    supportsResume: true,
+    requiresNonEmptyResumePrompt: false,
+  };
 
   public spawn(opts: SpawnOptions): AgentSession {
     return new StubSession(opts.sessionId, opts.prompt, "stub", opts.mcpBroker, opts.workspaceId);
   }
 
   public resume(opts: ResumeOptions): AgentSession {
-    return new StubSession(opts.sessionId, "(resumed session)");
+    return new StubSession(opts.sessionId, "(resumed)");
   }
 }

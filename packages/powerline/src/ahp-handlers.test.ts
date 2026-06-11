@@ -30,6 +30,7 @@ import type {
   AgentRuntime,
   AgentSession,
   ResumeOptions,
+  RuntimeCapabilities,
   SpawnOptions,
 } from "@grackle-ai/runtime-sdk";
 import { worktreeDir } from "@grackle-ai/runtime-sdk";
@@ -121,6 +122,11 @@ class StubSession implements AgentSession {
 
 class StubRuntime implements AgentRuntime {
   public readonly name: string;
+  public readonly capabilities: RuntimeCapabilities = {
+    supportsHooks: false,
+    supportsResume: true,
+    requiresNonEmptyResumePrompt: false,
+  };
   public readonly spawnCalls: SpawnOptions[] = [];
   public readonly resumeCalls: ResumeOptions[] = [];
   public lastSession: StubSession | undefined;

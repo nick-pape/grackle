@@ -34,6 +34,29 @@ runs:
         restore-keys: |
           huggingface-${{ runner.os }}-
 
+    # @vue/compiler-sfc@3.5.36 was published without its companion @vue/shared@3.5.36.
+    # depcheck@1.4.7 (pulled in by npm-check inside @microsoft/rush-lib) requires
+    # @vue/compiler-sfc@^3.3.4, which npm resolves to the broken 3.5.36 and then
+    # fails to fetch @vue/shared@3.5.36.  Pre-install Rush with npm overrides that pin
+    # @vue/compiler-sfc to 3.5.35 so install-run-rush.js skips the broken bootstrap.
+    # TODO: remove once @vue/shared@3.5.36 is published to npm.
+    - name: Pre-install Rush (pin @vue/compiler-sfc away from broken 3.5.36)
+      shell: bash
+      run: |
+        RUSH_VERSION=$(node -e "const r=require('./rush.json'); process.stdout.write(r.rushVersion)")
+        RUSH_DIR="common/temp/install-run/@microsoft+rush@${RUSH_VERSION}"
+        mkdir -p "$RUSH_DIR"
+        RUSH_VERSION="$RUSH_VERSION" RUSH_DIR="$RUSH_DIR" node -e "
+          const fs=require('fs');
+          const v=process.env.RUSH_VERSION, d=process.env.RUSH_DIR;
+          const pkg={name:'ci-rush',version:'0.0.0',dependencies:{'@microsoft/rush':v},
+            description:\"DON'T WARN\",repository:\"DON'T WARN\",license:'MIT',
+            overrides:{'@vue/compiler-sfc':'3.5.35','@vue/shared':'3.5.35'}};
+          fs.writeFileSync(d+'/package.json',JSON.stringify(pkg,null,2));
+        "
+        (cd "$RUSH_DIR" && npm install)
+        node -v > "$RUSH_DIR/installed.flag"
+
     - name: Rush install
       shell: bash
       run: node common/scripts/install-run-rush.js install
