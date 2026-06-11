@@ -1,6 +1,20 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 11 Jun 2026 01:37:11 GMT and should not be manually modified.
+This log was last generated on Thu, 11 Jun 2026 02:05:23 GMT and should not be manually modified.
+
+## 0.184.0
+Thu, 11 Jun 2026 02:05:23 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Add unit tests for spawnAgent and provisionEnvironment; extract ensureSpawnConnection helper for testability
 
 ## 0.183.0
 Thu, 11 Jun 2026 01:37:11 GMT
