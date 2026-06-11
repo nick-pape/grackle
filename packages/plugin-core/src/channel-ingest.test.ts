@@ -4,7 +4,10 @@ import { grackle, NotFoundError, PreconditionError } from "@grackle-ai/common";
 
 // ── Mock the leaf dependencies so we can drive every branch ──────────────────
 vi.mock("@grackle-ai/auth", () => ({ verifyChannelToken: vi.fn() }));
-vi.mock("@grackle-ai/database", () => ({ channelGrantStore: { getGrant: vi.fn() } }));
+vi.mock("@grackle-ai/database", () => {
+  const stores = { channelGrantStore: { getGrant: vi.fn() } };
+  return { ...stores, getDatabaseStores: () => stores };
+});
 vi.mock("./channel-config.js", () => ({
   getChannelConfig: vi.fn(() => ({
     signingSecret: "secret",

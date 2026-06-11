@@ -21,7 +21,7 @@ import {
   serverTimestamp,
 } from "@grackle-ai/common";
 import type { SessionStatus, EndReason } from "@grackle-ai/common";
-import { sessionStore, taskStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import {
   streamRegistry,
   adapterManager,
@@ -49,6 +49,7 @@ export { cleanupLifecycleStream, ensureLifecycleStream };
  */
 export function createLifecycleSubscriber(ctx: PluginContext): Disposable {
   const unsubOrphan = streamRegistry.onSessionOrphaned((sessionId: string) => {
+    const { sessionStore, taskStore } = getDatabaseStores();
     const session = sessionStore.getSession(sessionId);
     if (!session) {
       return;
@@ -126,6 +127,7 @@ export function createLifecycleSubscriber(ctx: PluginContext): Disposable {
   // "open() IS reanimate" model from the streams IPC spec.
   const unsubRevived = streamRegistry.onSessionRevived(
     (targetSessionId: string, _subscriberSessionId: string) => {
+      const { sessionStore } = getDatabaseStores();
       const session = sessionStore.getSession(targetSessionId);
       if (!session) {
         return;

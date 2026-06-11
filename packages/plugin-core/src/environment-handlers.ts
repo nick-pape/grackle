@@ -1,13 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, ValidationError, PreconditionError } from "@grackle-ai/common";
-import {
-  envRegistry,
-  workspaceStore,
-  workspaceEnvironmentLinkStore,
-  sessionStore,
-  sqlite,
-  agentStore,
-} from "@grackle-ai/database";
+import { getDatabaseStores, sqlite } from "@grackle-ai/database";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import { adapterManager } from "@grackle-ai/core";
 import { parseAdapterConfig } from "@grackle-ai/core";
@@ -22,6 +15,7 @@ import { requireEnvironment, requireField, requireNonEmpty } from "./require-hel
 
 /** List all registered environments. */
 export async function listEnvironments(): Promise<grackle.EnvironmentList> {
+  const { envRegistry } = getDatabaseStores();
   const rows = envRegistry.listEnvironments();
   return create(grackle.EnvironmentListSchema, {
     environments: rows.map(envRowToProto),
@@ -32,6 +26,7 @@ export async function listEnvironments(): Promise<grackle.EnvironmentList> {
 export async function addEnvironment(
   req: grackle.AddEnvironmentRequest,
 ): Promise<grackle.Environment> {
+  const { envRegistry } = getDatabaseStores();
   requireField(req.displayName, "displayName");
   requireField(req.adapterType, "adapterType");
   const id = req.displayName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
@@ -52,6 +47,7 @@ export async function addEnvironment(
 export async function updateEnvironment(
   req: grackle.UpdateEnvironmentRequest,
 ): Promise<grackle.Environment> {
+  const { envRegistry } = getDatabaseStores();
   const existing = requireEnvironment(req.id);
   const displayName = req.displayName !== undefined ? req.displayName : undefined;
   if (displayName !== undefined) {
@@ -89,6 +85,8 @@ export async function updateEnvironment(
 
 /** Remove an environment after disconnecting it and cleaning up references. */
 export async function removeEnvironment(req: grackle.EnvironmentId): Promise<grackle.Empty> {
+  const { workspaceStore, agentStore, workspaceEnvironmentLinkStore, sessionStore, envRegistry } =
+    getDatabaseStores();
   // Block deletion if workspaces still reference this environment as primary
   const wsCount = workspaceStore.countWorkspacesByEnvironment(req.id);
   if (wsCount > 0) {
@@ -153,6 +151,7 @@ export async function removeEnvironment(req: grackle.EnvironmentId): Promise<gra
 export async function* provisionEnvironment(
   req: grackle.ProvisionEnvironmentRequest,
 ): AsyncGenerator<grackle.ProvisionEvent> {
+  const { sessionStore, envRegistry } = getDatabaseStores();
   // Manual provision overrides auto-reconnect
   clearReconnectState(req.id);
   const env = envRegistry.getEnvironment(req.id);
@@ -268,6 +267,7 @@ export async function* provisionEnvironment(
 
 /** Stop (disconnect) an environment. */
 export async function stopEnvironment(req: grackle.EnvironmentId): Promise<grackle.Empty> {
+  const { sessionStore, envRegistry } = getDatabaseStores();
   const env = requireEnvironment(req.id);
 
   // Suspend active sessions before tearing down the adapter. Stop is a
@@ -291,6 +291,7 @@ export async function stopEnvironment(req: grackle.EnvironmentId): Promise<grack
 
 /** Destroy an environment and its underlying resources. */
 export async function destroyEnvironment(req: grackle.EnvironmentId): Promise<grackle.Empty> {
+  const { sessionStore, envRegistry } = getDatabaseStores();
   const env = requireEnvironment(req.id);
 
   // Kill active sessions BEFORE tearing down the adapter so the kill signal

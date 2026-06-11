@@ -10,7 +10,7 @@ import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
 import { eventTypeToEnum } from "@grackle-ai/common";
-import { sessionStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import {
   streamHub,
   logWriter,
@@ -23,6 +23,7 @@ import { requireField, requireSession } from "./require-helpers.js";
 
 /** List sessions with optional filters. */
 export async function listSessions(req: grackle.SessionFilter): Promise<grackle.SessionList> {
+  const { sessionStore } = getDatabaseStores();
   const rows = sessionStore.listSessions(req.environmentId, req.status);
   return create(grackle.SessionListSchema, {
     sessions: rows.map(sessionRowToProto),
@@ -65,6 +66,7 @@ export async function getSessionEvents(req: grackle.SessionId): Promise<grackle.
 
 /** Get all sessions for a task. */
 export async function getTaskSessions(req: grackle.TaskId): Promise<grackle.SessionList> {
+  const { sessionStore } = getDatabaseStores();
   requireField(req.id, "task id");
   const rows = sessionStore.listSessionsForTask(req.id);
   return create(grackle.SessionListSchema, {

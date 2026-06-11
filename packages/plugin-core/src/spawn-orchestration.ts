@@ -12,7 +12,7 @@ import { DEFAULT_MCP_PORT, UnavailableError, PreconditionError } from "@grackle-
 import type { ServerActionEnvelope, PowerLineConnection } from "@grackle-ai/adapter-sdk";
 import { reconnectOrProvision } from "@grackle-ai/adapter-sdk";
 import type { EnvironmentRow } from "@grackle-ai/database";
-import { envRegistry, sessionStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import {
   streamRegistry,
   pipeDelivery,
@@ -47,6 +47,7 @@ export async function ensureSpawnConnection(
   environmentId: string,
   env: EnvironmentRow,
 ): Promise<PowerLineConnection> {
+  const { envRegistry } = getDatabaseStores();
   const existing = adapterManager.getConnection(environmentId);
   if (existing) {
     return existing;
@@ -152,6 +153,7 @@ export interface SpawnTailParams {
  * `startTask` call this after creating the session row and transport stream.
  */
 export function executeSpawnTail(params: SpawnTailParams): grackle.Session {
+  const { sessionStore } = getDatabaseStores();
   const { sessionId, parentSessionId, pipeMode, transportStream, eventContext } = params;
 
   const lifecycleStream = streamRegistry.createStream(`lifecycle:${sessionId}`);

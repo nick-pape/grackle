@@ -7,7 +7,8 @@
  */
 import { create } from "@bufbuild/protobuf";
 import { grackle, ConflictError, PreconditionError } from "@grackle-ai/common";
-import { githubAccountStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
+import type { GitHubAccountInfo, UpdateGitHubAccountFields } from "@grackle-ai/database";
 import { exec } from "@grackle-ai/core";
 import { emit } from "@grackle-ai/core";
 import { logger } from "@grackle-ai/core";
@@ -34,7 +35,7 @@ async function resolveGitHubUsername(token: string): Promise<string> {
 }
 
 /** Convert a GitHubAccountInfo record to its proto representation. */
-function accountToProto(info: githubAccountStore.GitHubAccountInfo): grackle.GitHubAccount {
+function accountToProto(info: GitHubAccountInfo): grackle.GitHubAccount {
   return create(grackle.GitHubAccountSchema, {
     id: info.id,
     label: info.label,
@@ -46,6 +47,7 @@ function accountToProto(info: githubAccountStore.GitHubAccountInfo): grackle.Git
 
 /** List all registered GitHub accounts (tokens are never returned). */
 export async function listGitHubAccounts(): Promise<grackle.GitHubAccountList> {
+  const { githubAccountStore } = getDatabaseStores();
   const accounts = githubAccountStore.listGitHubAccounts();
   return create(grackle.GitHubAccountListSchema, {
     accounts: accounts.map(accountToProto),
@@ -56,6 +58,7 @@ export async function listGitHubAccounts(): Promise<grackle.GitHubAccountList> {
 export async function addGitHubAccount(
   req: grackle.AddGitHubAccountRequest,
 ): Promise<grackle.GitHubAccount> {
+  const { githubAccountStore } = getDatabaseStores();
   requireTrimmed(req.label, "label");
   const token = requireTrimmed(req.token, "token");
   let { username } = req;
@@ -88,9 +91,10 @@ export async function addGitHubAccount(
 export async function updateGitHubAccount(
   req: grackle.UpdateGitHubAccountRequest,
 ): Promise<grackle.GitHubAccount> {
+  const { githubAccountStore } = getDatabaseStores();
   const existing = requireGitHubAccount(req.id);
 
-  const fields: githubAccountStore.UpdateGitHubAccountFields = {};
+  const fields: UpdateGitHubAccountFields = {};
   if (req.label !== undefined) {
     fields.label = requireNonEmpty(req.label, "label");
   }
@@ -116,6 +120,7 @@ export async function updateGitHubAccount(
 export async function removeGitHubAccount(
   req: grackle.RemoveGitHubAccountRequest,
 ): Promise<grackle.Empty> {
+  const { githubAccountStore } = getDatabaseStores();
   const existing = requireGitHubAccount(req.id);
 
   githubAccountStore.removeGitHubAccount(req.id);

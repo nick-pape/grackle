@@ -8,7 +8,7 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, NotFoundError, PreconditionError } from "@grackle-ai/common";
 import { SESSION_STATUS } from "@grackle-ai/common";
-import { sessionStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { streamRegistry, pipeDelivery } from "@grackle-ai/core";
 import { isReservedStreamName } from "@grackle-ai/core";
 
@@ -97,6 +97,7 @@ export async function writeToFd(req: grackle.WriteToFdRequest): Promise<grackle.
 
 /** Close a pipe file descriptor, optionally stopping child sessions. */
 export async function closeFd(req: grackle.CloseFdRequest): Promise<grackle.CloseFdResponse> {
+  const { sessionStore } = getDatabaseStores();
   const sub = streamRegistry.getSubscription(req.sessionId, req.fd);
   if (!sub) {
     throw new NotFoundError(`No subscription found for session ${req.sessionId} fd ${req.fd}`);

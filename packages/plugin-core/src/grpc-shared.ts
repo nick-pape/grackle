@@ -20,7 +20,7 @@ import {
 } from "@grackle-ai/common";
 import { transferAllPipeSubscriptions } from "./signals/orphan-reparent.js";
 import type { SessionRow } from "@grackle-ai/database";
-import { sessionStore, taskStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import {
   adapterManager,
   streamHub,
@@ -49,6 +49,7 @@ export { toDialableHost, validatePipeInputs, resolveAncestorEnvironmentId, VALID
  * No-op if the session is already terminal or already suspended.
  */
 export function suspendSessionAndPublish(session: SessionRow): void {
+  const { sessionStore, taskStore } = getDatabaseStores();
   if (
     TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus) ||
     session.status === SESSION_STATUS.SUSPENDED
@@ -81,6 +82,7 @@ export function suspendSessionAndPublish(session: SessionRow): void {
  * do not accumulate.
  */
 export function killSessionAndCleanup(session: SessionRow): void {
+  const { sessionStore, taskStore } = getDatabaseStores();
   if (!TERMINAL_SESSION_STATUSES.has(session.status as SessionStatus)) {
     sessionStore.updateSession(
       session.id,

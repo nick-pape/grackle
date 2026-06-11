@@ -12,7 +12,9 @@ vi.mock("@grackle-ai/database", async () => {
       this.name = "LastEnvironmentError";
     }
   }
-  return { ...createDatabaseMock(), LastEnvironmentError };
+  const mock = createDatabaseMock();
+  mock.wire();
+  return { ...mock, LastEnvironmentError };
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {

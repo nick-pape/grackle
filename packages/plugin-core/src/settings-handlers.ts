@@ -6,12 +6,7 @@ import {
   ValidationError,
 } from "@grackle-ai/common";
 import { DEFAULT_WEB_PORT } from "@grackle-ai/common";
-import {
-  settingsStore,
-  personaStore,
-  envRegistry,
-  isAllowedSettingKey,
-} from "@grackle-ai/database";
+import { getDatabaseStores, isAllowedSettingKey } from "@grackle-ai/database";
 import { generatePairingCode as authGeneratePairingCode } from "@grackle-ai/auth";
 import { checkVersionStatus } from "@grackle-ai/core";
 import { detectLanIp } from "@grackle-ai/core";
@@ -20,6 +15,7 @@ import { requirePersona } from "./require-helpers.js";
 
 /** Get the value of a setting by key. */
 export async function getSetting(req: grackle.GetSettingRequest): Promise<grackle.SettingResponse> {
+  const { settingsStore } = getDatabaseStores();
   if (!isAllowedSettingKey(req.key)) {
     throw new ValidationError(`Setting key not allowed: ${req.key}`);
   }
@@ -32,6 +28,7 @@ export async function getSetting(req: grackle.GetSettingRequest): Promise<grackl
 
 /** Set the value of a setting. */
 export async function setSetting(req: grackle.SetSettingRequest): Promise<grackle.SettingResponse> {
+  const { settingsStore, personaStore, envRegistry } = getDatabaseStores();
   if (!isAllowedSettingKey(req.key)) {
     throw new ValidationError(`Setting key not allowed: ${req.key}`);
   }

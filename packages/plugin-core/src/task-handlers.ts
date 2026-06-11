@@ -10,7 +10,7 @@ import {
   type FuzzyKey,
 } from "@grackle-ai/common";
 import type { WorkspaceRow } from "@grackle-ai/database";
-import { sessionStore, taskStore, slugify, safeParseJsonArray } from "@grackle-ai/database";
+import { getDatabaseStores, slugify, safeParseJsonArray } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { emit } from "@grackle-ai/core";
 import { processorRegistry } from "@grackle-ai/core";
@@ -37,6 +37,7 @@ const DEFAULT_SEARCH_LIMIT = 10;
 
 /** List tasks, optionally filtered by workspace, search query, or status. */
 export async function listTasks(req: grackle.ListTasksRequest): Promise<grackle.TaskList> {
+  const { taskStore, sessionStore } = getDatabaseStores();
   const rows = taskStore.listTasks(req.workspaceId || undefined, {
     search: req.search || undefined,
     status: req.status || undefined,
@@ -66,6 +67,7 @@ export async function listTasks(req: grackle.ListTasksRequest): Promise<grackle.
 export async function searchTasks(
   req: grackle.SearchTasksRequest,
 ): Promise<grackle.SearchTasksResponse> {
+  const { taskStore, sessionStore } = getDatabaseStores();
   const query = requireTrimmed(req.query, "query");
   const limit = req.limit > 0 ? req.limit : DEFAULT_SEARCH_LIMIT;
 
@@ -104,6 +106,7 @@ export async function searchTasks(
 
 /** Create a new task. */
 export async function createTask(req: grackle.CreateTaskRequest): Promise<grackle.Task> {
+  const { taskStore } = getDatabaseStores();
   requireField(req.title, "title");
   const workspaceId = req.workspaceId || undefined;
   let workspace: WorkspaceRow | undefined;
@@ -156,6 +159,7 @@ export async function createTask(req: grackle.CreateTaskRequest): Promise<grackl
 
 /** Get a task by ID with computed status. */
 export async function getTask(req: grackle.TaskId): Promise<grackle.Task> {
+  const { taskStore, sessionStore } = getDatabaseStores();
   const row = requireTask(req.id);
   const taskSessions = sessionStore.listSessionsForTask(req.id);
   const { status, latestSessionId } = computeTaskStatus(row.status, taskSessions);
@@ -164,6 +168,7 @@ export async function getTask(req: grackle.TaskId): Promise<grackle.Task> {
 
 /** Update task fields or late-bind a session to a task. */
 export async function updateTask(req: grackle.UpdateTaskRequest): Promise<grackle.Task> {
+  const { taskStore, sessionStore } = getDatabaseStores();
   const existing = requireTask(req.id);
 
   let reqStatus = existing.status;

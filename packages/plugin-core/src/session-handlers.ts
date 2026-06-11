@@ -7,13 +7,7 @@ import {
   type SessionStatus,
   LOGS_DIR,
 } from "@grackle-ai/common";
-import {
-  sessionStore,
-  taskStore,
-  personaStore,
-  settingsStore,
-  grackleHome,
-} from "@grackle-ai/database";
+import { getDatabaseStores, grackleHome } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { join } from "node:path";
 import { adapterManager } from "@grackle-ai/core";
@@ -41,6 +35,7 @@ import { publishToStdin } from "@grackle-ai/core";
 
 /** Spawn a new agent session in the given environment. */
 export async function spawnAgent(req: grackle.SpawnRequest): Promise<grackle.Session> {
+  const { envRegistry, sessionStore, taskStore, personaStore, settingsStore } = getDatabaseStores();
   const env = requireEnvironment(req.environmentId);
   const conn = await ensureSpawnConnection(req.environmentId, env);
 
@@ -227,6 +222,7 @@ export async function sendInput(req: grackle.InputMessage): Promise<grackle.Empt
 
 /** Kill (or gracefully stop) an agent session. */
 export async function killAgent(req: grackle.KillAgentRequest): Promise<grackle.Empty> {
+  const { sessionStore } = getDatabaseStores();
   const session = requireSession(req.id);
 
   if (req.graceful) {
@@ -268,6 +264,7 @@ export async function killAgent(req: grackle.KillAgentRequest): Promise<grackle.
 
 /** Get aggregated usage stats for a session, task, task tree, workspace, or environment. */
 export async function getUsage(req: grackle.GetUsageRequest): Promise<grackle.UsageStats> {
+  const { sessionStore, taskStore } = getDatabaseStores();
   requireField(req.id, "id");
   switch (req.scope) {
     case "session": {

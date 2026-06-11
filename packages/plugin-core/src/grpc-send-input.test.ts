@@ -10,7 +10,9 @@ import { ConnectError, Code } from "@connectrpc/connect";
 
 vi.mock("@grackle-ai/database", async () => {
   const { createDatabaseMock } = await import("@grackle-ai/test-utils");
-  return createDatabaseMock();
+  const mock = createDatabaseMock();
+  mock.wire();
+  return mock;
 });
 
 vi.mock("@grackle-ai/core", async (importOriginal) => {

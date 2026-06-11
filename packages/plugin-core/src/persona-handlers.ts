@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { grackle, ConflictError, ValidationError } from "@grackle-ai/common";
 import { ALL_MCP_TOOL_NAMES } from "@grackle-ai/common";
-import { personaStore, settingsStore, envRegistry } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import { slugify } from "@grackle-ai/database";
 import { emit } from "@grackle-ai/core";
@@ -10,6 +10,7 @@ import { requireField, requirePersona } from "./require-helpers.js";
 
 /** List all personas. */
 export async function listPersonas(): Promise<grackle.PersonaList> {
+  const { personaStore } = getDatabaseStores();
   const rows = personaStore.listPersonas();
   return create(grackle.PersonaListSchema, {
     personas: rows.map(personaRowToProto),
@@ -18,6 +19,7 @@ export async function listPersonas(): Promise<grackle.PersonaList> {
 
 /** Create a new persona. */
 export async function createPersona(req: grackle.CreatePersonaRequest): Promise<grackle.Persona> {
+  const { personaStore } = getDatabaseStores();
   requireField(req.name, "name");
   const personaType = req.type || "agent";
   if (personaType !== "agent" && personaType !== "script") {
@@ -90,6 +92,7 @@ export async function getPersona(req: grackle.PersonaId): Promise<grackle.Person
 
 /** Update an existing persona. */
 export async function updatePersona(req: grackle.UpdatePersonaRequest): Promise<grackle.Persona> {
+  const { personaStore, settingsStore, envRegistry } = getDatabaseStores();
   const existing = requirePersona(req.id);
 
   // Only update toolConfig/mcpServers if the request provides non-empty values;
@@ -183,6 +186,7 @@ export async function updatePersona(req: grackle.UpdatePersonaRequest): Promise<
 
 /** Delete a persona by ID. */
 export async function deletePersona(req: grackle.PersonaId): Promise<grackle.Empty> {
+  const { personaStore } = getDatabaseStores();
   personaStore.deletePersona(req.id);
   emit("persona.deleted", { personaId: req.id });
   return create(grackle.EmptySchema, {});

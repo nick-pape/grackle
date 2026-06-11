@@ -9,7 +9,7 @@
 
 import { ROOT_TASK_ID, TASK_STATUS } from "@grackle-ai/common";
 import type { GrackleEvent } from "@grackle-ai/core";
-import { taskStore, sessionStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import { streamRegistry } from "@grackle-ai/core";
 import { ensureAsyncDeliveryListener } from "@grackle-ai/core";
 import { deliverSignalToTask } from "@grackle-ai/core";
@@ -72,6 +72,7 @@ async function handleParentTerminal(
   processed: Map<string, number>,
   parentTaskId: string,
 ): Promise<void> {
+  const { taskStore } = getDatabaseStores();
   const parentTask = taskStore.getTask(parentTaskId);
   if (!parentTask) {
     return;
@@ -171,6 +172,7 @@ export function transferAllPipeSubscriptions(
   deadParentTaskId: string,
   grandparentTaskId: string,
 ): void {
+  const { sessionStore } = getDatabaseStores();
   const grandparentSessions = sessionStore.getActiveSessionsForTask(grandparentTaskId);
   if (grandparentSessions.length === 0) {
     logger.debug(
