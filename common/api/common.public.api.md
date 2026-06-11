@@ -216,8 +216,8 @@ export const BUILTIN_COMPONENT_SCHEMAS: {
     }, z.core.$strip>;
     readonly Callout: z.ZodObject<{
         variant: z.ZodOptional<z.ZodEnum<{
-            success: "success";
             error: "error";
+            success: "success";
             info: "info";
             warning: "warning";
         }>>;
@@ -326,8 +326,8 @@ export type CalloutBuiltinProps = z.infer<typeof calloutPropsSchema>;
 // @public
 export const calloutPropsSchema: z.ZodObject<{
     variant: z.ZodOptional<z.ZodEnum<{
-        success: "success";
         error: "error";
+        success: "success";
         info: "info";
         warning: "warning";
     }>>;
@@ -339,8 +339,8 @@ export type CalloutVariant = z.infer<typeof calloutVariantSchema>;
 
 // @public
 export const calloutVariantSchema: z.ZodEnum<{
-    success: "success";
     error: "error";
+    success: "success";
     info: "info";
     warning: "warning";
 }>;

@@ -214,6 +214,66 @@ function str(parsed: Record<string, unknown>, fields: string[], fallback: string
 }
 
 /**
+ * Resolve the active turn for a substantive content event, synthesizing an orphan
+ * turn when none is present.
+ *
+ * - **Active-turn path:** calls `build(turnId)` against the existing turn and returns
+ *   the result as-is.
+ * - **Orphan path:** when no turn is active (`eventTurnId` and `context.turnId` are both
+ *   absent), synthesizes a complete one-shot turn (`turn-orphan-${index}`), runs `build`
+ *   inside it, and wraps the actions as
+ *   `[SessionTurnStarted, ...build.actions, SessionTurnComplete]`. `context.turnId` and
+ *   `context.openToolCalls` are cleared afterward (turn-complete semantics).
+ *
+ * This replaces PowerLine's former forwarder-side orphan rescue (HR8d), moving the
+ * lossless-translation concern into the mapper where it belongs.
+ *
+ * Invariant (content events): the mapper never silently drops a substantive content
+ * event. Only advisory events (`input_needed`) and diagnostic `system` events
+ * (OTLP-routed) may be dropped/carried. Status events are intercepted by the
+ * forwarder's `_meta` tunnel before reaching the mapper in production; their
+ * mapper-side drop branches are a temporary artifact of the HR8d tunnel (#1348/#1343).
+ */
+function withTurn(
+  index: number,
+  type: string,
+  context: MapperContext,
+  eventTurnId: string | undefined,
+  build: (turnId: string) => { actions: StateAction[]; detail: string },
+): MapResult {
+  const active = eventTurnId || context.turnId;
+  if (active) {
+    const { actions, detail } = build(active);
+    return { actions, note: { index, type, disposition: "mapped", detail } };
+  }
+  // No active turn — synthesize a complete one-shot orphan turn to contain the event.
+  const orphanTurnId = `turn-orphan-${index}`;
+  context.turnId = orphanTurnId;
+  context.openToolCalls = []; // turn_started semantics
+  const { actions, detail } = build(orphanTurnId);
+  const wrapped: StateAction[] = [
+    {
+      type: ActionType.SessionTurnStarted,
+      turnId: orphanTurnId,
+      message: { text: "", origin: { kind: MessageKind.User } },
+    },
+    ...actions,
+    { type: ActionType.SessionTurnComplete, turnId: orphanTurnId },
+  ];
+  context.turnId = undefined; // turn_complete semantics
+  context.openToolCalls = [];
+  return {
+    actions: wrapped,
+    note: {
+      index,
+      type,
+      disposition: "mapped",
+      detail: `Orphan-wrapped in ${orphanTurnId}: ${detail}`,
+    },
+  };
+}
+
+/**
  * Map a PowerLine `AgentEvent` into AHP `SessionAction` payloads.
  *
  * | AgentEvent type | AHP action(s) | Disposition |
@@ -221,17 +281,21 @@ function str(parsed: Record<string, unknown>, fields: string[], fallback: string
  * | `turn_started` | `SessionTurnStarted` | mapped |
  * | `turn_complete` | `SessionTurnComplete` | mapped |
  * | `input_needed` | advisory only | dropped |
- * | `text` | `SessionResponsePart(markdown)` | mapped |
- * | `tool_use` | `SessionToolCallStart` + `SessionToolCallReady` | mapped |
- * | `tool_result` | `SessionToolCallComplete` | mapped |
+ * | `text` (with turn) | `SessionResponsePart(markdown)` | mapped |
+ * | `text` (no turn) | `SessionTurnStarted` + part + `SessionTurnComplete` | mapped (orphan) |
+ * | `tool_use` (with turn) | `SessionToolCallStart` + `SessionToolCallReady` | mapped |
+ * | `tool_use` (no turn) | orphan-wrapped Start + Ready | mapped (orphan) |
+ * | `tool_result` (with turn) | `SessionToolCallComplete` | mapped |
+ * | `tool_result` (no turn) | orphan-wrapped Complete | mapped (orphan) |
  * | `usage` | (none — cost accumulated in `_meta`) | carried |
  * | `error` (in-turn) | `SessionError` | mapped |
  * | `error` (pre-turn) | `SessionCreationFailed` | mapped |
- * | `status: failed` | `SessionError` or `SessionCreationFailed` | mapped |
- * | `status: killed/terminated` | `SessionError` (abandoned turn) | conditional |
- * | `status: completed/waiting_input/running` | dropped | dropped |
+ * | `status: failed` | `SessionError` or `SessionCreationFailed` | mapped (dead — forwarder tunnel intercepts) |
+ * | `status: killed/terminated` | `SessionError` (abandoned turn) | conditional (dead — forwarder tunnel intercepts) |
+ * | `status: completed/waiting_input/running` | dropped (dead — forwarder tunnel intercepts) | dropped |
  * | `system` (diagnostic) | dropped (OTLP telemetry) | carried |
- * | `system` (non-diagnostic) | `SessionResponsePart(systemNotification)` | mapped |
+ * | `system` (non-diagnostic, with turn) | `SessionResponsePart(systemNotification)` | mapped |
+ * | `system` (non-diagnostic, no turn) | orphan-wrapped systemNotification | mapped (orphan) |
  * | `runtime_session_id` | `_meta.runtimeSessionId` | carried |
  */
 export function mapAgentEvent(
@@ -319,196 +383,162 @@ export function mapAgentEvent(
     // ─── Response parts ────────────────────────────────────────────
 
     case "text": {
-      const turnId = eventTurnId || context.turnId;
-      if (!turnId) {
-        note = {
-          index,
-          type: "text",
-          disposition: "dropped",
-          detail: "No active turn for text part",
+      const wt = withTurn(index, "text", context, eventTurnId, (tid) => {
+        const partId = `part-${context.partCounter++}`;
+        return {
+          actions: [
+            {
+              type: ActionType.SessionResponsePart,
+              turnId: tid,
+              part: { kind: ResponsePartKind.Markdown, id: partId, content: content || "" },
+            } as StateAction,
+          ],
+          detail: `Mapped to SessionResponsePart (partId=${partId})`,
         };
-        break;
-      }
-
-      const partId = `part-${context.partCounter++}`;
-      actions.push({
-        type: ActionType.SessionResponsePart,
-        turnId,
-        part: {
-          kind: ResponsePartKind.Markdown,
-          id: partId,
-          content: content || "",
-        },
       });
-
-      note = {
-        index,
-        type: "text",
-        disposition: "mapped",
-        detail: `Mapped to SessionResponsePart (partId=${partId})`,
-      };
+      actions.push(...wt.actions);
+      note = wt.note;
       break;
     }
 
     // ─── Tool calls ────────────────────────────────────────────────
 
     case "tool_use": {
-      const turnId = eventTurnId || context.turnId;
-      if (!turnId) {
-        note = {
-          index,
-          type: "tool_use",
-          disposition: "dropped",
-          detail: "No active turn for tool_use",
-        };
-        break;
-      }
-
-      const toolCallIdValue = toolCallId || `tc-${context.partCounter++}`;
-      // Accept the legacy `tool` key alongside `tool_name`/`name`. Production
-      // runtimes (Claude Code, Copilot, Codex) serialize their tool_use content
-      // as `{tool, args}` — only the runScenario stub fixture uses `tool_name`.
-      // Without this fallback the reverse mapper sees "unknown_tool" for every
-      // real runtime, losing the actual tool identity on the wire.
-      const toolName = hasParsed
-        ? str(parsed, ["tool_name", "name", "tool"], "unknown_tool")
-        : "unknown_tool";
-      const displayName = hasParsed ? str(parsed, ["display_name"], toolName) : toolName;
-      const invocationMessage = hasParsed
-        ? str(parsed, ["invocation_message"], `Running ${toolName}`)
-        : `Running ${toolName}`;
-      // Serialize args as `toolInput` (AHP-spec field on SessionToolCallReady)
-      // so the consumer can rehydrate them. The mapper sees several arg shapes:
-      // `args` (stub + Claude Code), `input` (Claude Code raw form on some
-      // paths), `arguments` (Copilot). Preserve the first that's present.
-      let toolInput: string | undefined;
-      if (hasParsed) {
-        const argsValue =
-          (parsed as Record<string, unknown>).args ??
-          (parsed as Record<string, unknown>).input ??
-          (parsed as Record<string, unknown>).arguments;
-        if (argsValue !== undefined) {
-          try {
-            toolInput = JSON.stringify(argsValue);
-          } catch {
-            /* circular / unserializable — skip the toolInput field. */
+      const wt = withTurn(index, "tool_use", context, eventTurnId, (tid) => {
+        const toolCallIdValue = toolCallId || `tc-${context.partCounter++}`;
+        // Accept the legacy `tool` key alongside `tool_name`/`name`. Production
+        // runtimes (Claude Code, Copilot, Codex) serialize their tool_use content
+        // as `{tool, args}` — only the runScenario stub fixture uses `tool_name`.
+        // Without this fallback the reverse mapper sees "unknown_tool" for every
+        // real runtime, losing the actual tool identity on the wire.
+        const toolName = hasParsed
+          ? str(parsed, ["tool_name", "name", "tool"], "unknown_tool")
+          : "unknown_tool";
+        const displayName = hasParsed ? str(parsed, ["display_name"], toolName) : toolName;
+        const invocationMessage = hasParsed
+          ? str(parsed, ["invocation_message"], `Running ${toolName}`)
+          : `Running ${toolName}`;
+        // Serialize args as `toolInput` (AHP-spec field on SessionToolCallReady)
+        // so the consumer can rehydrate them. The mapper sees several arg shapes:
+        // `args` (stub + Claude Code), `input` (Claude Code raw form on some
+        // paths), `arguments` (Copilot). Preserve the first that's present.
+        let toolInput: string | undefined;
+        if (hasParsed) {
+          const argsValue =
+            (parsed as Record<string, unknown>).args ??
+            (parsed as Record<string, unknown>).input ??
+            (parsed as Record<string, unknown>).arguments;
+          if (argsValue !== undefined) {
+            try {
+              toolInput = JSON.stringify(argsValue);
+            } catch {
+              /* circular / unserializable — skip the toolInput field. */
+            }
           }
         }
-      }
-
-      // SessionToolCallStart
-      actions.push({
-        type: ActionType.SessionToolCallStart,
-        turnId,
-        toolCallId: toolCallIdValue,
-        toolName,
-        displayName,
+        context.openToolCalls.push(toolCallIdValue);
+        return {
+          actions: [
+            // SessionToolCallStart
+            {
+              type: ActionType.SessionToolCallStart,
+              turnId: tid,
+              toolCallId: toolCallIdValue,
+              toolName,
+              displayName,
+            } as StateAction,
+            // SessionToolCallReady with auto-confirmation
+            {
+              type: ActionType.SessionToolCallReady,
+              turnId: tid,
+              toolCallId: toolCallIdValue,
+              invocationMessage,
+              confirmed: ToolCallConfirmationReason.NotNeeded,
+              ...(toolInput !== undefined ? { toolInput } : {}),
+            } as StateAction,
+          ],
+          detail: `Mapped to SessionToolCallStart + SessionToolCallReady (toolCallId=${toolCallIdValue})`,
+        };
       });
-
-      // SessionToolCallReady with auto-confirmation
-      actions.push({
-        type: ActionType.SessionToolCallReady,
-        turnId,
-        toolCallId: toolCallIdValue,
-        invocationMessage,
-        confirmed: ToolCallConfirmationReason.NotNeeded,
-        ...(toolInput !== undefined ? { toolInput } : {}),
-      });
-
-      context.openToolCalls.push(toolCallIdValue);
-
-      note = {
-        index,
-        type: "tool_use",
-        disposition: "mapped",
-        detail: `Mapped to SessionToolCallStart + SessionToolCallReady (toolCallId=${toolCallIdValue})`,
-      };
+      actions.push(...wt.actions);
+      note = wt.note;
       break;
     }
 
     case "tool_result": {
-      const turnId = eventTurnId || context.turnId;
-      if (!turnId) {
-        note = {
-          index,
-          type: "tool_result",
-          disposition: "dropped",
-          detail: "No active turn for tool_result",
-        };
-        break;
-      }
+      const wt = withTurn(index, "tool_result", context, eventTurnId, (tid) => {
+        // Pair by first-class toolCallId (HR3), with LIFO stack fallback.
+        // HR8d: when no tool_use precedes (an "unpaired tool_result" — legal
+        // under the gRPC wire and exercised by the tool-result-accordion
+        // E2E test), synthesize an id rather than dropping. The reverse
+        // mapper emits a tool_result with the synthetic id, the UI's
+        // pairToolEvents finds no matching tool_use in `toolUseById`, and
+        // the event falls through to the unpaired tool-card render path
+        // (GenericToolCard). Dropping silently masked the event entirely.
+        const pairedToolCallId =
+          toolCallId || context.openToolCalls.pop() || `tc-orphan-result-${context.partCounter++}`;
 
-      // Pair by first-class toolCallId (HR3), with LIFO stack fallback.
-      // HR8d: when no tool_use precedes (an "unpaired tool_result" — legal
-      // under the gRPC wire and exercised by the tool-result-accordion
-      // E2E test), synthesize an id rather than dropping. The reverse
-      // mapper emits a tool_result with the synthetic id, the UI's
-      // pairToolEvents finds no matching tool_use in `toolUseById`, and
-      // the event falls through to the unpaired tool-card render path
-      // (GenericToolCard). Dropping silently masked the event entirely.
-      const pairedToolCallId =
-        toolCallId || context.openToolCalls.pop() || `tc-orphan-result-${context.partCounter++}`;
-
-      // Remove matched id from stack when first-class toolCallId is provided
-      if (toolCallId) {
-        const idx = context.openToolCalls.indexOf(toolCallId);
-        if (idx !== -1) {
-          context.openToolCalls.splice(idx, 1);
+        // Remove matched id from stack when first-class toolCallId is provided
+        if (toolCallId) {
+          const idx = context.openToolCalls.indexOf(toolCallId);
+          if (idx !== -1) {
+            context.openToolCalls.splice(idx, 1);
+          }
         }
-      }
 
-      // The first-class `toolError` field (#1362) is authoritative — every
-      // runtime adapter sets it from its native outcome signal, which the AHP
-      // wire would otherwise lose (it doesn't carry `raw`). Fall back to the
-      // content `is_ok`/`success` keys only when `toolError` is absent (e.g.
-      // legacy/replayed events reconstructed from `content` by the reverse
-      // mapper), defaulting to success when nothing indicates failure.
-      const isOk =
-        event.toolError !== undefined
-          ? !event.toolError
-          : hasParsed
-            ? "is_ok" in parsed
-              ? parsed.is_ok === true
-              : "success" in parsed
-                ? parsed.success === true
-                : true
-            : true;
-      const pastTenseMessage = hasParsed
-        ? str(parsed, ["past_tense_message"], content || "")
-        : content || "";
-      const resultText = hasParsed ? str(parsed, ["content"], content || "") : content || "";
+        // The first-class `toolError` field (#1362) is authoritative — every
+        // runtime adapter sets it from its native outcome signal, which the AHP
+        // wire would otherwise lose (it doesn't carry `raw`). Fall back to the
+        // content `is_ok`/`success` keys only when `toolError` is absent (e.g.
+        // legacy/replayed events reconstructed from `content` by the reverse
+        // mapper), defaulting to success when nothing indicates failure.
+        const isOk =
+          event.toolError !== undefined
+            ? !event.toolError
+            : hasParsed
+              ? "is_ok" in parsed
+                ? parsed.is_ok === true
+                : "success" in parsed
+                  ? parsed.success === true
+                  : true
+              : true;
+        const pastTenseMessage = hasParsed
+          ? str(parsed, ["past_tense_message"], content || "")
+          : content || "";
+        const resultText = hasParsed ? str(parsed, ["content"], content || "") : content || "";
 
-      actions.push({
-        type: ActionType.SessionToolCallComplete,
-        turnId,
-        toolCallId: pairedToolCallId,
-        result: {
-          success: isOk,
-          pastTenseMessage,
-          content: isOk ? [makeTextResult(resultText)] : undefined,
-          error: isOk ? undefined : { message: pastTenseMessage },
-        },
-      });
-
-      // System notification for successful result
-      if (isOk && content) {
-        const displayText = resultText.length > 200 ? resultText.slice(0, 200) + "..." : resultText;
-        actions.push({
-          type: ActionType.SessionResponsePart,
-          turnId,
-          part: {
-            kind: ResponsePartKind.SystemNotification,
-            content: displayText,
+        const partActions: StateAction[] = [
+          {
+            type: ActionType.SessionToolCallComplete,
+            turnId: tid,
+            toolCallId: pairedToolCallId,
+            result: {
+              success: isOk,
+              pastTenseMessage,
+              content: isOk ? [makeTextResult(resultText)] : undefined,
+              error: isOk ? undefined : { message: pastTenseMessage },
+            },
           },
-        });
-      }
+        ];
 
-      note = {
-        index,
-        type: "tool_result",
-        disposition: "mapped",
-        detail: `Mapped to SessionToolCallComplete (toolCallId=${pairedToolCallId})`,
-      };
+        // System notification for successful result
+        if (isOk && content) {
+          const displayText =
+            resultText.length > 200 ? resultText.slice(0, 200) + "..." : resultText;
+          partActions.push({
+            type: ActionType.SessionResponsePart,
+            turnId: tid,
+            part: { kind: ResponsePartKind.SystemNotification, content: displayText },
+          });
+        }
+
+        return {
+          actions: partActions,
+          detail: `Mapped to SessionToolCallComplete (toolCallId=${pairedToolCallId})`,
+        };
+      });
+      actions.push(...wt.actions);
+      note = wt.note;
       break;
     }
 
@@ -675,8 +705,7 @@ export function mapAgentEvent(
     // ─── System events ─────────────────────────────────────────────
 
     case "system": {
-      const turnId = eventTurnId || context.turnId;
-
+      // Diagnostic events (HR7) route to OTLP telemetry — never orphan-wrap.
       if (isDiagnosticEvent(event)) {
         note = {
           index,
@@ -687,29 +716,18 @@ export function mapAgentEvent(
         break;
       }
 
-      if (turnId) {
-        actions.push({
-          type: ActionType.SessionResponsePart,
-          turnId,
-          part: {
-            kind: ResponsePartKind.SystemNotification,
-            content: content || "",
-          },
-        });
-        note = {
-          index,
-          type: "system",
-          disposition: "mapped",
-          detail: "Mapped to SessionResponsePart(systemNotification)",
-        };
-      } else {
-        note = {
-          index,
-          type: "system",
-          disposition: "dropped",
-          detail: "No active turn for system event",
-        };
-      }
+      const wt = withTurn(index, "system", context, eventTurnId, (tid) => ({
+        actions: [
+          {
+            type: ActionType.SessionResponsePart,
+            turnId: tid,
+            part: { kind: ResponsePartKind.SystemNotification, content: content || "" },
+          } as StateAction,
+        ],
+        detail: "Mapped to SessionResponsePart(systemNotification)",
+      }));
+      actions.push(...wt.actions);
+      note = wt.note;
       break;
     }
 
