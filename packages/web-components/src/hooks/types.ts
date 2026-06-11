@@ -630,6 +630,8 @@ export interface ScheduleData {
   runCount: number;
   createdAt: string;
   updatedAt: string;
+  /** Owning Agent id (#1439). Absent for unowned schedules. */
+  agentId?: string;
 }
 
 /** Fields that can be updated on an existing schedule. */
@@ -639,6 +641,11 @@ export interface ScheduleUpdate {
   scheduleExpression?: string;
   personaId?: string;
   enabled?: boolean;
+  /**
+   * Owning Agent id. Set to `""` to detach the schedule from its current
+   * agent; omit to leave the agent unchanged (#1439).
+   */
+  agentId?: string;
 }
 
 /** Values returned by the schedules domain hook. */
@@ -654,9 +661,12 @@ export interface UseSchedulesResult {
     title: string,
     description: string,
     scheduleExpression: string,
+    /** May be empty when `agentId` is set — inherited from the Agent's primary persona (#1439). */
     personaId: string,
     workspaceId?: string,
     parentTaskId?: string,
+    /** Owning Agent id. When set, `personaId` may be omitted (#1439). */
+    agentId?: string,
   ) => Promise<ScheduleData>;
   /** Update an existing schedule. */
   updateSchedule: (scheduleId: string, fields: ScheduleUpdate) => Promise<ScheduleData>;

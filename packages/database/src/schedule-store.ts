@@ -17,6 +17,7 @@ export interface ScheduleStore {
     parentTaskId: string,
     nextRunAt: string | null,
     taskId?: string | null,
+    agentId?: string | null,
   ): void;
   getSchedule(id: string): ScheduleRow | undefined;
   listSchedules(workspaceId?: string): ScheduleRow[];
@@ -37,6 +38,9 @@ export interface ScheduleUpdate {
   enabled?: boolean;
   nextRunAt?: string | null;
   taskId?: string | null;
+  /** Set to a non-empty string to attach an Agent; null / "" to detach. #1439. */
+  // eslint-disable-next-line @rushstack/no-new-null
+  agentId?: string | null;
 }
 
 /**
@@ -46,12 +50,15 @@ export interface ScheduleUpdate {
  * @param title - Human-readable title
  * @param description - Optional description
  * @param scheduleExpression - Interval shorthand or cron expression
- * @param personaId - Persona to use when firing
+ * @param personaId - Persona to use when firing (may be empty when agentId is set;
+ *   the cron phase resolves the effective persona from the agent's primaryPersonaId)
  * @param workspaceId - Optional workspace scope (empty = system-level)
  * @param parentTaskId - Parent task for spawned children (empty = ROOT_TASK_ID)
  * @param nextRunAt - Pre-computed next fire time (null if disabled)
  * @param taskId - Heartbeat target task (non-null = reanimate that task's session
  *   each tick; null = today's fresh-task-spawn schedule). Defaults to null. #1438.
+ * @param agentId - Owning Agent id (non-null = fires under Agent identity,
+ *   fire-tasks carry agent_id + kind=schedule_fire, parent = Agent root). #1439.
  */
 export function createSchedule(
   id: string,
@@ -63,6 +70,7 @@ export function createSchedule(
   parentTaskId: string,
   nextRunAt: string | null,
   taskId: string | null = null,
+  agentId: string | null = null,
 ): void {
   db.insert(schedules)
     .values({
@@ -75,6 +83,7 @@ export function createSchedule(
       parentTaskId,
       nextRunAt,
       taskId,
+      agentId,
     })
     .run();
 }
@@ -121,6 +130,9 @@ export function updateSchedule(id: string, update: ScheduleUpdate): void {
   }
   if (update.taskId !== undefined) {
     sets.taskId = update.taskId;
+  }
+  if (update.agentId !== undefined) {
+    sets.agentId = update.agentId;
   }
   db.update(schedules).set(sets).where(eq(schedules.id, id)).run();
 }

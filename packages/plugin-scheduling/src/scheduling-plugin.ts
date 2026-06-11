@@ -87,6 +87,12 @@ export function createSchedulingPlugin(): GracklePlugin {
         emit: ctx.emit,
         getPersona: personaStore.getPersona,
         setScheduleEnabled: scheduleStore.setScheduleEnabled,
+        // Agent-owned schedule wiring (#1439).
+        getAgent: agentStore.getAgent,
+        getRootTaskForAgent: (id: string) => {
+          const row = taskStore.getRootTaskForAgent(id);
+          return row ? toTaskModel(row) : undefined;
+        },
         // Heartbeat branch wiring (#1438). `reanimateAgent` is sync (returns
         // SessionRow); the CronPhaseDep type accepts `unknown` so it can be
         // passed directly without an async wrapper.

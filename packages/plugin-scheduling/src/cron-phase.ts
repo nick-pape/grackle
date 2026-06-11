@@ -56,6 +56,18 @@ export interface CronPhaseDeps {
   /** Enable or disable a schedule, setting or clearing nextRunAt. */
   // eslint-disable-next-line @rushstack/no-new-null
   setScheduleEnabled: (id: string, enabled: boolean, nextRunAt: string | null) => void;
+  // ── Agent-owned schedule dependencies (#1439) ──
+  /**
+   * Look up an Agent by id. Returns the minimal shape needed by the cron phase
+   * (primary persona for persona inheritance). Undefined = agent deleted.
+   */
+  getAgent: (id: string) => { primaryPersonaId: string } | undefined;
+  /**
+   * Look up the root task for an Agent. Returns undefined when the Agent exists
+   * but has no root task (should not occur in practice after #1418; treated as a
+   * misconfigured schedule → disable).
+   */
+  getRootTaskForAgent: (agentId: string) => TaskModel | undefined;
   // ── Heartbeat branch dependencies (#1438) ──
   /** Look up a task by id (heartbeat target resolution). */
   getTask: (id: string) => TaskModel | undefined;
@@ -229,7 +241,33 @@ async function fireScheduleAsHeartbeat(deps: CronPhaseDeps, schedule: ScheduleRo
   });
 }
 
-/** Fire a fresh-task schedule (today's behavior): create new task, enqueue, advance. */
+/**
+ * Resolve the effective persona id for a schedule fire.
+ *
+ * When the schedule has an explicit `personaId`, that always wins. When the
+ * schedule is agent-owned and `personaId` is empty, the agent's primary persona
+ * is inherited. Returns undefined when no persona can be resolved (fire skipped).
+ */
+function resolveEffectivePersonaId(deps: CronPhaseDeps, schedule: ScheduleRow): string | undefined {
+  if (schedule.personaId) {
+    return schedule.personaId;
+  }
+  if (schedule.agentId) {
+    const agent = deps.getAgent(schedule.agentId);
+    return agent?.primaryPersonaId || undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Fire a fresh-task schedule: create new task, enqueue, advance.
+ *
+ * When `schedule.agentId` is set (#1439) the fire-task carries `agent_id` +
+ * `kind=schedule_fire` and parents under the Agent's root task so it appears
+ * in the Agent's task tree. Persona is inherited from the Agent when the
+ * schedule carries no explicit `personaId`. Unowned schedules behave exactly
+ * as before.
+ */
 function fireScheduleAsTask(deps: CronPhaseDeps, schedule: ScheduleRow): void {
   const now = serverTimestamp();
   const nextRunAt = computeNextOrDisable(deps, schedule);
@@ -238,21 +276,55 @@ function fireScheduleAsTask(deps: CronPhaseDeps, schedule: ScheduleRow): void {
   }
 
   try {
-    // Validate persona exists
-    const persona = deps.getPersona(schedule.personaId);
+    // Resolve effective persona (explicit schedule override > agent primary > none).
+    const effectivePersonaId = resolveEffectivePersonaId(deps, schedule);
+    if (!effectivePersonaId) {
+      deps.logger.warn(
+        { scheduleId: schedule.id, agentId: schedule.agentId },
+        "Schedule fire skipped: no persona resolved (schedule.personaId empty and no owning agent)",
+      );
+      deps.advanceSchedule(schedule.id, now, nextRunAt);
+      return;
+    }
+
+    // Validate the resolved persona exists.
+    const persona = deps.getPersona(effectivePersonaId);
     if (!persona) {
       deps.logger.warn(
-        { scheduleId: schedule.id, personaId: schedule.personaId },
+        { scheduleId: schedule.id, personaId: effectivePersonaId },
         "Schedule fire skipped: persona not found",
       );
       deps.advanceSchedule(schedule.id, now, nextRunAt);
       return;
     }
 
+    // Determine parent task: agent-owned fires parent under the Agent root (#1439);
+    // unowned fires use the schedule's parentTaskId (or ROOT_TASK_ID).
+    let parentTaskId: string;
+    let agentId: string | undefined;
+    let taskKind: string | undefined;
+
+    if (schedule.agentId) {
+      const agentRoot = deps.getRootTaskForAgent(schedule.agentId);
+      if (!agentRoot) {
+        // Agent or its root task was deleted — disable to prevent every-tick error loops.
+        deps.logger.warn(
+          { scheduleId: schedule.id, agentId: schedule.agentId },
+          "Agent-owned schedule fire skipped: agent root task missing; disabling schedule",
+        );
+        deps.setScheduleEnabled(schedule.id, false, null);
+        return;
+      }
+      parentTaskId = agentRoot.id;
+      agentId = schedule.agentId;
+      taskKind = "schedule_fire";
+    } else {
+      parentTaskId = schedule.parentTaskId || ROOT_TASK_ID;
+    }
+
     // Create task
     const taskId = uuidv4();
     const taskTitle = `${schedule.title} @ ${now}`;
-    const parentTaskId = schedule.parentTaskId || ROOT_TASK_ID;
     deps.createTask({
       id: taskId,
       workspaceId: schedule.workspaceId || undefined,
@@ -261,7 +333,9 @@ function fireScheduleAsTask(deps: CronPhaseDeps, schedule: ScheduleRow): void {
       dependsOn: [],
       parentTaskId,
       canDecompose: false,
-      defaultPersonaId: schedule.personaId,
+      defaultPersonaId: effectivePersonaId,
+      agentId,
+      kind: taskKind,
     });
     deps.setTaskScheduleId(taskId, schedule.id);
 
@@ -271,7 +345,7 @@ function fireScheduleAsTask(deps: CronPhaseDeps, schedule: ScheduleRow): void {
     deps.enqueueForDispatch({
       id: uuidv4(),
       taskId,
-      personaId: schedule.personaId,
+      personaId: effectivePersonaId,
     });
 
     // Advance schedule
@@ -281,9 +355,13 @@ function fireScheduleAsTask(deps: CronPhaseDeps, schedule: ScheduleRow): void {
       scheduleId: schedule.id,
       taskId,
       firedAt: now,
+      ...(agentId ? { agentId } : {}),
     });
 
-    deps.logger.info({ scheduleId: schedule.id, taskId, title: schedule.title }, "Schedule fired");
+    deps.logger.info(
+      { scheduleId: schedule.id, taskId, title: schedule.title, agentId },
+      "Schedule fired",
+    );
   } catch (err) {
     deps.logger.error({ scheduleId: schedule.id, err }, "Schedule fire failed with exception");
     // Still advance to prevent retry storms

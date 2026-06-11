@@ -31,7 +31,7 @@ export interface ScheduleRowShape {
   description: string;
   /** Interval shorthand (`"30s"`) or 5-field cron expression. */
   scheduleExpression: string;
-  /** Persona to use when firing. */
+  /** Persona to use when firing. Empty when agent_id is set and no explicit override. */
   personaId: string;
   /** Workspace scope; empty = system-level. */
   workspaceId: string;
@@ -52,6 +52,13 @@ export interface ScheduleRowShape {
   createdAt: string;
   /** Row-update timestamp. */
   updatedAt: string;
+  /**
+   * Owning Agent id (#1439). Null = unowned (today's behavior). When set, each
+   * fire-task carries agent_id + kind=schedule_fire and parents under the Agent
+   * root task. Not the ACP runtime agent id.
+   */
+  // eslint-disable-next-line @rushstack/no-new-null
+  agentId: string | null;
 }
 
 /**
@@ -74,5 +81,6 @@ export function scheduleRowToProto(row: ScheduleRowShape): Schedule {
     runCount: row.runCount,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    agentId: row.agentId ?? "",
   });
 }

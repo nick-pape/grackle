@@ -10,7 +10,7 @@
 import { ConnectError, Code } from "@connectrpc/connect";
 import { create } from "@bufbuild/protobuf";
 import { grackle } from "@grackle-ai/common";
-import { personaStore, scheduleStore } from "@grackle-ai/database";
+import { personaStore, scheduleStore, agentStore } from "@grackle-ai/database";
 import { v4 as uuid } from "uuid";
 import type { PluginContext } from "@grackle-ai/plugin-sdk";
 import { scheduleRowToProto } from "@grackle-ai/common";
@@ -34,20 +34,44 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
     const title = req.title.trim();
     const expr = req.scheduleExpression.trim();
     const personaId = req.personaId.trim();
+    // agentId may be absent on legacy test request objects; default to "".
+    const agentId = (req.agentId ?? "").trim();
+
     if (!title) {
       throw new ConnectError("title is required", Code.InvalidArgument);
     }
     if (!expr) {
       throw new ConnectError("schedule_expression is required", Code.InvalidArgument);
     }
-    if (!personaId) {
-      throw new ConnectError("persona_id is required", Code.InvalidArgument);
+
+    // Validate agent when provided.
+    if (agentId) {
+      const agent = agentStore.getAgent(agentId);
+      if (!agent) {
+        throw new ConnectError(`Agent not found: ${agentId}`, Code.NotFound);
+      }
+      // Persona is optional when agent_id is set (inherits from agent.primaryPersonaId at fire
+      // time). When provided, validate it exists as an explicit override.
+      if (personaId) {
+        const persona = personaStore.getPersona(personaId);
+        if (!persona) {
+          throw new ConnectError(`Persona not found: ${personaId}`, Code.NotFound);
+        }
+      }
+    } else {
+      // Unowned schedule: persona is required (no agent to inherit from).
+      if (!personaId) {
+        throw new ConnectError(
+          "persona_id is required when agent_id is not set",
+          Code.InvalidArgument,
+        );
+      }
+      const persona = personaStore.getPersona(personaId);
+      if (!persona) {
+        throw new ConnectError(`Persona not found: ${personaId}`, Code.NotFound);
+      }
     }
-    // Validate persona exists
-    const persona = personaStore.getPersona(personaId);
-    if (!persona) {
-      throw new ConnectError(`Persona not found: ${personaId}`, Code.NotFound);
-    }
+
     // Validate expression
     try {
       validateExpression(expr);
@@ -68,6 +92,8 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
       req.workspaceId,
       req.parentTaskId,
       nextRunAt,
+      null,
+      agentId || null,
     );
     emit("schedule.created", { scheduleId: id });
     const row = scheduleStore.getSchedule(id);
@@ -112,6 +138,21 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
         throw new ConnectError(`Persona not found: ${trimmedPersonaId}`, Code.NotFound);
       }
       update.personaId = trimmedPersonaId;
+    }
+    // Handle agent attach/detach (#1439). proto3 optional: present = intent to change.
+    if (req.agentId !== undefined) {
+      const trimmedAgentId = req.agentId.trim();
+      if (trimmedAgentId) {
+        // Attach — validate agent exists.
+        const agent = agentStore.getAgent(trimmedAgentId);
+        if (!agent) {
+          throw new ConnectError(`Agent not found: ${trimmedAgentId}`, Code.NotFound);
+        }
+        update.agentId = trimmedAgentId;
+      } else {
+        // Detach — empty string = clear.
+        update.agentId = null;
+      }
     }
     // Handle schedule expression change
     let expressionChanged = false;

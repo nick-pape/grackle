@@ -13,6 +13,7 @@ export function SchedulesPage(): JSX.Element {
   const {
     schedules: { schedules, deleteSchedule, updateSchedule },
     personas: { personas },
+    agents: { agents },
   } = useGrackle();
   const { showToast } = useToast();
   const navigate = useAppNavigate();
@@ -21,6 +22,7 @@ export function SchedulesPage(): JSX.Element {
     <ScheduleManager
       schedules={schedules}
       personas={personas}
+      agents={agents}
       onDeleteSchedule={async (scheduleId) => {
         try {
           await deleteSchedule(scheduleId);

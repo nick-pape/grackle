@@ -95,6 +95,10 @@
   }
 }
 
+.agentBadge {
+  color: var(--accent-blue, var(--text-secondary)) !important;
+}
+
 .empty {
   text-align: center;
   color: var(--text-tertiary);

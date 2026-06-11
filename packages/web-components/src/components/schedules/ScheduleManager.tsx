@@ -1,5 +1,5 @@
 import { useState, useMemo, type JSX } from "react";
-import type { PersonaData, ScheduleData, ScheduleUpdate } from "../../hooks/types.js";
+import type { AgentData, PersonaData, ScheduleData, ScheduleUpdate } from "../../hooks/types.js";
 import { Button } from "../display/Button.js";
 import { ConfirmDialog } from "../display/index.js";
 import { formatRelativeTime, formatCountdown } from "../../utils/time.js";
@@ -11,6 +11,8 @@ export interface ScheduleManagerProps {
   schedules: ScheduleData[];
   /** All personas — used to resolve persona names. */
   personas: PersonaData[];
+  /** All agents — used to resolve agent names (#1439). */
+  agents?: AgentData[];
   /** Callback to delete a schedule. */
   onDeleteSchedule: (scheduleId: string) => Promise<void>;
   /** Callback to toggle a schedule's enabled state. */
@@ -25,6 +27,7 @@ export interface ScheduleManagerProps {
 export function ScheduleManager({
   schedules,
   personas,
+  agents,
   onDeleteSchedule,
   onToggleEnabled,
   onNavigateToNew,
@@ -48,8 +51,18 @@ export function ScheduleManager({
     return map;
   }, [personas]);
 
+  const agentNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const a of agents ?? []) {
+      map.set(a.id, a.name);
+    }
+    return map;
+  }, [agents]);
+
   const resolvePersonaName = (personaId: string): string =>
     personaNameMap.get(personaId) ?? personaId;
+
+  const resolveAgentName = (agentId: string): string => agentNameMap.get(agentId) ?? agentId;
 
   return (
     <div className={styles.container}>
@@ -132,6 +145,11 @@ export function ScheduleManager({
 
               <div className={styles.cardMeta}>
                 <span data-testid={`schedule-expression-${s.id}`}>{s.scheduleExpression}</span>
+                {s.agentId && (
+                  <span className={styles.agentBadge} data-testid={`schedule-agent-${s.id}`}>
+                    Agent: {resolveAgentName(s.agentId)}
+                  </span>
+                )}
                 {s.personaId && (
                   <span data-testid={`schedule-persona-${s.id}`}>
                     Persona: {resolvePersonaName(s.personaId)}

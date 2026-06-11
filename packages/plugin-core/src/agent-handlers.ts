@@ -253,6 +253,7 @@ export async function setAgentHeartbeat(
       rootTask.id, // parentTaskId — the root task is the natural parent.
       initialNextRunAt,
       rootTask.id, // taskId — the heartbeat discriminator.
+      agent.id, // agentId — heartbeat schedule is owned by the Agent (#1439).
     );
     if (!createWithEnabled) {
       scheduleStore.updateSchedule(id, { enabled: false });
