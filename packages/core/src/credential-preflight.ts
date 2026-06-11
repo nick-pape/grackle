@@ -88,8 +88,8 @@ const PROVIDER_SETUP_HINTS: Partial<Record<string, string>> = {
   codex:
     "Set OPENAI_API_KEY or mount ~/.codex/auth.json (via -v), then:\n" +
     "  grackle credential-provider set codex on",
-  goose: "Configure Goose credentials, then:\n" + "  grackle credential-provider set goose on",
-  github: "Set GH_TOKEN or GITHUB_TOKEN, then:\n" + "  grackle credential-provider set github on",
+  goose: "Configure Goose credentials, then:\n  grackle credential-provider set goose on",
+  github: "Set GH_TOKEN or GITHUB_TOKEN, then:\n  grackle credential-provider set github on",
 };
 
 /**
