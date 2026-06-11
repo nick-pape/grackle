@@ -134,7 +134,11 @@ export function updateSchedule(id: string, update: ScheduleUpdate): void {
     sets.taskId = update.taskId;
   }
   if (update.agentId !== undefined) {
-    sets.agentId = update.agentId;
+    // Normalize empty-string detach sentinel to null so the FK constraint is
+    // never violated by a stray "" caller. The handler already does this, but
+    // the store is the last line of defense.
+    // eslint-disable-next-line @rushstack/no-new-null
+    sets.agentId = update.agentId === "" ? null : update.agentId;
   }
   db.update(schedules).set(sets).where(eq(schedules.id, id)).run();
 }

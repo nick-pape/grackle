@@ -186,6 +186,30 @@ describe("createScheduleHandlers", () => {
       expect(result.title).toBe("My Schedule");
     });
 
+    it("throws FailedPrecondition when agent has no primary persona and no personaId provided", async () => {
+      vi.mocked(agentStore.getAgent).mockReturnValue({
+        id: "agent-1",
+        name: "Test Agent",
+        primaryPersonaId: "",
+        environmentId: "env-1",
+        avatar: "",
+        createdAt: "2026-01-01",
+        updatedAt: "2026-01-01",
+      } as ReturnType<typeof agentStore.getAgent>);
+      const req = {
+        title: "Agent Schedule",
+        scheduleExpression: "30s",
+        personaId: "",
+        agentId: "agent-1",
+        description: "",
+        workspaceId: "",
+        parentTaskId: "",
+      } as grackle.CreateScheduleRequest;
+      await expect(handlers.createSchedule(req)).rejects.toThrow(
+        expect.objectContaining({ code: Code.FailedPrecondition }),
+      );
+    });
+
     it("accepts agentId without personaId (persona optional when agent is set)", async () => {
       const req = {
         title: "Agent Schedule",
@@ -350,6 +374,25 @@ describe("createScheduleHandlers", () => {
       const req = { id: "sched-1", agentId: "ghost" } as grackle.UpdateScheduleRequest;
       await expect(handlers.updateSchedule(req)).rejects.toThrow(
         expect.objectContaining({ code: Code.NotFound }),
+      );
+    });
+
+    it("throws FailedPrecondition when attaching agent with no primary persona to a schedule with no personaId", async () => {
+      vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+        makeRow({ personaId: "" }) as ReturnType<typeof scheduleStore.getSchedule>,
+      );
+      vi.mocked(agentStore.getAgent).mockReturnValue({
+        id: "agent-1",
+        name: "Test Agent",
+        primaryPersonaId: "",
+        environmentId: "env-1",
+        avatar: "",
+        createdAt: "2026-01-01",
+        updatedAt: "2026-01-01",
+      } as ReturnType<typeof agentStore.getAgent>);
+      const req = { id: "sched-1", agentId: "agent-1" } as grackle.UpdateScheduleRequest;
+      await expect(handlers.updateSchedule(req)).rejects.toThrow(
+        expect.objectContaining({ code: Code.FailedPrecondition }),
       );
     });
 

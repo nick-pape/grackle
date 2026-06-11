@@ -218,4 +218,63 @@ describe("schedule-store", () => {
     scheduleStore.updateSchedule("s1", { taskId: "task-A" });
     expect(scheduleStore.getSchedule("s1")!.taskId).toBe("task-A");
   });
+
+  // ── Agent ownership cleanup (#1439) ──────────────────────────────
+
+  it("detachSchedulesForAgent deletes heartbeat schedules owned by the agent", () => {
+    scheduleStore.createSchedule("hb-1", "HB", "", "30s", "p1", "", "", null, "task-A", "agent-1");
+    scheduleStore.createSchedule(
+      "other",
+      "Other",
+      "",
+      "1h",
+      "p1",
+      "",
+      "",
+      null,
+      "task-B",
+      "agent-2",
+    );
+
+    scheduleStore.detachSchedulesForAgent("agent-1");
+
+    expect(scheduleStore.getSchedule("hb-1")).toBeUndefined();
+    expect(scheduleStore.getSchedule("other")).toBeDefined();
+  });
+
+  it("detachSchedulesForAgent clears agentId on standalone cron schedules and keeps the rows", () => {
+    scheduleStore.createSchedule("cron-1", "Cron", "", "5m", "p1", "", "", null, null, "agent-1");
+    scheduleStore.createSchedule("other", "Other", "", "1h", "p1", "", "", null, null, "agent-2");
+
+    scheduleStore.detachSchedulesForAgent("agent-1");
+
+    const cron = scheduleStore.getSchedule("cron-1");
+    expect(cron).toBeDefined();
+    expect(cron!.agentId).toBeNull();
+    const other = scheduleStore.getSchedule("other");
+    expect(other).toBeDefined();
+    expect(other!.agentId).toBe("agent-2");
+  });
+
+  it("detachSchedulesForAgent handles mixed heartbeat + standalone schedules for the same agent", () => {
+    scheduleStore.createSchedule("hb-1", "HB", "", "30s", "p1", "", "", null, "task-A", "agent-1");
+    scheduleStore.createSchedule("cron-1", "Cron", "", "5m", "p1", "", "", null, null, "agent-1");
+
+    scheduleStore.detachSchedulesForAgent("agent-1");
+
+    expect(scheduleStore.getSchedule("hb-1")).toBeUndefined();
+    const cron = scheduleStore.getSchedule("cron-1");
+    expect(cron).toBeDefined();
+    expect(cron!.agentId).toBeNull();
+  });
+
+  it("detachSchedulesForAgent is a no-op when the agent owns no schedules", () => {
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", null, null, "agent-2");
+
+    scheduleStore.detachSchedulesForAgent("agent-1");
+
+    const s1 = scheduleStore.getSchedule("s1");
+    expect(s1).toBeDefined();
+    expect(s1!.agentId).toBe("agent-2");
+  });
 });

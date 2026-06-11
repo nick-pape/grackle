@@ -52,13 +52,19 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
       if (!agent) {
         throw new ConnectError(`Agent not found: ${agentId}`, Code.NotFound);
       }
-      // Persona is optional when agent_id is set (inherits from agent.primaryPersonaId at fire
-      // time). When provided, validate it exists as an explicit override.
       if (personaId) {
+        // Explicit persona override — validate it exists.
         const persona = personaStore.getPersona(personaId);
         if (!persona) {
           throw new ConnectError(`Persona not found: ${personaId}`, Code.NotFound);
         }
+      } else if (!agent.primaryPersonaId) {
+        // No explicit persona and agent has no primary persona — the schedule
+        // would skip every fire. Reject at creation time with a clear message.
+        throw new ConnectError(
+          `Agent ${agentId} has no primary persona set. Provide persona_id or set a primary persona on the agent first.`,
+          Code.FailedPrecondition,
+        );
       }
     } else {
       // Unowned schedule: persona is required (no agent to inherit from).
@@ -152,6 +158,16 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
         const agent = agentStore.getAgent(trimmedAgentId);
         if (!agent) {
           throw new ConnectError(`Agent not found: ${trimmedAgentId}`, Code.NotFound);
+        }
+        // If no explicit personaId is available (incoming or existing on the schedule),
+        // the schedule will inherit from agent.primaryPersonaId at fire time — validate
+        // it is actually set so the schedule won't skip every fire.
+        const effectivePersonaId = (update.personaId ?? existing.personaId ?? "").trim();
+        if (!effectivePersonaId && !agent.primaryPersonaId) {
+          throw new ConnectError(
+            `Agent ${trimmedAgentId} has no primary persona set. Provide persona_id or set a primary persona on the agent first.`,
+            Code.FailedPrecondition,
+          );
         }
         update.agentId = trimmedAgentId;
       } else {
