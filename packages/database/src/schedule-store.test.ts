@@ -242,8 +242,19 @@ describe("schedule-store", () => {
     expect(scheduleStore.getSchedule("other")).toBeDefined();
   });
 
-  it("detachSchedulesForAgent clears agentId on standalone cron schedules and keeps the rows", () => {
-    scheduleStore.createSchedule("cron-1", "Cron", "", "5m", "p1", "", "", null, null, "agent-1");
+  it("detachSchedulesForAgent clears agentId on standalone cron schedules with explicit personaId and keeps them enabled", () => {
+    scheduleStore.createSchedule(
+      "cron-1",
+      "Cron",
+      "",
+      "5m",
+      "p1",
+      "",
+      "",
+      "2099-01-01T00:00:00Z",
+      null,
+      "agent-1",
+    );
     scheduleStore.createSchedule("other", "Other", "", "1h", "p1", "", "", null, null, "agent-2");
 
     scheduleStore.detachSchedulesForAgent("agent-1");
@@ -251,9 +262,35 @@ describe("schedule-store", () => {
     const cron = scheduleStore.getSchedule("cron-1");
     expect(cron).toBeDefined();
     expect(cron!.agentId).toBeNull();
+    expect(cron!.enabled).toBe(true);
     const other = scheduleStore.getSchedule("other");
     expect(other).toBeDefined();
     expect(other!.agentId).toBe("agent-2");
+  });
+
+  it("detachSchedulesForAgent disables standalone cron schedules whose personaId is empty (inherited from agent)", () => {
+    // personaId="" means the schedule relied on the agent's primaryPersonaId.
+    // After detachment it can't resolve a persona, so it must be disabled.
+    scheduleStore.createSchedule(
+      "cron-inh",
+      "Inherited",
+      "",
+      "5m",
+      "",
+      "",
+      "",
+      "2099-01-01T00:00:00Z",
+      null,
+      "agent-1",
+    );
+
+    scheduleStore.detachSchedulesForAgent("agent-1");
+
+    const cron = scheduleStore.getSchedule("cron-inh");
+    expect(cron).toBeDefined();
+    expect(cron!.agentId).toBeNull();
+    expect(cron!.enabled).toBe(false);
+    expect(cron!.nextRunAt).toBeNull();
   });
 
   it("detachSchedulesForAgent handles mixed heartbeat + standalone schedules for the same agent", () => {

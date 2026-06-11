@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { schedules, type ScheduleRow } from "./schema.js";
-import { eq, and, lte, sql, isNotNull, isNull } from "drizzle-orm";
+import { eq, and, ne, lte, sql, isNotNull, isNull } from "drizzle-orm";
 import { serverTimestamp } from "@grackle-ai/common";
 
 export type { ScheduleRow };
@@ -213,24 +213,46 @@ export function setScheduleEnabled(id: string, enabled: boolean, nextRunAt: stri
  * Clean up all schedules owned by the given agent before the agent row is
  * deleted (called by `deleteAgent` to satisfy `PRAGMA foreign_keys ON`).
  *
- * Two distinct cases:
+ * Three distinct cases:
  * - Heartbeat schedules (`task_id IS NOT NULL`): deleted outright — their
  *   target task is being removed too, so they would be orphaned.
- * - Standalone cron schedules (`task_id IS NULL`): `agent_id` is set to null
- *   so the rows survive as unowned schedules (preserving their config).
+ * - Standalone cron schedules with an explicit `persona_id`: `agent_id` is
+ *   set to null so the rows survive as unowned schedules (preserving config).
+ * - Standalone cron schedules with `persona_id=""` (inherited from agent):
+ *   `agent_id` is cleared AND the schedule is disabled — without an agent
+ *   the cron phase cannot resolve a persona and would skip every tick,
+ *   producing repeated warning logs until the schedule is reconfigured.
  */
 export function detachSchedulesForAgent(agentId: string): void {
   // Delete heartbeat schedules — target task is going away.
   db.delete(schedules)
     .where(and(eq(schedules.agentId, agentId), isNotNull(schedules.taskId)))
     .run();
-  // Detach standalone cron schedules — keep the row, clear the owner.
+  // Standalone schedules with an explicit personaId — keep enabled, just lose the owner.
   db.update(schedules)
     .set({
+      // eslint-disable-next-line @rushstack/no-new-null
       agentId: null,
       updatedAt: sql`datetime('now')`,
     })
-    .where(and(eq(schedules.agentId, agentId), isNull(schedules.taskId)))
+    .where(
+      and(eq(schedules.agentId, agentId), isNull(schedules.taskId), ne(schedules.personaId, "")),
+    )
+    .run();
+  // Standalone schedules relying on agent's persona (personaId="") — lose the owner AND
+  // are disabled; they can't resolve a persona without an agent.
+  db.update(schedules)
+    .set({
+      // eslint-disable-next-line @rushstack/no-new-null
+      agentId: null,
+      enabled: false,
+      // eslint-disable-next-line @rushstack/no-new-null
+      nextRunAt: null,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(
+      and(eq(schedules.agentId, agentId), isNull(schedules.taskId), eq(schedules.personaId, "")),
+    )
     .run();
 }
 

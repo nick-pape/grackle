@@ -169,7 +169,7 @@ export function registerScheduleCommands(program: Command): void {
         if (opts.schedule) {
           req.scheduleExpression = opts.schedule;
         }
-        if (opts.persona) {
+        if (opts.persona !== undefined) {
           req.personaId = opts.persona;
         }
         if (opts.detachAgent) {
