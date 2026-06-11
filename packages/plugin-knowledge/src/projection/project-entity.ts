@@ -18,7 +18,7 @@ import {
   type UpsertReferenceNodeInput,
   type EdgeType,
 } from "@grackle-ai/knowledge";
-import { workspaceEnvironmentLinkStore } from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 import type {
   TaskRow,
   WorkspaceRow,
@@ -110,8 +110,8 @@ async function reconcileEdges(
 
 /** Resolve a workspace's LINKED_TO edge specs from the junction table. */
 function workspaceLinkEdges(workspaceId: string): EdgeSpec[] {
-  return workspaceEnvironmentLinkStore
-    .getLinkedEnvironmentIds(workspaceId)
+  return getDatabaseStores()
+    .workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(workspaceId)
     .map((environmentId) => workspaceLinkEdge(workspaceId, environmentId));
 }
 
@@ -128,7 +128,7 @@ export async function projectWorkspace(workspace: WorkspaceRow): Promise<void> {
   const nodeId = await upsertEntityNode(
     workspaceToNodeInput(
       workspace,
-      workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(workspace.id),
+      getDatabaseStores().workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(workspace.id),
     ),
   );
   await reconcileEdges(nodeId, WORKSPACE_EDGE_TYPES, workspaceLinkEdges(workspace.id), true);

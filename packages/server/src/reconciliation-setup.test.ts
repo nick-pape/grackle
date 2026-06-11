@@ -56,46 +56,61 @@ vi.mock("@grackle-ai/common", () => ({
   })),
 }));
 
-vi.mock("@grackle-ai/database", () => ({
-  taskStore: {
+vi.mock("@grackle-ai/database", () => {
+  const taskStore = {
     createTask: vi.fn(),
     setTaskScheduleId: vi.fn(),
     getTask: vi.fn(),
     listTasks: vi.fn(() => []),
     areDependenciesMet: vi.fn(() => true),
     reparentTask: vi.fn(),
-  },
-  workspaceStore: {
+  };
+  const workspaceStore = {
     listWorkspaces: vi.fn(() => []),
     getWorkspace: vi.fn(),
-  },
-  personaStore: {
-    getPersona: vi.fn(),
-  },
-  envRegistry: {
+  };
+  const personaStore = { getPersona: vi.fn() };
+  const envRegistry = {
     getEnvironment: vi.fn(),
     listEnvironments: vi.fn(() => []),
     updateEnvironmentStatus: vi.fn(),
-  },
-  sessionStore: {
+  };
+  const sessionStore = {
     countActiveForEnvironment: vi.fn(() => 0),
     getActiveSessionsForTask: vi.fn(() => []),
     listSessionsForTask: vi.fn(() => []),
     listRunningSubagentChildren: vi.fn(() => []),
     getSession: vi.fn(),
-  },
-  settingsStore: {
-    getSetting: vi.fn(),
-  },
-  dispatchQueueStore: {
+  };
+  const settingsStore = { getSetting: vi.fn() };
+  const dispatchQueueStore = {
     listPending: vi.fn(() => []),
     dequeue: vi.fn(),
     enqueue: vi.fn(),
-  },
-  workspaceEnvironmentLinkStore: {
-    getLinkedEnvironmentIds: vi.fn(() => []),
-  },
-}));
+  };
+  const workspaceEnvironmentLinkStore = { getLinkedEnvironmentIds: vi.fn(() => []) };
+  const stores = {
+    taskStore,
+    workspaceStore,
+    personaStore,
+    envRegistry,
+    sessionStore,
+    settingsStore,
+    dispatchQueueStore,
+    workspaceEnvironmentLinkStore,
+  };
+  return {
+    taskStore,
+    workspaceStore,
+    personaStore,
+    envRegistry,
+    sessionStore,
+    settingsStore,
+    dispatchQueueStore,
+    workspaceEnvironmentLinkStore,
+    getDatabaseStores: () => stores,
+  };
+});
 
 import { createCoreReconciliationPhases } from "./reconciliation-setup.js";
 

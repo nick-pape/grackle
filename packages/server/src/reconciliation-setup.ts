@@ -21,14 +21,7 @@ import {
   createSubagentReconciliationPhase,
 } from "@grackle-ai/plugin-core";
 import { TASK_STATUS, ROOT_TASK_ID } from "@grackle-ai/common";
-import {
-  taskStore,
-  envRegistry,
-  sessionStore,
-  settingsStore,
-  dispatchQueueStore,
-  workspaceEnvironmentLinkStore,
-} from "@grackle-ai/database";
+import { getDatabaseStores } from "@grackle-ai/database";
 
 /**
  * Assemble the ordered list of core reconciliation phases for the server.
@@ -42,31 +35,35 @@ import {
  */
 export function createCoreReconciliationPhases(): ReconciliationPhase[] {
   const environmentReconciliationPhase = createEnvironmentReconciliationPhase({
-    listEnvironments: envRegistry.listEnvironments,
+    listEnvironments: () => getDatabaseStores().envRegistry.listEnvironments(),
     listConnectionIds: () => new Set(listConnections().keys()),
-    updateEnvironmentStatus: envRegistry.updateEnvironmentStatus,
+    updateEnvironmentStatus: (id, status) =>
+      getDatabaseStores().envRegistry.updateEnvironmentStatus(id, status),
     removeConnection,
     emit,
   });
 
   const dispatchPhase = createDispatchPhase({
-    listPendingEntries: dispatchQueueStore.listPending,
-    dequeueEntry: dispatchQueueStore.dequeue,
+    listPendingEntries: () => getDatabaseStores().dispatchQueueStore.listPending(),
+    dequeueEntry: (id) => getDatabaseStores().dispatchQueueStore.dequeue(id),
     getTask: (id: string) => {
-      const row = taskStore.getTask(id);
+      const row = getDatabaseStores().taskStore.getTask(id);
       return row ? toTaskModel(row) : undefined;
     },
     hasCapacity: (environmentId: string): boolean =>
       hasCapacity(environmentId, {
-        countActiveForEnvironment: sessionStore.countActiveForEnvironment,
-        getEnvironment: (id) => envRegistry.getEnvironment(id),
-        getSetting: settingsStore.getSetting,
+        countActiveForEnvironment: (envId) =>
+          getDatabaseStores().sessionStore.countActiveForEnvironment(envId),
+        getEnvironment: (id) => getDatabaseStores().envRegistry.getEnvironment(id),
+        getSetting: (key) => getDatabaseStores().settingsStore.getSetting(key),
       }),
-    environmentExists: (id: string): boolean => envRegistry.getEnvironment(id) !== undefined,
+    environmentExists: (id: string): boolean =>
+      getDatabaseStores().envRegistry.getEnvironment(id) !== undefined,
     isTaskEligible: (taskId: string): boolean => {
       if (!taskService.areDependenciesMet(taskId)) {
         return false;
       }
+      const { taskStore, sessionStore } = getDatabaseStores();
       const task = taskStore.getTask(taskId);
       if (!task) {
         return false;
@@ -83,15 +80,18 @@ export function createCoreReconciliationPhases(): ReconciliationPhase[] {
     },
     startTaskSession,
     isEnvironmentConnected: (id: string): boolean => {
-      const env = envRegistry.getEnvironment(id);
+      const env = getDatabaseStores().envRegistry.getEnvironment(id);
       return env?.status === "connected";
     },
     resolveEnvironment: (task) => {
       const resolved = resolveDispatchEnvironment(task, {
         resolveAncestorEnvironmentId,
-        getLinkedEnvironmentIds: workspaceEnvironmentLinkStore.getLinkedEnvironmentIds,
-        isEnvironmentConnected: (id) => envRegistry.getEnvironment(id)?.status === "connected",
-        countActiveForEnvironment: sessionStore.countActiveForEnvironment,
+        getLinkedEnvironmentIds: (wsId) =>
+          getDatabaseStores().workspaceEnvironmentLinkStore.getLinkedEnvironmentIds(wsId),
+        isEnvironmentConnected: (id) =>
+          getDatabaseStores().envRegistry.getEnvironment(id)?.status === "connected",
+        countActiveForEnvironment: (envId) =>
+          getDatabaseStores().sessionStore.countActiveForEnvironment(envId),
         findFirstConnectedEnvironment,
       });
       if (resolved) {
@@ -105,8 +105,9 @@ export function createCoreReconciliationPhases(): ReconciliationPhase[] {
   });
 
   const subagentReconciliationPhase = createSubagentReconciliationPhase({
-    listRunningSubagentChildren: sessionStore.listRunningSubagentChildren,
-    getSession: sessionStore.getSession,
+    listRunningSubagentChildren: () =>
+      getDatabaseStores().sessionStore.listRunningSubagentChildren(),
+    getSession: (id) => getDatabaseStores().sessionStore.getSession(id),
     interruptChildSession,
   });
 

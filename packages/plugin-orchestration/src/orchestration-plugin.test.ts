@@ -22,12 +22,17 @@ vi.mock("@grackle-ai/common", () => ({
   })),
 }));
 
-vi.mock("@grackle-ai/database", () => ({
-  taskStore: {
+vi.mock("@grackle-ai/database", () => {
+  const taskStore = {
     listTasks: vi.fn(() => []),
     reparentTask: vi.fn(),
-  },
-}));
+  };
+  const stores = { taskStore };
+  return {
+    taskStore,
+    getDatabaseStores: () => stores,
+  };
+});
 
 vi.mock("@grackle-ai/plugin-core", () => ({
   // Orchestration collector — returns handlers with representative methods
