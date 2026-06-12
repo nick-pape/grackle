@@ -246,6 +246,7 @@ export function protoToSchedule(p: grackle.Schedule): ScheduleData {
     runCount: p.runCount,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
+    agentId: p.agentId || undefined,
   };
 }
 

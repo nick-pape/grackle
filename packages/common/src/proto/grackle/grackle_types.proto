@@ -965,6 +965,10 @@ message Schedule {
   int32 run_count = 12;
   string created_at = 13;
   string updated_at = 14;
+  // Owning Agent (#1439, epic #1412). Empty = unowned (today's behavior).
+  // When set, each fire-task carries agent_id + kind=schedule_fire and parents
+  // under the Agent's root task. Not the ACP runtime agent id.
+  string agent_id = 15;
 }
 
 message ScheduleId {
@@ -979,9 +983,10 @@ message CreateScheduleRequest {
   string title = 1;
   string description = 2;
   string schedule_expression = 3;
-  string persona_id = 4;
+  string persona_id = 4; // Optional when agent_id is set; resolved from agent.primaryPersonaId at fire time
   string workspace_id = 6; // Empty = system-level
   string parent_task_id = 7; // Empty = ROOT_TASK_ID
+  string agent_id = 8; // Optional owning Agent (#1439); empty = unowned
 }
 
 message UpdateScheduleRequest {
@@ -991,6 +996,8 @@ message UpdateScheduleRequest {
   optional string schedule_expression = 4;
   optional string persona_id = 5;
   optional bool enabled = 7;
+  // Attach/detach owning Agent (#1439). Present + non-empty = attach; present + empty = detach.
+  optional string agent_id = 8;
 }
 
 message ListSchedulesRequest {

@@ -41,6 +41,7 @@ function makeSchedule(overrides: Partial<ScheduleRow> = {}): ScheduleRow {
     nextRunAt: "2026-03-25T10:00:00Z",
     runCount: 0,
     taskId: null,
+    agentId: null,
     createdAt: "2026-03-25T09:59:30Z",
     updatedAt: "2026-03-25T09:59:30Z",
     ...overrides,
@@ -67,6 +68,10 @@ function createMockDeps(): CronPhaseDeps {
     emit: vi.fn(),
     getPersona: vi.fn().mockReturnValue({ id: "persona-1", name: "Test", runtime: "stub" }),
     setScheduleEnabled: vi.fn(),
+    // ── Agent-owned schedule deps (#1439) ──
+    getAgent: vi.fn().mockReturnValue({ primaryPersonaId: "agent-persona-1" }),
+    getRootTaskForAgent: vi.fn().mockReturnValue({ id: "root-task-1", title: "Agent Root" }),
+    // ── Heartbeat branch (#1438) ──
     getTask: vi.fn(),
     getLatestSessionForTask: vi.fn(),
     reanimateAgent: vi.fn().mockResolvedValue(undefined),

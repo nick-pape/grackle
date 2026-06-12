@@ -421,7 +421,7 @@ grackle task create "Design API" --workspace ws-123 --can-decompose
 
 #### `grackle task show <task-id>`
 
-Show full task details including status, branch, dependencies, and token usage.
+Show full task details including status, branch, dependencies, and token usage. Also prints `Kind` (e.g. `schedule_fire`, `root`), `Agent` (owning agent ID), and `Parent` (parent task ID) when set — useful for inspecting agent-owned scheduled fire-tasks.
 
 #### `grackle task update <task-id>`
 

@@ -1,6 +1,6 @@
 import db from "./db.js";
 import { schedules, type ScheduleRow } from "./schema.js";
-import { eq, and, lte, sql } from "drizzle-orm";
+import { eq, and, ne, lte, sql, isNotNull, isNull } from "drizzle-orm";
 import { serverTimestamp } from "@grackle-ai/common";
 
 export type { ScheduleRow };
@@ -17,6 +17,7 @@ export interface ScheduleStore {
     parentTaskId: string,
     nextRunAt: string | null,
     taskId?: string | null,
+    agentId?: string | null,
   ): void;
   getSchedule(id: string): ScheduleRow | undefined;
   listSchedules(workspaceId?: string): ScheduleRow[];
@@ -26,6 +27,8 @@ export interface ScheduleStore {
   getDueSchedules(): ScheduleRow[];
   advanceSchedule(id: string, lastRunAt: string, nextRunAt: string): void;
   setScheduleEnabled(id: string, enabled: boolean, nextRunAt: string | null): void;
+  /** Detach all schedules owned by the given agent (set agent_id to null). */
+  detachSchedulesForAgent(agentId: string): void;
 }
 
 /** Fields that can be updated on a schedule. */
@@ -37,6 +40,9 @@ export interface ScheduleUpdate {
   enabled?: boolean;
   nextRunAt?: string | null;
   taskId?: string | null;
+  /** Set to a non-empty string to attach an Agent; null / "" to detach. #1439. */
+  // eslint-disable-next-line @rushstack/no-new-null
+  agentId?: string | null;
 }
 
 /**
@@ -46,12 +52,15 @@ export interface ScheduleUpdate {
  * @param title - Human-readable title
  * @param description - Optional description
  * @param scheduleExpression - Interval shorthand or cron expression
- * @param personaId - Persona to use when firing
+ * @param personaId - Persona to use when firing (may be empty when agentId is set;
+ *   the cron phase resolves the effective persona from the agent's primaryPersonaId)
  * @param workspaceId - Optional workspace scope (empty = system-level)
  * @param parentTaskId - Parent task for spawned children (empty = ROOT_TASK_ID)
  * @param nextRunAt - Pre-computed next fire time (null if disabled)
  * @param taskId - Heartbeat target task (non-null = reanimate that task's session
  *   each tick; null = today's fresh-task-spawn schedule). Defaults to null. #1438.
+ * @param agentId - Owning Agent id (non-null = fires under Agent identity,
+ *   fire-tasks carry agent_id + kind=schedule_fire, parent = Agent root). #1439.
  */
 export function createSchedule(
   id: string,
@@ -63,6 +72,7 @@ export function createSchedule(
   parentTaskId: string,
   nextRunAt: string | null,
   taskId: string | null = null,
+  agentId: string | null = null,
 ): void {
   db.insert(schedules)
     .values({
@@ -75,6 +85,7 @@ export function createSchedule(
       parentTaskId,
       nextRunAt,
       taskId,
+      agentId,
     })
     .run();
 }
@@ -121,6 +132,13 @@ export function updateSchedule(id: string, update: ScheduleUpdate): void {
   }
   if (update.taskId !== undefined) {
     sets.taskId = update.taskId;
+  }
+  if (update.agentId !== undefined) {
+    // Normalize empty-string detach sentinel to null so the FK constraint is
+    // never violated by a stray "" caller. The handler already does this, but
+    // the store is the last line of defense.
+    // eslint-disable-next-line @rushstack/no-new-null
+    sets.agentId = update.agentId === "" ? null : update.agentId;
   }
   db.update(schedules).set(sets).where(eq(schedules.id, id)).run();
 }
@@ -191,6 +209,53 @@ export function setScheduleEnabled(id: string, enabled: boolean, nextRunAt: stri
     .run();
 }
 
+/**
+ * Clean up all schedules owned by the given agent before the agent row is
+ * deleted (called by `deleteAgent` to satisfy `PRAGMA foreign_keys ON`).
+ *
+ * Three distinct cases:
+ * - Heartbeat schedules (`task_id IS NOT NULL`): deleted outright — their
+ *   target task is being removed too, so they would be orphaned.
+ * - Standalone cron schedules with an explicit `persona_id`: `agent_id` is
+ *   set to null so the rows survive as unowned schedules (preserving config).
+ * - Standalone cron schedules with `persona_id=""` (inherited from agent):
+ *   `agent_id` is cleared AND the schedule is disabled — without an agent
+ *   the cron phase cannot resolve a persona and would skip every tick,
+ *   producing repeated warning logs until the schedule is reconfigured.
+ */
+export function detachSchedulesForAgent(agentId: string): void {
+  // Delete heartbeat schedules — target task is going away.
+  db.delete(schedules)
+    .where(and(eq(schedules.agentId, agentId), isNotNull(schedules.taskId)))
+    .run();
+  // Standalone schedules with an explicit personaId — keep enabled, just lose the owner.
+  db.update(schedules)
+    .set({
+      // eslint-disable-next-line @rushstack/no-new-null
+      agentId: null,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(
+      and(eq(schedules.agentId, agentId), isNull(schedules.taskId), ne(schedules.personaId, "")),
+    )
+    .run();
+  // Standalone schedules relying on agent's persona (personaId="") — lose the owner AND
+  // are disabled; they can't resolve a persona without an agent.
+  db.update(schedules)
+    .set({
+      // eslint-disable-next-line @rushstack/no-new-null
+      agentId: null,
+      enabled: false,
+      // eslint-disable-next-line @rushstack/no-new-null
+      nextRunAt: null,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(
+      and(eq(schedules.agentId, agentId), isNull(schedules.taskId), eq(schedules.personaId, "")),
+    )
+    .run();
+}
+
 const _typeCheck: ScheduleStore = {
   createSchedule,
   getSchedule,
@@ -201,5 +266,6 @@ const _typeCheck: ScheduleStore = {
   getDueSchedules,
   advanceSchedule,
   setScheduleEnabled,
+  detachSchedulesForAgent,
 };
 void _typeCheck;

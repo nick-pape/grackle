@@ -32,24 +32,54 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
 } {
   /** Create a new schedule. */
   async function createSchedule(req: grackle.CreateScheduleRequest): Promise<grackle.Schedule> {
-    const { personaStore, scheduleStore } = getDatabaseStores();
+    const { personaStore, scheduleStore, agentStore } = getDatabaseStores();
     const title = req.title.trim();
     const expr = req.scheduleExpression.trim();
     const personaId = req.personaId.trim();
+    // agentId may be absent on legacy test request objects; default to "".
+    const agentId = (req.agentId ?? "").trim();
+
     if (!title) {
       throw new ConnectError("title is required", Code.InvalidArgument);
     }
     if (!expr) {
       throw new ConnectError("schedule_expression is required", Code.InvalidArgument);
     }
-    if (!personaId) {
-      throw new ConnectError("persona_id is required", Code.InvalidArgument);
+
+    // Validate agent when provided.
+    if (agentId) {
+      const agent = agentStore.getAgent(agentId);
+      if (!agent) {
+        throw new ConnectError(`Agent not found: ${agentId}`, Code.NotFound);
+      }
+      if (personaId) {
+        // Explicit persona override — validate it exists.
+        const persona = personaStore.getPersona(personaId);
+        if (!persona) {
+          throw new ConnectError(`Persona not found: ${personaId}`, Code.NotFound);
+        }
+      } else if (!agent.primaryPersonaId) {
+        // No explicit persona and agent has no primary persona — the schedule
+        // would skip every fire. Reject at creation time with a clear message.
+        throw new ConnectError(
+          `Agent ${agentId} has no primary persona set. Provide persona_id or set a primary persona on the agent first.`,
+          Code.FailedPrecondition,
+        );
+      }
+    } else {
+      // Unowned schedule: persona is required (no agent to inherit from).
+      if (!personaId) {
+        throw new ConnectError(
+          "persona_id is required when agent_id is not set",
+          Code.InvalidArgument,
+        );
+      }
+      const persona = personaStore.getPersona(personaId);
+      if (!persona) {
+        throw new ConnectError(`Persona not found: ${personaId}`, Code.NotFound);
+      }
     }
-    // Validate persona exists
-    const persona = personaStore.getPersona(personaId);
-    if (!persona) {
-      throw new ConnectError(`Persona not found: ${personaId}`, Code.NotFound);
-    }
+
     // Validate expression
     try {
       validateExpression(expr);
@@ -70,6 +100,8 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
       req.workspaceId,
       req.parentTaskId,
       nextRunAt,
+      null,
+      agentId || null,
     );
     emit("schedule.created", { scheduleId: id });
     const row = scheduleStore.getSchedule(id);
@@ -97,7 +129,7 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
 
   /** Update an existing schedule. */
   async function updateSchedule(req: grackle.UpdateScheduleRequest): Promise<grackle.Schedule> {
-    const { personaStore, scheduleStore } = getDatabaseStores();
+    const { personaStore, scheduleStore, agentStore } = getDatabaseStores();
     const existing = scheduleStore.getSchedule(req.id);
     if (!existing) {
       throw new ConnectError(`Schedule not found: ${req.id}`, Code.NotFound);
@@ -110,13 +142,58 @@ export function createScheduleHandlers(emit: PluginContext["emit"]): {
     if (req.description !== undefined) {
       update.description = req.description;
     }
-    if (req.personaId !== undefined && req.personaId.trim() !== "") {
+    if (req.personaId !== undefined) {
       const trimmedPersonaId = req.personaId.trim();
-      const persona = personaStore.getPersona(trimmedPersonaId);
-      if (!persona) {
-        throw new ConnectError(`Persona not found: ${trimmedPersonaId}`, Code.NotFound);
+      if (trimmedPersonaId) {
+        const persona = personaStore.getPersona(trimmedPersonaId);
+        if (!persona) {
+          throw new ConnectError(`Persona not found: ${trimmedPersonaId}`, Code.NotFound);
+        }
+        update.personaId = trimmedPersonaId;
+      } else if ((existing.agentId || req.agentId?.trim()) && req.agentId !== "") {
+        // Clear the explicit persona override so the schedule inherits from
+        // agent.primaryPersonaId at fire time. Guard: the schedule must be (or become)
+        // agent-owned after this update — allowed when the schedule is already agent-owned
+        // OR when an agent is being attached in the same request. Silently ignored when
+        // also detaching (agentId=""), which would leave the schedule with no persona.
+        update.personaId = "";
       }
-      update.personaId = trimmedPersonaId;
+      // Empty personaId on an unowned schedule or paired with agent detach: silently ignored.
+    }
+    // Handle agent attach/detach (#1439). proto3 optional: present = intent to change.
+    if (req.agentId !== undefined) {
+      const trimmedAgentId = req.agentId.trim();
+      if (trimmedAgentId) {
+        // Attach — validate agent exists.
+        const agent = agentStore.getAgent(trimmedAgentId);
+        if (!agent) {
+          throw new ConnectError(`Agent not found: ${trimmedAgentId}`, Code.NotFound);
+        }
+        // If no explicit personaId is available (incoming or existing on the schedule),
+        // the schedule will inherit from agent.primaryPersonaId at fire time — validate
+        // it is actually set so the schedule won't skip every fire.
+        const effectivePersonaId = (update.personaId ?? existing.personaId ?? "").trim();
+        if (!effectivePersonaId && !agent.primaryPersonaId) {
+          throw new ConnectError(
+            `Agent ${trimmedAgentId} has no primary persona set. Provide persona_id or set a primary persona on the agent first.`,
+            Code.FailedPrecondition,
+          );
+        }
+        update.agentId = trimmedAgentId;
+      } else {
+        // Detach — empty string = clear. Guard: the schedule must have a personaId either
+        // already set or provided in this same request, otherwise it would be left with no
+        // way to resolve a persona at fire time.
+        const existingPersonaId = existing.personaId;
+        const incomingPersonaId = (req.personaId ?? "").trim();
+        if (!existingPersonaId && !incomingPersonaId) {
+          throw new ConnectError(
+            "Cannot detach agent: schedule has no persona_id set. Provide persona_id in the same request or set it first.",
+            Code.InvalidArgument,
+          );
+        }
+        update.agentId = null;
+      }
     }
     // Handle schedule expression change
     let expressionChanged = false;

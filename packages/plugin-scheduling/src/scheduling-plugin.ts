@@ -72,8 +72,14 @@ export function createSchedulingPlugin(): GracklePlugin {
     ],
 
     reconciliationPhases: (ctx: PluginContext) => {
-      const { scheduleStore, taskStore, personaStore, dispatchQueueStore, sessionStore } =
-        getDatabaseStores();
+      const {
+        scheduleStore,
+        taskStore,
+        personaStore,
+        agentStore,
+        dispatchQueueStore,
+        sessionStore,
+      } = getDatabaseStores();
       return [
         createCronPhase({
           getDueSchedules: scheduleStore.getDueSchedules,
@@ -84,6 +90,12 @@ export function createSchedulingPlugin(): GracklePlugin {
           emit: ctx.emit,
           getPersona: personaStore.getPersona,
           setScheduleEnabled: scheduleStore.setScheduleEnabled,
+          // Agent-owned schedule wiring (#1439).
+          getAgent: agentStore.getAgent,
+          getRootTaskForAgent: (id: string) => {
+            const row = taskStore.getRootTaskForAgent(id);
+            return row ? toTaskModel(row) : undefined;
+          },
           // Heartbeat branch wiring (#1438). `reanimateAgent` is sync (returns
           // SessionRow); the CronPhaseDep type accepts `unknown` so it can be
           // passed directly without an async wrapper.

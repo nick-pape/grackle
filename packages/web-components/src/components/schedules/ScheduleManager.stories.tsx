@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, within } from "@storybook/test";
 import { ScheduleManager } from "./ScheduleManager.js";
+import type { AgentData } from "../../hooks/types.js";
 import { makeSchedule, makePersona } from "../../test-utils/storybook-helpers.js";
 
 const MOCK_PERSONAS: ReturnType<typeof makePersona>[] = [
@@ -86,6 +87,39 @@ export const DeleteConfirmation: Story = {
     await userEvent.click(canvas.getByTestId("schedule-delete-del-1"));
     const dialog = document.querySelector('[role="dialog"]');
     await expect(dialog).toBeInTheDocument();
+  },
+};
+
+const MOCK_AGENTS: AgentData[] = [
+  {
+    id: "agent-1",
+    name: "PM Bot",
+    avatar: "",
+    primaryPersonaId: "persona-1",
+    environmentId: "env-1",
+  },
+];
+
+export const WithAgentOwnedSchedule: Story = {
+  args: {
+    agents: MOCK_AGENTS,
+    schedules: [
+      makeSchedule({
+        id: "agent-sched-1",
+        title: "Weekly Digest",
+        scheduleExpression: "0 9 * * MON",
+        agentId: "agent-1",
+        personaId: "",
+        enabled: true,
+        runCount: 3,
+      }),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const badge = canvas.getByTestId("schedule-agent-agent-sched-1");
+    await expect(badge).toBeInTheDocument();
+    await expect(badge).toHaveTextContent("PM Bot");
   },
 };
 

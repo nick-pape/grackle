@@ -158,6 +158,99 @@ test.describe("Schedule Management — UI", { tag: ["@schedule"] }, () => {
     await expect(nav.getByText("UI Updated Schedule")).not.toBeVisible({ timeout: 5_000 });
   });
 
+  test("create agent-owned schedule via UI — selected agent persists and shows in edit form (#1439)", async ({
+    appPage,
+    grackle: { client },
+  }) => {
+    const page = appPage;
+
+    // Create an agent so the schedule form shows the agent selector.
+    const agent = await client.orchestration.createAgent({
+      name: "UI Test Agent",
+      environmentId: "test-local",
+      primaryPersonaId: "stub",
+    });
+
+    await page.locator('[data-testid="sidebar-tab-schedules"]').click();
+    await page.getByTestId("schedule-nav-add").click();
+    await expect(page).toHaveURL(/\/schedules\/new/, { timeout: 5_000 });
+
+    await page.getByTestId("schedule-detail-title").fill("Agent Owned Scan");
+    await page.getByTestId("schedule-detail-expression").fill("30m");
+    // Pick the agent — leave persona empty (inherited from agent).
+    await page.getByTestId("schedule-detail-agent").selectOption({ value: agent.id });
+    await page.getByTestId("schedule-detail-save").click();
+
+    // After save, redirected to the edit page — the agent EditableSelect shows the agent name.
+    await page.waitForURL(/\/schedules\/[^/]+$/, { timeout: 5_000 });
+    await expect(page.getByTestId("schedule-detail-agent-button")).toContainText("UI Test Agent", {
+      timeout: 5_000,
+    });
+
+    // Backend confirms agentId is stored.
+    await expect
+      .poll(
+        async () => {
+          const listResp = await client.scheduling.listSchedules({});
+          return listResp.schedules.find((s) => s.title === "Agent Owned Scan")?.agentId;
+        },
+        { timeout: 5_000 },
+      )
+      .toBe(agent.id);
+  });
+
+  test("detach agent from schedule via UI — agent field reverts to None after detach (#1439)", async ({
+    appPage,
+    grackle: { client },
+  }) => {
+    const page = appPage;
+
+    // Create agent + persona + an agent-owned schedule with an explicit persona (detach allowed).
+    const persona = await client.orchestration.createPersona({
+      name: "Detach Test Persona",
+      systemPrompt: "For detach testing.",
+      runtime: "stub",
+    });
+    const agent = await client.orchestration.createAgent({
+      name: "Detach Test Agent",
+      environmentId: "test-local",
+      primaryPersonaId: "stub",
+    });
+    const schedule = await client.scheduling.createSchedule({
+      title: "Detach Test Schedule",
+      scheduleExpression: "5m",
+      agentId: agent.id,
+      personaId: persona.id,
+    });
+
+    await page.locator('[data-testid="sidebar-tab-schedules"]').click();
+    const nav = page.getByTestId("schedule-nav");
+    await nav.getByText("Detach Test Schedule").click();
+    await page.waitForURL(new RegExp(`/schedules/${schedule.id}$`), { timeout: 5_000 });
+
+    // The agent field is an EditableSelect: click the button to enter edit mode, then
+    // pick the empty option. EditableSelect saves immediately on change — no save button.
+    await page.getByTestId("schedule-detail-agent-button").click();
+    await page.getByTestId("schedule-detail-agent-select").selectOption({ value: "" });
+
+    // Poll for the update to propagate to the backend before asserting.
+    await expect
+      .poll(
+        async () => {
+          const updated = await client.scheduling.getSchedule({ id: schedule.id });
+          return updated.agentId;
+        },
+        { timeout: 5_000 },
+      )
+      .toBe("");
+
+    // The edit page's agent field should revert to "None (no agent)" in display mode.
+    await expect(page.getByTestId("schedule-detail-agent-button")).toContainText(
+      "None (no agent)",
+      { timeout: 5_000 },
+    );
+  });
+
   test("legacy /settings/schedules* URLs redirect to /schedules*", async ({
     appPage,
     grackle: { client },

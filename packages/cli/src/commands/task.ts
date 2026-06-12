@@ -174,6 +174,15 @@ export function registerTaskCommands(program: Command): void {
       console.log(`Title:       ${t.title}`);
       console.log(`Status:      ${taskStatusToString(t.status)}`);
       console.log(`Branch:      ${t.branch}`);
+      if (t.kind) {
+        console.log(`Kind:        ${t.kind}`);
+      }
+      if (t.agentId) {
+        console.log(`Agent:       ${t.agentId}`);
+      }
+      if (t.parentTaskId) {
+        console.log(`Parent:      ${t.parentTaskId}`);
+      }
       console.log(`Session:     ${t.latestSessionId || "-"}`);
       console.log(`Depends On:  ${t.dependsOn.length > 0 ? t.dependsOn.join(", ") : "none"}`);
       console.log(`Decompose:   ${t.canDecompose ? "yes" : "no"}`);

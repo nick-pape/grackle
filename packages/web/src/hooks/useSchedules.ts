@@ -71,15 +71,20 @@ export function useSchedules(): UseSchedulesResult {
       personaId: string,
       workspaceId?: string,
       parentTaskId?: string,
+      agentId?: string,
     ): Promise<ScheduleData> => {
-      const resp = await grackleClient.createSchedule({
+      const req: Parameters<typeof grackleClient.createSchedule>[0] = {
         title,
         description,
         scheduleExpression,
         personaId,
         workspaceId: workspaceId || "",
         parentTaskId: parentTaskId || "",
-      });
+      };
+      if (agentId) {
+        req.agentId = agentId;
+      }
+      const resp = await grackleClient.createSchedule(req);
       const created = protoToSchedule(resp);
       setSchedules((prev) => [...prev.filter((s) => s.id !== created.id), created]);
       return created;
@@ -104,6 +109,10 @@ export function useSchedules(): UseSchedulesResult {
       }
       if (fields.enabled !== undefined) {
         request.enabled = fields.enabled;
+      }
+      if (fields.agentId !== undefined) {
+        // "" means detach; presence-tracked optional field on the proto
+        request.agentId = fields.agentId;
       }
       const resp = await grackleClient.updateSchedule(request);
       const updated = protoToSchedule(resp);

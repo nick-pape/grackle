@@ -13,7 +13,12 @@ import {
   formatRelativeTime,
   formatCountdown,
 } from "@grackle-ai/web-components";
-import type { ScheduleData, ScheduleUpdate, SelectOption } from "@grackle-ai/web-components";
+import type {
+  AgentData,
+  ScheduleData,
+  ScheduleUpdate,
+  SelectOption,
+} from "@grackle-ai/web-components";
 import styles from "./ScheduleDetail.module.scss";
 
 /** ScheduleDetailPage handles both create (/schedules/new) and edit (/schedules/:scheduleId). */
@@ -25,6 +30,7 @@ export function ScheduleDetailPage(): JSX.Element {
     schedules: { schedules, schedulesLoading, createSchedule, updateSchedule, deleteSchedule },
     personas: { personas },
     workspaces: { workspaces },
+    agents: { agents },
   } = useGrackle();
 
   const isNew = scheduleId === undefined;
@@ -44,6 +50,7 @@ export function ScheduleDetailPage(): JSX.Element {
         isNew={isNew}
         personas={personas}
         workspaces={workspaces}
+        agents={agents}
         onCreateSchedule={createSchedule}
         onUpdateSchedule={updateSchedule}
         onDeleteSchedule={deleteSchedule}
@@ -65,6 +72,7 @@ interface ScheduleFormProps {
   isNew: boolean;
   personas: Array<{ id: string; name: string }>;
   workspaces: Array<{ id: string; name: string }>;
+  agents: AgentData[];
   onCreateSchedule: (
     title: string,
     description: string,
@@ -72,6 +80,7 @@ interface ScheduleFormProps {
     personaId: string,
     workspaceId?: string,
     parentTaskId?: string,
+    agentId?: string,
   ) => Promise<ScheduleData>;
   onUpdateSchedule: (scheduleId: string, fields: ScheduleUpdate) => Promise<ScheduleData>;
   onDeleteSchedule: (scheduleId: string) => Promise<void>;
@@ -84,6 +93,7 @@ function ScheduleForm({
   isNew,
   personas,
   workspaces,
+  agents,
   onCreateSchedule,
   onUpdateSchedule,
   onDeleteSchedule,
@@ -95,6 +105,7 @@ function ScheduleForm({
   const [description, setDescription] = useState(existing?.description ?? "");
   const [scheduleExpression, setScheduleExpression] = useState(existing?.scheduleExpression ?? "");
   const [personaId, setPersonaId] = useState(existing?.personaId ?? "");
+  const [agentId, setAgentId] = useState(existing?.agentId ?? "");
   const [workspaceId, setWorkspaceId] = useState(existing?.workspaceId ?? "");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
@@ -114,20 +125,33 @@ function ScheduleForm({
     setDescription(existing.description);
     setScheduleExpression(existing.scheduleExpression);
     setPersonaId(existing.personaId);
+    setAgentId(existing.agentId ?? "");
     setWorkspaceId(existing.workspaceId);
   }, [isNew, existing, activeFieldId]);
 
   const isLoadingExisting = !isNew && existing === undefined;
+
+  // In create mode: persona required unless an agent is picked (agent provides its primary persona).
+  const personaRequired = !agentId;
   const canCreate =
     isNew &&
     title.trim().length > 0 &&
     scheduleExpression.trim().length > 0 &&
-    personaId.length > 0;
+    (!personaRequired || personaId.length > 0);
 
-  const personaOptions: SelectOption[] = personas.map((p) => ({ value: p.id, label: p.name }));
+  const personaOptions: SelectOption[] = [
+    ...(agentId ? [{ value: "", label: "Inherit from Agent" }] : []),
+    ...personas.map((p) => ({ value: p.id, label: p.name })),
+  ];
   const workspaceOptions: SelectOption[] = [
     { value: "", label: "System-level (no workspace)" },
     ...workspaces.map((w) => ({ value: w.id, label: w.name })),
+  ];
+
+  /** Agent options: first entry is "None" to represent an unowned schedule. */
+  const agentOptions: SelectOption[] = [
+    { value: "", label: "None (no agent)" },
+    ...agents.map((a) => ({ value: a.id, label: a.name })),
   ];
 
   const handleCreateSubmit = (e: FormEvent): void => {
@@ -141,6 +165,8 @@ function ScheduleForm({
       scheduleExpression,
       personaId,
       workspaceId || undefined,
+      undefined,
+      agentId || undefined,
     ).then(
       (created) => {
         showToast("Schedule created", "success");
@@ -154,6 +180,16 @@ function ScheduleForm({
 
   const handleFieldSave = (field: keyof ScheduleUpdate, value: string | boolean): void => {
     if (!existing) {
+      return;
+    }
+    // Guard: detaching the agent while there is no explicit personaId would leave
+    // the schedule unresolvable at fire time. Show a friendly error instead of
+    // letting the server reject it with a generic toast.
+    if (field === "agentId" && value === "" && !existing.personaId) {
+      showToast(
+        "Set a Persona before detaching the Agent — the schedule needs a persona to fire.",
+        "error",
+      );
       return;
     }
     onUpdateSchedule(existing.id, { [field]: value }).then(
@@ -170,6 +206,9 @@ function ScheduleForm({
         }
         if (field === "personaId") {
           setPersonaId(String(value));
+        }
+        if (field === "agentId") {
+          setAgentId(String(value));
         }
       },
       () => {
@@ -254,15 +293,36 @@ function ScheduleForm({
               10s) &nbsp;|&nbsp; Cron: <code>0 9 * * MON</code> (standard 5-field cron syntax)
             </p>
           </label>
+          {agents.length > 0 && (
+            <label>
+              Agent <span className={styles.optional}>(optional — fires under Agent identity)</span>
+              <select
+                value={agentId}
+                onChange={(e) => setAgentId(e.target.value)}
+                data-testid="schedule-detail-agent"
+              >
+                {agentOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
-            Persona
+            Persona{" "}
+            {agentId ? (
+              <span className={styles.optional}>(optional — inherited from Agent)</span>
+            ) : (
+              ""
+            )}
             <select
               value={personaId}
               onChange={(e) => setPersonaId(e.target.value)}
-              required
+              required={personaRequired}
               data-testid="schedule-detail-persona"
             >
-              <option value="">Select a persona...</option>
+              <option value="">{agentId ? "Inherit from Agent..." : "Select a persona..."}</option>
               {personaOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -385,8 +445,31 @@ function ScheduleForm({
                 data-testid="schedule-detail-expression"
               />
             </label>
+            {agents.length > 0 && (
+              <label>
+                Agent{" "}
+                <span className={styles.optional}>
+                  (fires under Agent identity — empty to detach)
+                </span>
+                <EditableSelect
+                  value={agentId}
+                  onSave={(value) => {
+                    handleFieldSave("agentId", value);
+                  }}
+                  options={agentOptions}
+                  fieldId="schedule-agent"
+                  activeFieldId={activeFieldId}
+                  onActivate={setActiveFieldId}
+                  ariaLabel="Schedule agent"
+                  data-testid="schedule-detail-agent"
+                />
+              </label>
+            )}
             <label>
-              Persona
+              Persona{" "}
+              {agentId && (
+                <span className={styles.optional}>(optional — inherited from Agent)</span>
+              )}
               <EditableSelect
                 value={personaId}
                 onSave={(value) => {

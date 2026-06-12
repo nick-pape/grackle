@@ -130,6 +130,33 @@ describe("useSchedules createSchedule", () => {
     expect(result.current.schedules).toContainEqual(newSchedule);
   });
 
+  it("passes agentId when provided (#1439)", async () => {
+    const newSchedule = { id: "s-agent", title: "Agent Scan", agentId: "agent-1", personaId: "" };
+    mockClient.createSchedule.mockResolvedValue(newSchedule);
+
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.createSchedule("Agent Scan", "", "30s", "", "", "", "agent-1");
+    });
+
+    expect(mockClient.createSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: "agent-1", personaId: "" }),
+    );
+  });
+
+  it("omits agentId from request when not provided", async () => {
+    mockClient.createSchedule.mockResolvedValue({ id: "s-noa", title: "No Agent" });
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.createSchedule("No Agent", "", "5m", "p1");
+    });
+
+    const call = mockClient.createSchedule.mock.calls[0][0] as Record<string, unknown>;
+    expect(call).not.toHaveProperty("agentId");
+  });
+
   it("passes optional workspaceId, parentTaskId", async () => {
     const newSchedule = { id: "s3", title: "Custom" };
     mockClient.createSchedule.mockResolvedValue(newSchedule);
@@ -210,6 +237,50 @@ describe("useSchedules updateSchedule", () => {
 
     expect(result.current.schedules).toContainEqual(updatedSchedule);
     expect(result.current.schedules).not.toContainEqual(original);
+  });
+
+  it("sends agentId='' (detach sentinel) when provided in update (#1439)", async () => {
+    const updated = { id: "s1", agentId: "", personaId: "p1" };
+    mockClient.updateSchedule.mockResolvedValue(updated);
+
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.updateSchedule("s1", { agentId: "" });
+    });
+
+    expect(mockClient.updateSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "s1", agentId: "" }),
+    );
+  });
+
+  it("sends agentId when attaching an agent (#1439)", async () => {
+    const updated = { id: "s1", agentId: "agent-1" };
+    mockClient.updateSchedule.mockResolvedValue(updated);
+
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.updateSchedule("s1", { agentId: "agent-1" });
+    });
+
+    expect(mockClient.updateSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "s1", agentId: "agent-1" }),
+    );
+  });
+
+  it("omits agentId from update request when not provided", async () => {
+    const updated = { id: "s1", title: "New" };
+    mockClient.updateSchedule.mockResolvedValue(updated);
+
+    const { result } = setup();
+
+    await act(async () => {
+      await result.current.updateSchedule("s1", { title: "New" });
+    });
+
+    const call = mockClient.updateSchedule.mock.calls[0][0] as Record<string, unknown>;
+    expect(call).not.toHaveProperty("agentId");
   });
 
   it("omits undefined fields from the update request", async () => {

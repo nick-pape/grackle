@@ -12,15 +12,17 @@ vi.mock("@grackle-ai/database", () => {
     updateSchedule: vi.fn(),
     deleteSchedule: vi.fn(),
   };
-  const stores = { personaStore, scheduleStore };
+  const agentStore = { getAgent: vi.fn() };
+  const stores = { personaStore, scheduleStore, agentStore };
   return {
     personaStore,
     scheduleStore,
+    agentStore,
     getDatabaseStores: () => stores,
   };
 });
 
-import { personaStore, scheduleStore } from "@grackle-ai/database";
+import { personaStore, scheduleStore, agentStore } from "@grackle-ai/database";
 import { createScheduleHandlers } from "./schedule-handlers.js";
 
 /** A minimal valid schedule row returned from the store. */
@@ -73,6 +75,15 @@ describe("createScheduleHandlers", () => {
     vi.mocked(scheduleStore.listSchedules).mockReturnValue([makeRow()] as ReturnType<
       typeof scheduleStore.listSchedules
     >);
+    vi.mocked(agentStore.getAgent).mockReturnValue({
+      id: "agent-1",
+      name: "Test Agent",
+      primaryPersonaId: "p-1",
+      environmentId: "env-1",
+      avatar: "",
+      createdAt: "2026-01-01",
+      updatedAt: "2026-01-01",
+    } as ReturnType<typeof agentStore.getAgent>);
   });
 
   // ── createSchedule ──────────────────────────────────────
@@ -173,6 +184,77 @@ describe("createScheduleHandlers", () => {
       );
       expect(result.id).toBe("sched-1");
       expect(result.title).toBe("My Schedule");
+    });
+
+    it("throws FailedPrecondition when agent has no primary persona and no personaId provided", async () => {
+      vi.mocked(agentStore.getAgent).mockReturnValue({
+        id: "agent-1",
+        name: "Test Agent",
+        primaryPersonaId: "",
+        environmentId: "env-1",
+        avatar: "",
+        createdAt: "2026-01-01",
+        updatedAt: "2026-01-01",
+      } as ReturnType<typeof agentStore.getAgent>);
+      const req = {
+        title: "Agent Schedule",
+        scheduleExpression: "30s",
+        personaId: "",
+        agentId: "agent-1",
+        description: "",
+        workspaceId: "",
+        parentTaskId: "",
+      } as grackle.CreateScheduleRequest;
+      await expect(handlers.createSchedule(req)).rejects.toThrow(
+        expect.objectContaining({ code: Code.FailedPrecondition }),
+      );
+    });
+
+    it("accepts agentId without personaId (persona optional when agent is set)", async () => {
+      const req = {
+        title: "Agent Schedule",
+        scheduleExpression: "30s",
+        personaId: "",
+        agentId: "agent-1",
+        description: "",
+        workspaceId: "",
+        parentTaskId: "",
+      } as grackle.CreateScheduleRequest;
+      const result = await handlers.createSchedule(req);
+      expect(scheduleStore.createSchedule).toHaveBeenCalledOnce();
+      expect(result.id).toBe("sched-1");
+    });
+
+    it("throws NotFound when agentId points to a non-existent agent", async () => {
+      vi.mocked(agentStore.getAgent).mockReturnValue(undefined);
+      const req = {
+        title: "Test",
+        scheduleExpression: "30s",
+        personaId: "",
+        agentId: "ghost-agent",
+        description: "",
+        workspaceId: "",
+        parentTaskId: "",
+      } as grackle.CreateScheduleRequest;
+      await expect(handlers.createSchedule(req)).rejects.toThrow(
+        expect.objectContaining({ code: Code.NotFound }),
+      );
+    });
+
+    it("validates explicit personaId when agentId is also set", async () => {
+      vi.mocked(personaStore.getPersona).mockReturnValue(undefined);
+      const req = {
+        title: "Test",
+        scheduleExpression: "30s",
+        personaId: "missing-persona",
+        agentId: "agent-1",
+        description: "",
+        workspaceId: "",
+        parentTaskId: "",
+      } as grackle.CreateScheduleRequest;
+      await expect(handlers.createSchedule(req)).rejects.toThrow(
+        expect.objectContaining({ code: Code.NotFound }),
+      );
     });
   });
 
@@ -276,6 +358,146 @@ describe("createScheduleHandlers", () => {
         "schedule.updated",
         expect.objectContaining({ scheduleId: "sched-1" }),
       );
+    });
+
+    it("attaches an agent when valid agentId is provided", async () => {
+      const req = { id: "sched-1", agentId: "agent-1" } as grackle.UpdateScheduleRequest;
+      await handlers.updateSchedule(req);
+      expect(scheduleStore.updateSchedule).toHaveBeenCalledWith(
+        "sched-1",
+        expect.objectContaining({ agentId: "agent-1" }),
+      );
+    });
+
+    it("throws NotFound when attaching a non-existent agent", async () => {
+      vi.mocked(agentStore.getAgent).mockReturnValue(undefined);
+      const req = { id: "sched-1", agentId: "ghost" } as grackle.UpdateScheduleRequest;
+      await expect(handlers.updateSchedule(req)).rejects.toThrow(
+        expect.objectContaining({ code: Code.NotFound }),
+      );
+    });
+
+    it("throws FailedPrecondition when attaching agent with no primary persona to a schedule with no personaId", async () => {
+      vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+        makeRow({ personaId: "" }) as ReturnType<typeof scheduleStore.getSchedule>,
+      );
+      vi.mocked(agentStore.getAgent).mockReturnValue({
+        id: "agent-1",
+        name: "Test Agent",
+        primaryPersonaId: "",
+        environmentId: "env-1",
+        avatar: "",
+        createdAt: "2026-01-01",
+        updatedAt: "2026-01-01",
+      } as ReturnType<typeof agentStore.getAgent>);
+      const req = { id: "sched-1", agentId: "agent-1" } as grackle.UpdateScheduleRequest;
+      await expect(handlers.updateSchedule(req)).rejects.toThrow(
+        expect.objectContaining({ code: Code.FailedPrecondition }),
+      );
+    });
+
+    it("detaches agent when agentId is empty and schedule has a personaId", async () => {
+      const req = { id: "sched-1", agentId: "" } as grackle.UpdateScheduleRequest;
+      await handlers.updateSchedule(req);
+      expect(scheduleStore.updateSchedule).toHaveBeenCalledWith(
+        "sched-1",
+        expect.objectContaining({ agentId: null }),
+      );
+    });
+
+    it("throws InvalidArgument when detaching agent leaves schedule with no personaId", async () => {
+      vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+        makeRow({ personaId: "" }) as ReturnType<typeof scheduleStore.getSchedule>,
+      );
+      const req = { id: "sched-1", agentId: "" } as grackle.UpdateScheduleRequest;
+      await expect(handlers.updateSchedule(req)).rejects.toThrow(
+        expect.objectContaining({ code: Code.InvalidArgument }),
+      );
+    });
+
+    it("allows detaching agent when req.personaId provides a fallback persona", async () => {
+      vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+        makeRow({ personaId: "" }) as ReturnType<typeof scheduleStore.getSchedule>,
+      );
+      const req = {
+        id: "sched-1",
+        agentId: "",
+        personaId: "p-1",
+      } as grackle.UpdateScheduleRequest;
+      await handlers.updateSchedule(req);
+      expect(scheduleStore.updateSchedule).toHaveBeenCalledWith(
+        "sched-1",
+        expect.objectContaining({ agentId: null }),
+      );
+    });
+
+    it("clears persona override (reverts to agent inheritance) when personaId='' on agent-owned schedule", async () => {
+      vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+        makeRow({ agentId: "a-1", personaId: "p-1" }) as ReturnType<
+          typeof scheduleStore.getSchedule
+        >,
+      );
+      const req = { id: "sched-1", personaId: "" } as grackle.UpdateScheduleRequest;
+      await handlers.updateSchedule(req);
+      expect(scheduleStore.updateSchedule).toHaveBeenCalledWith(
+        "sched-1",
+        expect.objectContaining({ personaId: "" }),
+      );
+    });
+
+    it("clears personaId when personaId='' and agent is being attached in the same request (atomic attach+inherit)", async () => {
+      vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+        makeRow({ agentId: null, personaId: "p-1" }) as ReturnType<
+          typeof scheduleStore.getSchedule
+        >,
+      );
+      const req = {
+        id: "sched-1",
+        personaId: "",
+        agentId: "agent-1",
+      } as grackle.UpdateScheduleRequest;
+      await handlers.updateSchedule(req);
+      expect(scheduleStore.updateSchedule).toHaveBeenCalledWith(
+        "sched-1",
+        expect.objectContaining({ personaId: "", agentId: "agent-1" }),
+      );
+    });
+
+    it("ignores personaId='' when schedule is not agent-owned (no-op, already unresolvable)", async () => {
+      vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+        makeRow({ agentId: null, personaId: "p-1" }) as ReturnType<
+          typeof scheduleStore.getSchedule
+        >,
+      );
+      const req = { id: "sched-1", personaId: "" } as grackle.UpdateScheduleRequest;
+      await handlers.updateSchedule(req);
+      const call = vi.mocked(scheduleStore.updateSchedule).mock.calls[0]![1] as Record<
+        string,
+        unknown
+      >;
+      expect(call.personaId).toBeUndefined();
+    });
+
+    it("ignores personaId='' when also detaching agent (guard: would leave schedule persona-less)", async () => {
+      vi.mocked(scheduleStore.getSchedule).mockReturnValue(
+        makeRow({ agentId: "a-1", personaId: "p-1" }) as ReturnType<
+          typeof scheduleStore.getSchedule
+        >,
+      );
+      const req = {
+        id: "sched-1",
+        personaId: "",
+        agentId: "",
+      } as grackle.UpdateScheduleRequest;
+      // personaId="" + agentId="" would leave schedule with no persona — the clear is
+      // silently ignored; the detach guard then uses existing.personaId and allows detach.
+      await handlers.updateSchedule(req);
+      const call = vi.mocked(scheduleStore.updateSchedule).mock.calls[0]![1] as Record<
+        string,
+        unknown
+      >;
+      expect(call.personaId).toBeUndefined();
+      expect(call.agentId).toBeNull();
     });
   });
 

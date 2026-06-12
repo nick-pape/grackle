@@ -18,6 +18,7 @@ function makeSchedule(overrides: Partial<ScheduleRow> = {}): ScheduleRow {
     nextRunAt: "2026-03-25T10:00:00Z",
     runCount: 0,
     taskId: null,
+    agentId: null,
     createdAt: "2026-03-25T09:59:30Z",
     updatedAt: "2026-03-25T09:59:30Z",
     ...overrides,
@@ -34,6 +35,9 @@ function createMockDeps(): CronPhaseDeps {
     emit: vi.fn(),
     getPersona: vi.fn().mockReturnValue({ id: "persona-1", name: "Test", runtime: "stub" }),
     setScheduleEnabled: vi.fn(),
+    // ── Agent-owned schedule deps (#1439) ──
+    getAgent: vi.fn().mockReturnValue({ primaryPersonaId: "agent-persona-1" }),
+    getRootTaskForAgent: vi.fn().mockReturnValue({ id: "root-task-1", title: "Agent Root" }),
     // ── Heartbeat branch (#1438) ──
     getTask: vi.fn(),
     getLatestSessionForTask: vi.fn(),
@@ -184,6 +188,155 @@ describe("createCronPhase", () => {
     const deps = createMockDeps();
     const phase = createCronPhase(deps);
     expect(phase.name).toBe("cron");
+  });
+
+  // ── #1439 — Agent-owned schedule fire path ────────────────────────
+
+  it("agent-owned: creates fire-task with agentId, kind=schedule_fire, parented on agent root", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.getDueSchedules).mockReturnValue([
+      makeSchedule({ agentId: "agent-1", personaId: "" }),
+    ]);
+    // getAgent returns agent with primaryPersonaId
+    vi.mocked(deps.getAgent).mockReturnValue({ primaryPersonaId: "agent-persona-1" });
+    // getPersona resolves the inherited persona
+    vi.mocked(deps.getPersona).mockReturnValue({
+      id: "agent-persona-1",
+      name: "AgentPersona",
+      runtime: "stub",
+    });
+    vi.mocked(deps.getRootTaskForAgent).mockReturnValue({ id: "root-task-1", title: "Root" });
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    expect(deps.createTask).toHaveBeenCalledTimes(1);
+    const params = vi.mocked(deps.createTask).mock.calls[0]![0] as Record<string, unknown>;
+    expect(params.agentId).toBe("agent-1");
+    expect(params.kind).toBe("schedule_fire");
+    expect(params.parentTaskId).toBe("root-task-1");
+    expect(params.defaultPersonaId).toBe("agent-persona-1");
+    // Dispatch entry must also carry the resolved persona.
+    expect(deps.enqueueForDispatch).toHaveBeenCalledTimes(1);
+    const dispatch = vi.mocked(deps.enqueueForDispatch).mock.calls[0]![0] as Record<
+      string,
+      unknown
+    >;
+    expect(dispatch.personaId).toBe("agent-persona-1");
+    // setTaskScheduleId must be called on the fire-task.
+    const fireTaskId = params.id as string;
+    expect(deps.setTaskScheduleId).toHaveBeenCalledWith(fireTaskId, "sched-1");
+  });
+
+  it("agent-owned: explicit personaId overrides agent's primary persona", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.getDueSchedules).mockReturnValue([
+      makeSchedule({ agentId: "agent-1", personaId: "override-persona" }),
+    ]);
+    vi.mocked(deps.getPersona).mockReturnValue({
+      id: "override-persona",
+      name: "Override",
+      runtime: "stub",
+    });
+    vi.mocked(deps.getRootTaskForAgent).mockReturnValue({ id: "root-task-1", title: "Root" });
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    const params = vi.mocked(deps.createTask).mock.calls[0]![0] as Record<string, unknown>;
+    expect(params.defaultPersonaId).toBe("override-persona");
+    // getAgent should NOT have been called — explicit personaId takes precedence
+    expect(deps.getAgent).not.toHaveBeenCalled();
+    // Dispatch entry must carry the override persona too.
+    const dispatch = vi.mocked(deps.enqueueForDispatch).mock.calls[0]![0] as Record<
+      string,
+      unknown
+    >;
+    expect(dispatch.personaId).toBe("override-persona");
+  });
+
+  it("agent-owned: skips fire and advances when getAgent returns undefined (agent record missing)", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.getDueSchedules).mockReturnValue([
+      makeSchedule({ agentId: "ghost-agent", personaId: "" }),
+    ]);
+    vi.mocked(deps.getAgent).mockReturnValue(undefined);
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    expect(deps.createTask).not.toHaveBeenCalled();
+    expect(deps.advanceSchedule).toHaveBeenCalledTimes(1);
+  });
+
+  it("agent-owned: emits schedule.fired with agentId", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.getDueSchedules).mockReturnValue([
+      makeSchedule({ agentId: "agent-1", personaId: "" }),
+    ]);
+    vi.mocked(deps.getAgent).mockReturnValue({ primaryPersonaId: "agent-persona-1" });
+    vi.mocked(deps.getPersona).mockReturnValue({
+      id: "agent-persona-1",
+      name: "AgentPersona",
+      runtime: "stub",
+    });
+    vi.mocked(deps.getRootTaskForAgent).mockReturnValue({ id: "root-task-1", title: "Root" });
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    expect(deps.emit).toHaveBeenCalledWith(
+      "schedule.fired",
+      expect.objectContaining({ scheduleId: "sched-1", agentId: "agent-1" }),
+    );
+  });
+
+  it("agent-owned: disables schedule when agent root task is missing", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.getDueSchedules).mockReturnValue([
+      makeSchedule({ agentId: "agent-1", personaId: "" }),
+    ]);
+    vi.mocked(deps.getAgent).mockReturnValue({ primaryPersonaId: "agent-persona-1" });
+    vi.mocked(deps.getPersona).mockReturnValue({
+      id: "agent-persona-1",
+      name: "AgentPersona",
+      runtime: "stub",
+    });
+    vi.mocked(deps.getRootTaskForAgent).mockReturnValue(undefined);
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    expect(deps.setScheduleEnabled).toHaveBeenCalledWith("sched-1", false, null);
+    expect(deps.createTask).not.toHaveBeenCalled();
+    expect(deps.enqueueForDispatch).not.toHaveBeenCalled();
+  });
+
+  it("agent-owned: skips fire and advances when no persona can be resolved", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.getDueSchedules).mockReturnValue([
+      makeSchedule({ agentId: "agent-1", personaId: "" }),
+    ]);
+    // Agent has empty primaryPersonaId
+    vi.mocked(deps.getAgent).mockReturnValue({ primaryPersonaId: "" });
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    expect(deps.createTask).not.toHaveBeenCalled();
+    expect(deps.advanceSchedule).toHaveBeenCalledTimes(1);
+  });
+
+  it("unowned schedule (no agentId) behaves exactly as before: no agentId/kind on task", async () => {
+    const deps = createMockDeps();
+    vi.mocked(deps.getDueSchedules).mockReturnValue([makeSchedule()]);
+
+    const phase = createCronPhase(deps);
+    await phase.execute();
+
+    const params = vi.mocked(deps.createTask).mock.calls[0]![0] as Record<string, unknown>;
+    expect(params.agentId).toBeUndefined();
+    expect(params.kind).toBeUndefined();
   });
 
   // ── #1438 — Heartbeat branch (schedule.taskId is non-null) ────────

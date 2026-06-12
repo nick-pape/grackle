@@ -24,12 +24,14 @@ function applySchema(): void {
       next_run_at         TEXT,
       run_count           INTEGER NOT NULL DEFAULT 0,
       task_id             TEXT,
+      agent_id            TEXT,
       created_at          TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_schedules_due ON schedules(enabled, next_run_at);
     CREATE UNIQUE INDEX IF NOT EXISTS uq_schedules_heartbeat_per_task
       ON schedules(task_id) WHERE task_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_schedules_agent_id ON schedules(agent_id);
   `);
 }
 
@@ -215,5 +217,101 @@ describe("schedule-store", () => {
     scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", null);
     scheduleStore.updateSchedule("s1", { taskId: "task-A" });
     expect(scheduleStore.getSchedule("s1")!.taskId).toBe("task-A");
+  });
+
+  // ── Agent ownership cleanup (#1439) ──────────────────────────────
+
+  it("detachSchedulesForAgent deletes heartbeat schedules owned by the agent", () => {
+    scheduleStore.createSchedule("hb-1", "HB", "", "30s", "p1", "", "", null, "task-A", "agent-1");
+    scheduleStore.createSchedule(
+      "other",
+      "Other",
+      "",
+      "1h",
+      "p1",
+      "",
+      "",
+      null,
+      "task-B",
+      "agent-2",
+    );
+
+    scheduleStore.detachSchedulesForAgent("agent-1");
+
+    expect(scheduleStore.getSchedule("hb-1")).toBeUndefined();
+    expect(scheduleStore.getSchedule("other")).toBeDefined();
+  });
+
+  it("detachSchedulesForAgent clears agentId on standalone cron schedules with explicit personaId and keeps them enabled", () => {
+    scheduleStore.createSchedule(
+      "cron-1",
+      "Cron",
+      "",
+      "5m",
+      "p1",
+      "",
+      "",
+      "2099-01-01T00:00:00Z",
+      null,
+      "agent-1",
+    );
+    scheduleStore.createSchedule("other", "Other", "", "1h", "p1", "", "", null, null, "agent-2");
+
+    scheduleStore.detachSchedulesForAgent("agent-1");
+
+    const cron = scheduleStore.getSchedule("cron-1");
+    expect(cron).toBeDefined();
+    expect(cron!.agentId).toBeNull();
+    expect(cron!.enabled).toBe(true);
+    const other = scheduleStore.getSchedule("other");
+    expect(other).toBeDefined();
+    expect(other!.agentId).toBe("agent-2");
+  });
+
+  it("detachSchedulesForAgent disables standalone cron schedules whose personaId is empty (inherited from agent)", () => {
+    // personaId="" means the schedule relied on the agent's primaryPersonaId.
+    // After detachment it can't resolve a persona, so it must be disabled.
+    scheduleStore.createSchedule(
+      "cron-inh",
+      "Inherited",
+      "",
+      "5m",
+      "",
+      "",
+      "",
+      "2099-01-01T00:00:00Z",
+      null,
+      "agent-1",
+    );
+
+    scheduleStore.detachSchedulesForAgent("agent-1");
+
+    const cron = scheduleStore.getSchedule("cron-inh");
+    expect(cron).toBeDefined();
+    expect(cron!.agentId).toBeNull();
+    expect(cron!.enabled).toBe(false);
+    expect(cron!.nextRunAt).toBeNull();
+  });
+
+  it("detachSchedulesForAgent handles mixed heartbeat + standalone schedules for the same agent", () => {
+    scheduleStore.createSchedule("hb-1", "HB", "", "30s", "p1", "", "", null, "task-A", "agent-1");
+    scheduleStore.createSchedule("cron-1", "Cron", "", "5m", "p1", "", "", null, null, "agent-1");
+
+    scheduleStore.detachSchedulesForAgent("agent-1");
+
+    expect(scheduleStore.getSchedule("hb-1")).toBeUndefined();
+    const cron = scheduleStore.getSchedule("cron-1");
+    expect(cron).toBeDefined();
+    expect(cron!.agentId).toBeNull();
+  });
+
+  it("detachSchedulesForAgent is a no-op when the agent owns no schedules", () => {
+    scheduleStore.createSchedule("s1", "A", "", "30s", "p1", "", "", null, null, "agent-2");
+
+    scheduleStore.detachSchedulesForAgent("agent-1");
+
+    const s1 = scheduleStore.getSchedule("s1");
+    expect(s1).toBeDefined();
+    expect(s1!.agentId).toBe("agent-2");
   });
 });

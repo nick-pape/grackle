@@ -546,6 +546,7 @@ type CreateScheduleRequest = Message<"grackle.CreateScheduleRequest"> & {
     personaId: string;
     workspaceId: string;
     parentTaskId: string;
+    agentId: string;
 };
 
 // @public
@@ -2978,6 +2979,7 @@ type Schedule = Message<"grackle.Schedule"> & {
     runCount: number;
     createdAt: string;
     updatedAt: string;
+    agentId: string;
 };
 
 // @public
@@ -2998,6 +3000,7 @@ const ScheduleListSchema: GenMessage<ScheduleList>;
 
 // @public
 export interface ScheduleRowShape {
+    agentId: string | null;
     createdAt: string;
     description: string;
     enabled: boolean;
@@ -3908,6 +3911,7 @@ type UpdateScheduleRequest = Message<"grackle.UpdateScheduleRequest"> & {
     scheduleExpression?: string;
     personaId?: string;
     enabled?: boolean;
+    agentId?: string;
 };
 
 // @public

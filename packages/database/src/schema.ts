@@ -339,6 +339,12 @@ export const schedules = sqliteTable("schedules", {
   // Heartbeat target (#1438). NULL = today's fresh-task-spawn schedule;
   // non-NULL = heartbeat that reanimates `task_id`'s latest session each tick.
   taskId: text("task_id").references(() => tasks.id),
+  /**
+   * Owning Agent (#1439, epic #1412). NULL = today's unowned schedule, fires as
+   * bare tasks. Non-NULL = schedule belongs to this Agent; each fire-task carries
+   * `agent_id` + `kind=schedule_fire` and parents under the Agent's root task.
+   */
+  agentId: text("agent_id").references(() => agents.id),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),

@@ -93,6 +93,10 @@
     @include surface-inset;
     padding: 2px var(--space-sm);
   }
+
+  .agentBadge {
+    color: var(--accent-blue, var(--text-secondary));
+  }
 }
 
 .empty {

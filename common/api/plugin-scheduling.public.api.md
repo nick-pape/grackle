@@ -36,6 +36,9 @@ export interface CronPhaseDeps {
         environmentId?: string;
         personaId?: string;
     }) => void;
+    getAgent: (id: string) => {
+        primaryPersonaId: string;
+    } | undefined;
     getDueSchedules: () => ScheduleRow[];
     getLatestSessionForTask: (taskId: string) => SessionRow | undefined;
     getPersona: (id: string) => {
@@ -43,6 +46,7 @@ export interface CronPhaseDeps {
         name: string;
         runtime: string;
     } | undefined;
+    getRootTaskForAgent: (agentId: string) => TaskModel | undefined;
     getTask: (id: string) => TaskModel | undefined;
     logger: Pick<Logger, "debug" | "info" | "warn" | "error">;
     publishToStdin: (sessionId: string, text: string) => void;

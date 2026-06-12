@@ -491,6 +491,25 @@ const MIGRATIONS: Migration[] = [
       conn.exec("CREATE INDEX IF NOT EXISTS idx_sessions_task_id ON sessions(task_id, started_at)");
     },
   },
+  {
+    version: 24,
+    name: "schedule-agent-ownership",
+    up: (conn) => {
+      // Schedule-to-Agent ownership (#1439, epic #1412): a Schedule with
+      // agent_id set fires under the Agent's identity — fire-tasks carry
+      // `agent_id` + `kind=schedule_fire` and parent under the Agent's root
+      // task. Null = today's unowned behavior (unchanged).
+      const scheduleCols = conn.prepare("PRAGMA table_info(schedules)").all() as Array<{
+        name: string;
+      }>;
+      if (!scheduleCols.some((c) => c.name === "agent_id")) {
+        // Nullable FK, no ON DELETE CASCADE — app-layer cleanup handles
+        // agent deletion (detach schedules or cascade-delete per policy).
+        conn.exec("ALTER TABLE schedules ADD COLUMN agent_id TEXT REFERENCES agents(id)");
+      }
+      conn.exec("CREATE INDEX IF NOT EXISTS idx_schedules_agent_id ON schedules(agent_id)");
+    },
+  },
 ];
 
 /** The highest schema version defined by BASELINE + MIGRATIONS. */
