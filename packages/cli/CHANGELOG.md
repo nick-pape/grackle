@@ -1,6 +1,21 @@
 # Change Log - @grackle-ai/cli
 
-This log was last generated on Thu, 11 Jun 2026 21:50:44 GMT and should not be manually modified.
+This log was last generated on Fri, 12 Jun 2026 14:51:08 GMT and should not be manually modified.
+
+## 0.195.0
+Fri, 12 Jun 2026 14:51:08 GMT
+
+### Minor changes
+
+- Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417).
+- Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438).
+- Add optional agent_id to schedules so cron fires run under Agent identity: new DB column + migration, proto fields, cron-phase agent-owned path, schedule create/edit/list/show CLI updates, web agent selector on create/edit forms (#1439)
+
+### Patches
+
+- `grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418).
+- Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438).
+- Fix token leak in bootstrap exec error and docker credential helper argv (GHSA-9w45-v2jr-fgx6)
 
 ## 0.194.0
 Thu, 11 Jun 2026 21:50:44 GMT

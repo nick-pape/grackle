@@ -2,6 +2,35 @@
   "name": "@grackle-ai/cli",
   "entries": [
     {
+      "version": "0.195.0",
+      "tag": "@grackle-ai/cli_v0.195.0",
+      "date": "Fri, 12 Jun 2026 14:51:08 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add `grackle agent` command group (list/create/show/edit/delete) for the new minimal Agent entity (#1417)."
+          },
+          {
+            "comment": "Add `agent edit --heartbeat`, `--heartbeat-clear`, `--heartbeat-rules`, `--heartbeat-rules-file`, `--heartbeat-pause`, `--heartbeat-resume` flags and a heartbeat block in `agent show` (#1438)."
+          },
+          {
+            "comment": "Add optional agent_id to schedules so cron fires run under Agent identity: new DB column + migration, proto fields, cron-phase agent-owned path, schedule create/edit/list/show CLI updates, web agent selector on create/edit forms (#1439)"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "`grackle agent create` now requires `--environment <id>`; `agent show` displays the agent's home environment (#1418)."
+          },
+          {
+            "comment": "Lockstep version bump for the `rawPrompt` option on `startTaskSession` (#1442, prereq for #1438)."
+          },
+          {
+            "comment": "Fix token leak in bootstrap exec error and docker credential helper argv (GHSA-9w45-v2jr-fgx6)"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.194.0",
       "tag": "@grackle-ai/cli_v0.194.0",
       "date": "Thu, 11 Jun 2026 21:50:44 GMT",
