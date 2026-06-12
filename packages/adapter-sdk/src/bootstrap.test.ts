@@ -185,6 +185,29 @@ describe("startRemotePowerLine", () => {
     expect(calls[0][0]).toContain("bash -c");
   });
 
+  it("does not include the PowerLine token in the thrown error message (F4 regression)", async () => {
+    const sensitiveToken = "super-secret-powerline-token-abc123";
+    // Simulate execFile rejection: err.message contains the full argv including the token blob
+    const tokenBlob = Buffer.from(`GRACKLE_POWERLINE_TOKEN='${sensitiveToken}'`).toString("base64");
+    const execError = Object.assign(
+      new Error(
+        `Command failed: ssh user@host bash -c 'cd ~/.grackle/powerline && node -e "..." '${tokenBlob}''`,
+      ),
+      { code: 1, stderr: "bash: node: command not found" },
+    );
+    const executor = createMockExecutor({
+      exec: vi.fn().mockRejectedValue(execError),
+    });
+
+    const thrown = await startRemotePowerLine(executor, sensitiveToken, {
+      logger: silentLogger,
+    }).catch((e: unknown) => e as Error);
+
+    expect(thrown.message).toContain("PowerLine process died immediately after starting");
+    expect(thrown.message).not.toContain(sensitiveToken);
+    expect(thrown.message).not.toContain(tokenBlob);
+  });
+
   it("uses workingDirectory when provided", async () => {
     const executor = createMockExecutor();
     await startRemotePowerLine(executor, "tok", {
