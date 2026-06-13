@@ -1772,6 +1772,33 @@ importers:
         specifier: ^4.1.0
         version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@22.19.15)(@vitest/coverage-v8@4.1.8)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
 
+  ../../tests/ahp-spike:
+    devDependencies:
+      '@grackle-ai/ahp':
+        specifier: workspace:*
+        version: link:../../packages/ahp
+      '@grackle-ai/common':
+        specifier: workspace:*
+        version: link:../../packages/common
+      '@grackle-ai/heft-rig':
+        specifier: workspace:*
+        version: link:../../rigs/heft-rig
+      '@grackle-ai/powerline':
+        specifier: workspace:*
+        version: link:../../packages/powerline
+      '@grackle-ai/runtime-sdk':
+        specifier: workspace:*
+        version: link:../../packages/runtime-sdk
+      '@rushstack/heft':
+        specifier: 1.2.7
+        version: 1.2.7(@types/node@22.19.15)
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      vitest:
+        specifier: ^3.1.1
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.15)(jiti@1.21.7)(jsdom@29.0.1)(sass@1.98.0)(terser@5.46.1)
+
   ../../tests/e2e-tests:
     devDependencies:
       '@connectrpc/connect':
